@@ -22,7 +22,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
@@ -31,7 +35,9 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -105,6 +111,7 @@ fun SettingsScreen(
 
     var selectedExportFormat by remember { mutableStateOf<ExportFormat?>(null) }
     var showExportFormatDialog by remember { mutableStateOf(false) }
+    var showTermsDialog by remember { mutableStateOf(false) }
 
     val backupPrefs = remember { com.example.hisab.data.backup.BackupPreferences(context) }
     val isAutoBackupEnabled by backupPrefs.isAutoBackupEnabled.collectAsState(initial = true)
@@ -340,37 +347,64 @@ fun SettingsScreen(
                     title = "Import Backup",
                     subtitle = "Restore transactions from a JSON or CSV backup file",
                     onClick = {
-                        importLauncher.launch(arrayOf("application/json", "text/csv", "text/comma-separated-values", "*/*"))
+                        viewModel.smartImportBackup(context) {
+                            importLauncher.launch(arrayOf("application/json", "text/csv", "text/comma-separated-values", "*/*"))
+                        }
                     }
                 )
             }
 
             item { Spacer(modifier = Modifier.height(20.dp)) }
 
-            // ── About Section ────────────────────────
+            // ── About & Credits Section ────────────────────────
             item {
-                SectionTitle(icon = Icons.Outlined.Code, title = "About")
+                SectionTitle(icon = Icons.Outlined.Code, title = "About & Credits")
             }
 
             item {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp)
+                        .padding(horizontal = 20.dp, vertical = 8.dp)
                 ) {
                     Text(
-                        text = "Hisab v1.0",
+                        text = "Hisab v2.0",
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
                         color = colors.textPrimary
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Hisab is a personal finance tracking application designed to simplify tracking income and expenses.",
+                        text = "Hisab is a privacy-first, offline personal finance tracker designed for modern budget management.",
                         style = MaterialTheme.typography.bodySmall,
                         color = colors.textSecondary
                     )
                 }
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Filled.AccountBalance,
+                    title = "Developer Credit",
+                    subtitle = "Subham Bose  •  GitHub: @XHLEIK",
+                    onClick = {
+                        try {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/XHLEIK"))
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            // Fallback
+                        }
+                    }
+                )
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Outlined.Code,
+                    title = "Terms & Conditions",
+                    subtitle = "Offline data privacy, usage terms, and open-source license",
+                    onClick = { showTermsDialog = true }
+                )
             }
 
             item { Spacer(modifier = Modifier.height(32.dp)) }
@@ -516,6 +550,41 @@ fun SettingsScreen(
             }
         )
     }
+
+    // Terms & Conditions Dialog
+    if (showTermsDialog) {
+        AlertDialog(
+            onDismissRequest = { showTermsDialog = false },
+            title = { Text("Terms & Conditions", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .verticalScroll(rememberScrollState())
+                        .padding(vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "Hisab Privacy & Usage Policy",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "1. 100% Offline & Private: Hisab processes all financial records, accounts, and budgets strictly on your local device storage. No data is sent to external servers or cloud services.\n\n" +
+                               "2. Data Ownership: Auto-backups are saved to your public Documents folder (Documents/Hisab/). You maintain complete control over your financial data.\n\n" +
+                               "3. Open Source License: Developed by Subham Bose (GitHub: @XHLEIK) under the MIT License.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.textSecondary
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTermsDialog = false }) {
+                    Text("Close", fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -596,6 +665,32 @@ private fun AccountRow(
     onDelete: () -> Unit
 ) {
     val colors = HisabTheme.colors
+    val parsedColor = remember(account) {
+        try {
+            if (!account.colorHex.isNullOrBlank()) {
+                Color(android.graphics.Color.parseColor(account.colorHex))
+            } else {
+                val lower = account.name.lowercase()
+                when {
+                    lower.contains("primary") -> Color(0xFF10B981)
+                    lower.contains("secondary") -> Color(0xFF3B82F6)
+                    lower.contains("savings") || lower.contains("saving") -> Color(0xFFF59E0B)
+                    lower.contains("cash") -> Color(0xFF8B5CF6)
+                    else -> Color(0xFF14B8A6)
+                }
+            }
+        } catch (e: Exception) {
+            val lower = account.name.lowercase()
+            when {
+                lower.contains("primary") -> Color(0xFF10B981)
+                lower.contains("secondary") -> Color(0xFF3B82F6)
+                lower.contains("savings") || lower.contains("saving") -> Color(0xFFF59E0B)
+                lower.contains("cash") -> Color(0xFF8B5CF6)
+                else -> Color(0xFF14B8A6)
+            }
+        }
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -606,13 +701,13 @@ private fun AccountRow(
             modifier = Modifier
                 .size(36.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                .background(parsedColor.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = com.example.hisab.util.CategoryIconMapper.getAccountIcon(account.name),
                 contentDescription = account.name,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = parsedColor,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -632,7 +727,7 @@ private fun AccountRow(
                     Text(
                         text = "(Primary)",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = parsedColor
                     )
                 }
             }

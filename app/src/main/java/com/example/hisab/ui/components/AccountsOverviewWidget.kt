@@ -74,13 +74,21 @@ fun AccountsOverviewWidget(
         ) {
             items(accountBalances.entries.toList(), key = { it.key }) { (accName, balance) ->
                 val icon = CategoryIconMapper.getAccountIcon(accName)
+                val lowerName = accName.lowercase()
+                val accentColor = when {
+                    lowerName.contains("primary") -> androidx.compose.ui.graphics.Color(0xFF10B981) // Green
+                    lowerName.contains("secondary") -> androidx.compose.ui.graphics.Color(0xFF3B82F6) // Blue
+                    lowerName.contains("savings") || lowerName.contains("saving") -> androidx.compose.ui.graphics.Color(0xFFF59E0B) // Yellow/Gold
+                    lowerName.contains("cash") -> androidx.compose.ui.graphics.Color(0xFF8B5CF6) // Purple
+                    else -> androidx.compose.ui.graphics.Color(0xFF14B8A6) // Teal
+                }
 
                 Box(
                     modifier = Modifier
                         .width(155.dp)
                         .clip(RoundedCornerShape(16.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .border(1.dp, colors.cardBorder, RoundedCornerShape(16.dp))
+                        .border(1.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
                         .padding(14.dp)
                 ) {
                     Column {
@@ -89,13 +97,13 @@ fun AccountsOverviewWidget(
                                 modifier = Modifier
                                     .size(28.dp)
                                     .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                    .background(accentColor.copy(alpha = 0.15f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = icon,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = accentColor,
                                     modifier = Modifier.size(16.dp)
                                 )
                             }

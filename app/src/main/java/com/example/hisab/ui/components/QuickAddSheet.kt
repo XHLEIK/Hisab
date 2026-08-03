@@ -34,6 +34,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -78,8 +79,20 @@ fun QuickAddSheet(
         } ?: "")
     }
     var selectedCategoryId by remember {
-        mutableLongStateOf(editCategoryId ?: editTransaction?.categoryId ?: categories.firstOrNull()?.id ?: 0L)
+        mutableLongStateOf(
+            editCategoryId ?: editTransaction?.categoryId ?: categories.firstOrNull { it.type == (editTransaction?.type ?: initialType) }?.id ?: 0L
+        )
     }
+
+    LaunchedEffect(type) {
+        if (editTransaction == null || editTransaction.type != type) {
+            val matchingCat = categories.firstOrNull { it.type == type }
+            if (matchingCat != null) {
+                selectedCategoryId = matchingCat.id
+            }
+        }
+    }
+
     var selectedAccount by remember {
         mutableStateOf(editTransaction?.account ?: accounts.firstOrNull() ?: "Primary Bank")
     }

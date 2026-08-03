@@ -42,6 +42,14 @@ class BackupRepository(
         exportReport(context, uri, ExportFormat.CSV)
 
     /**
+     * Attempts smart auto-restore from Documents/Hisab/hisab_auto_backup.json.
+     */
+    suspend fun smartImport(context: Context): Boolean = withContext(Dispatchers.IO) {
+        val manager = autoBackupManager ?: AutoBackupManager(context, HisabDatabase.getDatabase(context))
+        manager.smartImportFromDocuments()
+    }
+
+    /**
      * Imports data from a backup file (JSON or CSV).
      */
     suspend fun importBackup(context: Context, uri: Uri): Result<Int> = withContext(Dispatchers.IO) {

@@ -7,8 +7,13 @@ import kotlinx.coroutines.flow.Flow
 
 class AccountRepository(
     private val accountDao: AccountDao,
-    private val transactionDao: TransactionDao? = null
+    private val transactionDao: TransactionDao? = null,
+    private var autoBackupManager: com.example.hisab.data.backup.AutoBackupManager? = null
 ) {
+
+    fun setAutoBackupManager(manager: com.example.hisab.data.backup.AutoBackupManager) {
+        this.autoBackupManager = manager
+    }
 
     fun getAllAccounts(): Flow<List<AccountEntity>> =
         accountDao.getAll()
@@ -16,11 +21,16 @@ class AccountRepository(
     fun getAllAccountNames(): Flow<List<String>> =
         accountDao.getAllNames()
 
-    suspend fun insertAccount(account: AccountEntity): Long =
-        accountDao.insert(account)
+    suspend fun insertAccount(account: AccountEntity): Long {
+        val result = accountDao.insert(account)
+        autoBackupManager?.performBackup()
+        return result
+    }
 
-    suspend fun updateAccount(account: AccountEntity) =
+    suspend fun updateAccount(account: AccountEntity) {
         accountDao.update(account)
+        autoBackupManager?.performBackup()
+    }
 
     suspend fun updateAccount(oldName: String, account: AccountEntity) {
         if (oldName != account.name && transactionDao != null) {
@@ -28,10 +38,13 @@ class AccountRepository(
             transactionDao.updateToAccountName(oldName, account.name)
         }
         accountDao.update(account)
+        autoBackupManager?.performBackup()
     }
 
-    suspend fun deleteAccount(account: AccountEntity) =
+    suspend fun deleteAccount(account: AccountEntity) {
         accountDao.delete(account)
+        autoBackupManager?.performBackup()
+    }
 
     suspend fun getAllAccountsSync(): List<AccountEntity> =
         accountDao.getAllSync()

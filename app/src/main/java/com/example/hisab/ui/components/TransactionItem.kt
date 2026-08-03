@@ -57,24 +57,20 @@ fun TransactionItem(
         else -> "+"
     }
 
-    val displayName = if (isTransfer) {
-        val toAcc = transaction.toAccount ?: "Account"
-        "Transfer: ${transaction.account} → $toAcc"
-    } else {
-        categoryName
+    val displayName = categoryName
+
+    val iconVector = remember(categoryIcon, isTransfer) {
+        if (categoryIcon.isNotBlank()) CategoryIconMapper.getIcon(categoryIcon)
+        else if (isTransfer) CategoryIconMapper.getIcon("SwapHoriz")
+        else CategoryIconMapper.getIcon("MoreHoriz")
     }
 
-    val iconVector = if (isTransfer) CategoryIconMapper.getIcon("SwapHoriz") else CategoryIconMapper.getIcon(categoryIcon)
-
     val defaultPrimary = MaterialTheme.colorScheme.primary
-    val parsedColor = remember(categoryColor, isTransfer, defaultPrimary) {
-        if (isTransfer) defaultPrimary
-        else {
-            try {
-                Color(android.graphics.Color.parseColor(categoryColor))
-            } catch (e: Exception) {
-                defaultPrimary
-            }
+    val parsedColor = remember(categoryColor, defaultPrimary) {
+        try {
+            Color(android.graphics.Color.parseColor(categoryColor))
+        } catch (e: Exception) {
+            defaultPrimary
         }
     }
 
@@ -103,7 +99,7 @@ fun TransactionItem(
 
         Spacer(modifier = Modifier.width(14.dp))
 
-        // Name & notes
+        // Name & notes / account transfer direction
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.Center
@@ -116,21 +112,27 @@ fun TransactionItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            if (transaction.notes.isNotBlank()) {
-                Text(
-                    text = transaction.notes,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.textSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            } else if (showDate) {
-                Text(
-                    text = DateUtils.formatShort(transaction.date),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.textTertiary
-                )
+            
+            val subtitleText = remember(transaction, isTransfer, showDate) {
+                if (isTransfer) {
+                    val accDirection = "${transaction.account} → ${transaction.toAccount ?: "Account"}"
+                    if (transaction.notes.isNotBlank()) "$accDirection • ${transaction.notes}" else accDirection
+                } else if (transaction.notes.isNotBlank()) {
+                    transaction.notes
+                } else if (showDate) {
+                    DateUtils.formatShort(transaction.date)
+                } else {
+                    transaction.account
+                }
             }
+
+            Text(
+                text = subtitleText,
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
 
         Spacer(modifier = Modifier.width(8.dp))

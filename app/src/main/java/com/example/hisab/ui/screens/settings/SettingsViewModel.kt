@@ -80,9 +80,16 @@ class SettingsViewModel(
     }
 
     fun addAccount(name: String, type: String) {
+        val colorHex = when (type.uppercase()) {
+            "PRIMARY" -> "#10B981"
+            "SECONDARY" -> "#3B82F6"
+            "SAVINGS", "SAVING" -> "#F59E0B"
+            "CASH", "CASH WALLET" -> "#8B5CF6"
+            else -> "#14B8A6"
+        }
         viewModelScope.launch(Dispatchers.IO) {
             accountRepository?.insertAccount(
-                AccountEntity(name = name, type = type, isPrimary = false)
+                AccountEntity(name = name, type = type, isPrimary = false, colorHex = colorHex)
             )
         }
     }
@@ -109,6 +116,17 @@ class SettingsViewModel(
                     _exportResult.value = "Export failed: ${error.message}"
                 }
             )
+        }
+    }
+
+    fun smartImportBackup(context: Context, onFallbackToFilePicker: () -> Unit) {
+        viewModelScope.launch {
+            val success = backupRepository.smartImport(context)
+            if (success) {
+                _importResult.value = "Successfully restored backup from Documents/Hisab!"
+            } else {
+                onFallbackToFilePicker()
+            }
         }
     }
 

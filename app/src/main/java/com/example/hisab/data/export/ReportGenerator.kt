@@ -26,8 +26,8 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 enum class ExportFormat(val displayName: String, val extension: String, val mimeType: String) {
-    PDF("PDF Report (With Charts & Tables)", "pdf", "application/pdf"),
-    XLSX("Excel Workbook (.xlsx)", "xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+    PDF("PDF Report (With Charts & Ledger)", "pdf", "application/pdf"),
+    XLSX("Excel Ledger (.xlsx)", "xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
     CSV("CSV Spreadsheet (.csv)", "csv", "text/csv"),
     JSON("Full JSON Backup (.json)", "json", "application/json")
 }
@@ -73,228 +73,238 @@ class ReportGenerator(private val context: Context) {
         val pdfDoc = PdfDocument()
         val categoryMap = categories.associateBy { it.id }
 
-        val pageWidth = 595 // A4 standard width in points (72 dpi)
+        val pageWidth = 595 // A4 standard width in points
         val pageHeight = 842 // A4 standard height in points
 
         // Computations
         val totalIncome = transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
         val totalExpense = transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+        val totalTransfer = transactions.filter { it.type == TransactionType.TRANSFER }.sumOf { it.amount }
         val netBalance = totalIncome - totalExpense
         val savingsRate = if (totalIncome > 0) ((totalIncome - totalExpense) / totalIncome) * 100 else 0.0
 
-        // Page 1: Executive Summary & Visual Charts
+        // Page 1: Executive KPI Cards & Balance Sheet Ledger
         val pageInfo1 = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
         val page1 = pdfDoc.startPage(pageInfo1)
         val canvas1 = page1.canvas
 
-        val titlePaint = Paint().apply {
-            color = Color.parseColor("#1E293B")
-            textSize = 24f
-            isFakeBoldText = true
-            isAntiAlias = true
-        }
+        val titlePaint = Paint().apply { color = Color.parseColor("#0F172A"); textSize = 22f; isFakeBoldText = true; isAntiAlias = true }
+        val subTitlePaint = Paint().apply { color = Color.parseColor("#64748B"); textSize = 10f; isAntiAlias = true }
+        val headerPaint = Paint().apply { color = Color.parseColor("#0F172A"); textSize = 13f; isFakeBoldText = true; isAntiAlias = true }
+        val bodyPaint = Paint().apply { color = Color.parseColor("#334155"); textSize = 9.5f; isAntiAlias = true }
+        val linePaint = Paint().apply { color = Color.parseColor("#E2E8F0"); strokeWidth = 1f }
 
-        val subTitlePaint = Paint().apply {
-            color = Color.parseColor("#64748B")
-            textSize = 11f
-            isAntiAlias = true
-        }
-
-        val headerPaint = Paint().apply {
-            color = Color.parseColor("#0F172A")
-            textSize = 14f
-            isFakeBoldText = true
-            isAntiAlias = true
-        }
-
-        val bodyPaint = Paint().apply {
-            color = Color.parseColor("#334155")
-            textSize = 10f
-            isAntiAlias = true
-        }
-
-        val primaryColor = Color.parseColor("#0D9488") // Teal
-        val incomeColor = Color.parseColor("#10B981") // Emerald
-        val expenseColor = Color.parseColor("#EF4444") // Coral Red
+        val incomeColor = Color.parseColor("#10B981")
+        val expenseColor = Color.parseColor("#EF4444")
+        val transferColor = Color.parseColor("#3B82F6")
 
         // App Logo & Header
-        canvas1.drawText("Hisab Financial Statement", 40f, 50f, titlePaint)
-        canvas1.drawText("Generated on: ${LocalDate.now().format(dateFormatter)}  •  Total Entries: ${transactions.size}", 40f, 68f, subTitlePaint)
+        canvas1.drawText("Hisab Financial Statement & Ledger", 40f, 48f, titlePaint)
+        canvas1.drawText("Generated on: ${LocalDate.now().format(dateFormatter)}  •  Total Transactions: ${transactions.size}", 40f, 65f, subTitlePaint)
+        canvas1.drawLine(40f, 75f, (pageWidth - 40).toFloat(), 75f, linePaint)
 
-        // Divider
-        val linePaint = Paint().apply {
-            color = Color.parseColor("#E2E8F0")
-            strokeWidth = 1f
-        }
-        canvas1.drawLine(40f, 80f, (pageWidth - 40).toFloat(), 80f, linePaint)
-
-        // KPI Summary Cards
-        var currentY = 100f
-        val cardWidth = 115f
-        val cardHeight = 54f
+        // 1. Top 4 KPI Summary Cards
+        var currentY = 90f
+        val cardWidth = 118f
+        val cardHeight = 52f
 
         fun drawKpiCard(x: Float, label: String, value: String, accentHex: String) {
-            val bgPaint = Paint().apply {
-                color = Color.parseColor(accentHex)
-                alpha = 25
-            }
-            val borderPaint = Paint().apply {
-                color = Color.parseColor(accentHex)
-                style = Paint.Style.STROKE
-                strokeWidth = 1f
-                isAntiAlias = true
-            }
+            val bgPaint = Paint().apply { color = Color.parseColor(accentHex); alpha = 20 }
+            val borderPaint = Paint().apply { color = Color.parseColor(accentHex); style = Paint.Style.STROKE; strokeWidth = 1f; isAntiAlias = true }
             val rect = RectF(x, currentY, x + cardWidth, currentY + cardHeight)
             canvas1.drawRoundRect(rect, 8f, 8f, bgPaint)
             canvas1.drawRoundRect(rect, 8f, 8f, borderPaint)
 
-            val labelP = Paint().apply { color = Color.parseColor("#64748B"); textSize = 9f; isAntiAlias = true }
-            val valP = Paint().apply { color = Color.parseColor("#0F172A"); textSize = 11f; isFakeBoldText = true; isAntiAlias = true }
+            val labelP = Paint().apply { color = Color.parseColor("#64748B"); textSize = 8.5f; isAntiAlias = true }
+            val valP = Paint().apply { color = Color.parseColor("#0F172A"); textSize = 10.5f; isFakeBoldText = true; isAntiAlias = true }
 
-            canvas1.drawText(label, x + 10f, currentY + 20f, labelP)
-            canvas1.drawText(value, x + 10f, currentY + 40f, valP)
+            canvas1.drawText(label, x + 8f, currentY + 18f, labelP)
+            canvas1.drawText(value, x + 8f, currentY + 38f, valP)
         }
 
         drawKpiCard(40f, "Total Income", CurrencyFormatter.format(totalIncome), "#10B981")
-        drawKpiCard(170f, "Total Expenses", CurrencyFormatter.format(totalExpense), "#EF4444")
-        drawKpiCard(300f, "Net Balance", CurrencyFormatter.format(netBalance), "#3B82F6")
-        drawKpiCard(430f, "Savings Rate", "${String.format("%.1f", savingsRate)}%", "#8B5CF6")
+        drawKpiCard(168f, "Total Expenses", CurrencyFormatter.format(totalExpense), "#EF4444")
+        drawKpiCard(296f, "Net Balance", CurrencyFormatter.format(netBalance), "#3B82F6")
+        drawKpiCard(424f, "Savings Rate", "${String.format("%.1f", savingsRate)}%", "#F59E0B")
 
-        currentY += 75f
+        currentY += 70f
 
-        // ── Visual Donut Chart Rendering on Canvas ──
-        canvas1.drawText("Expense Category Distribution", 40f, currentY, headerPaint)
-        currentY += 20f
+        // 2. Financial Ledger Table (Date | Category | Type | Account | Debit | Credit)
+        canvas1.drawText("Transaction Ledger", 40f, currentY, headerPaint)
+        currentY += 15f
 
-        val expenseTxns = transactions.filter { it.type == TransactionType.EXPENSE }
-        val categoryBreakdown = expenseTxns.groupBy { it.categoryId }
-            .mapValues { (_, txs) -> txs.sumOf { it.amount } }
-            .entries.sortedByDescending { it.value }
-
-        val chartRadius = 60f
-        val chartCenterX = 110f
-        val chartCenterY = currentY + chartRadius + 10f
-
-        val arcRect = RectF(
-            chartCenterX - chartRadius,
-            chartCenterY - chartRadius,
-            chartCenterX + chartRadius,
-            chartCenterY + chartRadius
-        )
-
-        var startAngle = -90f
-        val chartColors = listOf("#4CAF50", "#FF9800", "#E91E63", "#2196F3", "#FF5722", "#9C27B0", "#00BCD4", "#607D8B")
-
-        if (totalExpense > 0) {
-            categoryBreakdown.take(8).forEachIndexed { idx, entry ->
-                val sweep = ((entry.value / totalExpense) * 360f).toFloat()
-                val arcPaint = Paint().apply {
-                    color = Color.parseColor(categoryMap[entry.key]?.colorHex ?: chartColors[idx % chartColors.size])
-                    style = Paint.Style.STROKE
-                    strokeWidth = 24f
-                    isAntiAlias = true
-                }
-                canvas1.drawArc(arcRect, startAngle, sweep, false, arcPaint)
-                startAngle += sweep
-            }
-        } else {
-            val emptyPaint = Paint().apply { color = Color.parseColor("#CBD5E1"); style = Paint.Style.STROKE; strokeWidth = 24f; isAntiAlias = true }
-            canvas1.drawArc(arcRect, 0f, 360f, false, emptyPaint)
-        }
-
-        // Donut Legend next to Chart
-        var legendY = currentY + 15f
-        categoryBreakdown.take(6).forEachIndexed { idx, entry ->
-            val cat = categoryMap[entry.key]
-            val colorHex = cat?.colorHex ?: chartColors[idx % chartColors.size]
-            val pct = if (totalExpense > 0) (entry.value / totalExpense) * 100 else 0.0
-
-            val dotPaint = Paint().apply { color = Color.parseColor(colorHex); isAntiAlias = true }
-            canvas1.drawCircle(220f, legendY - 4f, 5f, dotPaint)
-            canvas1.drawText("${cat?.name ?: "Expense"}: ${CurrencyFormatter.format(entry.value)} (${String.format("%.1f", pct)}%)", 235f, legendY, bodyPaint)
-            legendY += 18f
-        }
-
-        currentY += 155f
-
-        // ── Category Summary Table ──
-        canvas1.drawText("Category Breakdown Ledger", 40f, currentY, headerPaint)
-        currentY += 18f
-
-        // Table Header
         val thBg = Paint().apply { color = Color.parseColor("#F1F5F9") }
-        canvas1.drawRect(40f, currentY, (pageWidth - 40).toFloat(), currentY + 22f, thBg)
+        canvas1.drawRect(40f, currentY, (pageWidth - 40).toFloat(), currentY + 20f, thBg)
 
-        val thText = Paint().apply { color = Color.parseColor("#334155"); textSize = 10f; isFakeBoldText = true; isAntiAlias = true }
-        canvas1.drawText("Category Name", 50f, currentY + 15f, thText)
-        canvas1.drawText("Type", 240f, currentY + 15f, thText)
-        canvas1.drawText("Total Amount", 360f, currentY + 15f, thText)
-        canvas1.drawText("% Share", 480f, currentY + 15f, thText)
+        val thText = Paint().apply { color = Color.parseColor("#1E293B"); textSize = 9f; isFakeBoldText = true; isAntiAlias = true }
+        canvas1.drawText("Date", 48f, currentY + 14f, thText)
+        canvas1.drawText("Category", 110f, currentY + 14f, thText)
+        canvas1.drawText("Type", 220f, currentY + 14f, thText)
+        canvas1.drawText("Account", 285f, currentY + 14f, thText)
+        canvas1.drawText("Debit (Expense)", 375f, currentY + 14f, thText)
+        canvas1.drawText("Credit (Income/Trf)", 465f, currentY + 14f, thText)
 
-        currentY += 22f
-
-        categoryBreakdown.take(10).forEach { (catId, amount) ->
-            val cat = categoryMap[catId]
-            val pct = if (totalExpense > 0) (amount / totalExpense) * 100 else 0.0
-
-            canvas1.drawText(cat?.name ?: "Unknown", 50f, currentY + 15f, bodyPaint)
-            canvas1.drawText("EXPENSE", 240f, currentY + 15f, bodyPaint)
-            canvas1.drawText(CurrencyFormatter.format(amount), 360f, currentY + 15f, bodyPaint)
-            canvas1.drawText("${String.format("%.1f", pct)}%", 480f, currentY + 15f, bodyPaint)
-            canvas1.drawLine(40f, currentY + 20f, (pageWidth - 40).toFloat(), currentY + 20f, linePaint)
-            currentY += 22f
-        }
-
-        // Page footer
-        canvas1.drawText("Page 1 of 2  •  Hisab Offline Expense Tracker", (pageWidth / 2 - 60).toFloat(), 820f, subTitlePaint)
-        pdfDoc.finishPage(page1)
-
-        // ── Page 2: Detailed Transaction Ledger ──
-        val pageInfo2 = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 2).create()
-        val page2 = pdfDoc.startPage(pageInfo2)
-        val canvas2 = page2.canvas
-
-        canvas2.drawText("Detailed Transaction Ledger", 40f, 45f, titlePaint)
-        canvas2.drawLine(40f, 55f, (pageWidth - 40).toFloat(), 55f, linePaint)
-
-        currentY = 70f
-        canvas2.drawRect(40f, currentY, (pageWidth - 40).toFloat(), currentY + 22f, thBg)
-        canvas2.drawText("Date", 50f, currentY + 15f, thText)
-        canvas2.drawText("Type", 120f, currentY + 15f, thText)
-        canvas2.drawText("Category", 190f, currentY + 15f, thText)
-        canvas2.drawText("Account", 310f, currentY + 15f, thText)
-        canvas2.drawText("Amount", 420f, currentY + 15f, thText)
-        canvas2.drawText("Notes", 490f, currentY + 15f, thText)
-
-        currentY += 22f
+        currentY += 20f
 
         val rowBgEven = Paint().apply { color = Color.parseColor("#FFFFFF") }
         val rowBgOdd = Paint().apply { color = Color.parseColor("#F8FAFC") }
 
-        transactions.take(32).forEachIndexed { idx, tx ->
+        transactions.take(30).forEachIndexed { idx, tx ->
             val bg = if (idx % 2 == 0) rowBgEven else rowBgOdd
-            canvas2.drawRect(40f, currentY, (pageWidth - 40).toFloat(), currentY + 20f, bg)
+            canvas1.drawRect(40f, currentY, (pageWidth - 40).toFloat(), currentY + 18f, bg)
 
-            val catName = categoryMap[tx.categoryId]?.name ?: "Expense"
-            val amtColor = when (tx.type) {
-                TransactionType.INCOME -> incomeColor
-                TransactionType.EXPENSE -> expenseColor
-                else -> primaryColor
-            }
-            val amtPaint = Paint().apply { color = amtColor; textSize = 9.5f; isFakeBoldText = true; isAntiAlias = true }
+            val catName = categoryMap[tx.categoryId]?.name ?: "General"
+            val isDebit = tx.type == TransactionType.EXPENSE
+            val debitText = if (isDebit) CurrencyFormatter.format(tx.amount) else "-"
+            val creditText = if (!isDebit) CurrencyFormatter.format(tx.amount) else "-"
 
-            canvas2.drawText(DateUtils.formatShort(tx.date), 50f, currentY + 14f, bodyPaint)
-            canvas2.drawText(tx.type.name, 120f, currentY + 14f, bodyPaint)
-            canvas2.drawText(catName.take(18), 190f, currentY + 14f, bodyPaint)
-            canvas2.drawText(tx.account.take(12), 310f, currentY + 14f, bodyPaint)
-            canvas2.drawText(CurrencyFormatter.format(tx.amount), 420f, currentY + 14f, amtPaint)
-            canvas2.drawText(tx.notes.take(15), 490f, currentY + 14f, bodyPaint)
+            val debitPaint = Paint().apply { color = if (isDebit) expenseColor else Color.parseColor("#94A3B8"); textSize = 9f; isAntiAlias = true }
+            val creditPaint = Paint().apply { color = if (!isDebit) incomeColor else Color.parseColor("#94A3B8"); textSize = 9f; isAntiAlias = true }
 
-            canvas2.drawLine(40f, currentY + 20f, (pageWidth - 40).toFloat(), currentY + 20f, linePaint)
-            currentY += 20f
+            canvas1.drawText(DateUtils.formatShort(tx.date), 48f, currentY + 13f, bodyPaint)
+            canvas1.drawText(catName.take(16), 110f, currentY + 13f, bodyPaint)
+            canvas1.drawText(tx.type.name, 220f, currentY + 13f, bodyPaint)
+            canvas1.drawText(tx.account.take(12), 285f, currentY + 13f, bodyPaint)
+            canvas1.drawText(debitText, 375f, currentY + 13f, debitPaint)
+            canvas1.drawText(creditText, 465f, currentY + 13f, creditPaint)
+
+            canvas1.drawLine(40f, currentY + 18f, (pageWidth - 40).toFloat(), currentY + 18f, linePaint)
+            currentY += 18f
         }
 
-        canvas2.drawText("Page 2 of 2  •  Hisab Offline Expense Tracker", (pageWidth / 2 - 60).toFloat(), 820f, subTitlePaint)
+        // Ledger Totals Row
+        canvas1.drawRect(40f, currentY, (pageWidth - 40).toFloat(), currentY + 20f, thBg)
+        val totalTextPaint = Paint().apply { color = Color.parseColor("#0F172A"); textSize = 9.5f; isFakeBoldText = true; isAntiAlias = true }
+        canvas1.drawText("TOTAL LEDGER", 48f, currentY + 14f, totalTextPaint)
+        canvas1.drawText(CurrencyFormatter.format(totalExpense), 375f, currentY + 14f, totalTextPaint)
+        canvas1.drawText(CurrencyFormatter.format(totalIncome + totalTransfer), 465f, currentY + 14f, totalTextPaint)
+
+        canvas1.drawText("Page 1 of 2  •  Hisab Balance Sheet & Ledger Statement", (pageWidth / 2 - 80).toFloat(), 820f, subTitlePaint)
+        pdfDoc.finishPage(page1)
+
+        // ── Page 2: Visual Charts (Donut, Bar & Line Charts) ──
+        val pageInfo2 = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 2).create()
+        val page2 = pdfDoc.startPage(pageInfo2)
+        val canvas2 = page2.canvas
+
+        canvas2.drawText("Visual Analytics & Charts", 40f, 48f, titlePaint)
+        canvas2.drawLine(40f, 60f, (pageWidth - 40).toFloat(), 60f, linePaint)
+
+        currentY = 80f
+
+        // 1. Donut Chart (Category Breakdown across Income, Expense, Transfer)
+        canvas2.drawText("1. Category Distribution (All Types)", 40f, currentY, headerPaint)
+        currentY += 15f
+
+        val categoryBreakdown = transactions.groupBy { it.categoryId }
+            .mapValues { (_, txs) -> txs.sumOf { it.amount } }
+            .entries.sortedByDescending { it.value }
+
+        val totalAllAmount = transactions.sumOf { it.amount }
+        val chartRadius = 55f
+        val chartCenterX = 100f
+        val chartCenterY = currentY + chartRadius + 10f
+
+        val arcRect = RectF(chartCenterX - chartRadius, chartCenterY - chartRadius, chartCenterX + chartRadius, chartCenterY + chartRadius)
+        var startAngle = -90f
+        val chartColors = listOf("#4CAF50", "#FF9800", "#E91E63", "#2196F3", "#FF5722", "#9C27B0", "#00BCD4", "#8BC34A")
+
+        if (totalAllAmount > 0) {
+            categoryBreakdown.take(8).forEachIndexed { idx, entry ->
+                val sweep = ((entry.value / totalAllAmount) * 360f).toFloat()
+                val arcPaint = Paint().apply {
+                    color = Color.parseColor(categoryMap[entry.key]?.colorHex ?: chartColors[idx % chartColors.size])
+                    style = Paint.Style.STROKE
+                    strokeWidth = 20f
+                    isAntiAlias = true
+                }
+                canvas2.drawArc(arcRect, startAngle, sweep, false, arcPaint)
+                startAngle += sweep
+            }
+        } else {
+            val emptyPaint = Paint().apply { color = Color.parseColor("#CBD5E1"); style = Paint.Style.STROKE; strokeWidth = 20f; isAntiAlias = true }
+            canvas2.drawArc(arcRect, 0f, 360f, false, emptyPaint)
+        }
+
+        var legendY = currentY + 10f
+        categoryBreakdown.take(6).forEachIndexed { idx, entry ->
+            val cat = categoryMap[entry.key]
+            val colorHex = cat?.colorHex ?: chartColors[idx % chartColors.size]
+            val pct = if (totalAllAmount > 0) (entry.value / totalAllAmount) * 100 else 0.0
+
+            val dotPaint = Paint().apply { color = Color.parseColor(colorHex); isAntiAlias = true }
+            canvas2.drawCircle(200f, legendY - 4f, 4f, dotPaint)
+            canvas2.drawText("${cat?.name ?: "General"} (${cat?.type?.name ?: "EXPENSE"}): ${CurrencyFormatter.format(entry.value)} (${String.format("%.1f", pct)}%)", 212f, legendY, bodyPaint)
+            legendY += 16f
+        }
+
+        currentY += 140f
+
+        // 2. Bar Chart (Income vs Expense vs Transfer Comparison)
+        canvas2.drawText("2. Financial Flow Comparison (Bar Chart)", 40f, currentY, headerPaint)
+        currentY += 25f
+
+        val maxVal = maxOf(totalIncome, totalExpense, totalTransfer, 1.0)
+        val barMaxHeight = 80f
+
+        fun drawBar(x: Float, label: String, amount: Double, colorHex: String) {
+            val h = ((amount / maxVal) * barMaxHeight).toFloat().coerceAtLeast(4f)
+            val barPaint = Paint().apply { color = Color.parseColor(colorHex); isAntiAlias = true }
+            val rect = RectF(x, currentY + barMaxHeight - h, x + 50f, currentY + barMaxHeight)
+            canvas2.drawRoundRect(rect, 4f, 4f, barPaint)
+
+            val valP = Paint().apply { color = Color.parseColor("#0F172A"); textSize = 8.5f; isFakeBoldText = true; isAntiAlias = true }
+            canvas2.drawText(CurrencyFormatter.format(amount), x, currentY + barMaxHeight - h - 5f, valP)
+            canvas2.drawText(label, x + 8f, currentY + barMaxHeight + 14f, bodyPaint)
+        }
+
+        drawBar(80f, "Income", totalIncome, "#10B981")
+        drawBar(220f, "Expense", totalExpense, "#EF4444")
+        drawBar(360f, "Transfer", totalTransfer, "#3B82F6")
+
+        currentY += 135f
+
+        // 3. Line Chart (Daily Financial Trajectory Line)
+        canvas2.drawText("3. Daily Trajectory (Line Chart)", 40f, currentY, headerPaint)
+        currentY += 20f
+
+        val sortedTx = transactions.sortedBy { it.date }
+        val dailyMap = sortedTx.groupBy { it.date }
+            .mapValues { (_, txs) ->
+                txs.sumOf { if (it.type == TransactionType.INCOME) it.amount else if (it.type == TransactionType.EXPENSE) -it.amount else 0.0 }
+            }
+
+        val chartWidth = 500f
+        val lineMaxH = 90f
+        val startX = 55f
+        val chartY = currentY
+
+        val borderPaint = Paint().apply { color = Color.parseColor("#E2E8F0"); style = Paint.Style.STROKE; strokeWidth = 1f }
+        canvas2.drawRect(startX, chartY, startX + chartWidth, chartY + lineMaxH, borderPaint)
+
+        if (dailyMap.isNotEmpty()) {
+            val path = Path()
+            val entries = dailyMap.entries.toList()
+            val stepX = chartWidth / maxOf(entries.size - 1, 1)
+
+            var accum = 0.0
+            val values = entries.map { accum += it.value; accum }
+            val minV = values.minOrNull() ?: 0.0
+            val maxV = values.maxOrNull() ?: 1.0
+            val rangeV = maxOf(maxV - minV, 1.0)
+
+            values.forEachIndexed { i, v ->
+                val px = startX + i * stepX
+                val py = chartY + lineMaxH - (((v - minV) / rangeV) * (lineMaxH - 20f)).toFloat() - 10f
+                if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
+                canvas2.drawCircle(px, py, 3f, Paint().apply { color = Color.parseColor("#0D9488"); isAntiAlias = true })
+            }
+
+            val strokeP = Paint().apply { color = Color.parseColor("#0D9488"); style = Paint.Style.STROKE; strokeWidth = 2.5f; isAntiAlias = true }
+            canvas2.drawPath(path, strokeP)
+        }
+
+        canvas2.drawText("Page 2 of 2  •  Hisab Financial Statement & Visual Analytics", (pageWidth / 2 - 90).toFloat(), 820f, subTitlePaint)
         pdfDoc.finishPage(page2)
 
         pdfDoc.writeTo(stream)
@@ -311,47 +321,17 @@ class ReportGenerator(private val context: Context) {
         val workbook = XSSFWorkbook()
         val categoryMap = categories.associateBy { it.id }
 
-        // Header style
         val headerStyle = workbook.createCellStyle().apply {
             fillForegroundColor = IndexedColors.BLUE.index
             fillPattern = FillPatternType.SOLID_FOREGROUND
-            val font = workbook.createFont().apply {
-                bold = true
-                color = IndexedColors.WHITE.index
-            }
+            val font = workbook.createFont().apply { bold = true; color = IndexedColors.WHITE.index }
             setFont(font)
             alignment = HorizontalAlignment.CENTER
             borderBottom = BorderStyle.THIN
         }
 
-        // Sheet 1: Financial Summary
-        val summarySheet = workbook.createSheet("Summary")
-        var rowIdx = 0
-
-        val totalIncome = transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
-        val totalExpense = transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
-        val netBalance = totalIncome - totalExpense
-
-        val sRow0 = summarySheet.createRow(rowIdx++)
-        sRow0.createCell(0).apply { setCellValue("Hisab Financial Summary"); setCellStyle(headerStyle) }
-
-        val metrics = listOf(
-            "Report Date" to LocalDate.now().toString(),
-            "Total Transactions" to transactions.size.toString(),
-            "Total Income" to CurrencyFormatter.format(totalIncome),
-            "Total Expenses" to CurrencyFormatter.format(totalExpense),
-            "Net Balance" to CurrencyFormatter.format(netBalance)
-        )
-
-        metrics.forEach { (key, value) ->
-            val row = summarySheet.createRow(rowIdx++)
-            row.createCell(0).setCellValue(key)
-            row.createCell(1).setCellValue(value)
-        }
-
-        // Sheet 2: Transactions
-        val txSheet = workbook.createSheet("Transactions")
-        val headers = listOf("Date", "Type", "Category", "Account", "To Account", "Amount", "Notes")
+        val txSheet = workbook.createSheet("Ledger & Transactions")
+        val headers = listOf("Date", "Type", "Category", "Account", "To Account", "Debit (Expense)", "Credit (Income/Transfer)", "Notes")
 
         val hRow = txSheet.createRow(0)
         headers.forEachIndexed { i, h ->
@@ -367,11 +347,17 @@ class ReportGenerator(private val context: Context) {
             row.createCell(2).setCellValue(categoryMap[tx.categoryId]?.name ?: "Unknown")
             row.createCell(3).setCellValue(tx.account)
             row.createCell(4).setCellValue(tx.toAccount ?: "-")
-            row.createCell(5).setCellValue(tx.amount)
-            row.createCell(6).setCellValue(tx.notes)
+            if (tx.type == TransactionType.EXPENSE) {
+                row.createCell(5).setCellValue(tx.amount)
+                row.createCell(6).setCellValue(0.0)
+            } else {
+                row.createCell(5).setCellValue(0.0)
+                row.createCell(6).setCellValue(tx.amount)
+            }
+            row.createCell(7).setCellValue(tx.notes)
         }
 
-        for (i in 0..6) txSheet.autoSizeColumn(i)
+        for (i in 0..7) txSheet.autoSizeColumn(i)
 
         workbook.write(stream)
         workbook.close()
@@ -386,17 +372,20 @@ class ReportGenerator(private val context: Context) {
     ) {
         val categoryMap = categories.associateBy { it.id }
         val sb = StringBuilder()
-        sb.appendLine("Date,Type,Category,Amount,Account,ToAccount,Notes")
+        sb.appendLine("Date,Type,Category,Account,ToAccount,Debit (Expense),Credit (Income/Transfer),Notes")
 
         for (tx in transactions) {
             val catName = categoryMap[tx.categoryId]?.name ?: "Unknown"
+            val debit = if (tx.type == TransactionType.EXPENSE) tx.amount else 0.0
+            val credit = if (tx.type != TransactionType.EXPENSE) tx.amount else 0.0
             val line = listOf(
                 tx.date.toString(),
                 tx.type.name,
                 "\"${catName}\"",
-                tx.amount.toString(),
                 "\"${tx.account}\"",
                 "\"${tx.toAccount ?: ""}\"",
+                debit.toString(),
+                credit.toString(),
                 "\"${tx.notes}\""
             ).joinToString(",")
             sb.appendLine(line)
@@ -406,14 +395,13 @@ class ReportGenerator(private val context: Context) {
 
     // ── JSON BACKUP GENERATOR ──────────────────────────────────────────────────
 
-    private fun generateJsonReport(
+    private suspend fun generateJsonReport(
         stream: OutputStream,
         transactions: List<TransactionEntity>,
         categories: List<CategoryEntity>
     ) {
         val backupManager = AutoBackupManager(context, HisabDatabase.getDatabase(context))
-        val jsonStr = com.example.hisab.util.CsvHelper.transactionsToCsv(transactions, categories.associateBy { it.id })
-        // Use JSON serialization from AutoBackupManager if called
+        val jsonStr = backupManager.exportBackupString()
         stream.write(jsonStr.toByteArray(Charsets.UTF_8))
     }
 }

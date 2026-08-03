@@ -27,6 +27,8 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import android.os.Build
+import androidx.activity.result.contract.ActivityResultContracts
 import com.example.hisab.data.repository.AccountRepository
 import com.example.hisab.data.repository.BackupRepository
 import com.example.hisab.data.repository.CategoryRepository
@@ -40,15 +42,40 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+
+    private val permissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ -> }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Request storage permission so it appears in Android App Info -> Permissions
+        try {
+            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
+                permissionLauncher.launch(
+                    arrayOf(
+                        android.Manifest.permission.READ_EXTERNAL_STORAGE,
+                        android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+                    )
+                )
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                permissionLauncher.launch(
+                    arrayOf(
+                        android.Manifest.permission.READ_MEDIA_IMAGES
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            // Permission request fallback
+        }
+
         val database = (application as HisabApplication).database
         val autoBackupManager = com.example.hisab.data.backup.AutoBackupManager(applicationContext, database)
         val transactionRepository = TransactionRepository(database.transactionDao(), autoBackupManager)
-        val categoryRepository = CategoryRepository(database.categoryDao())
-        val accountRepository = AccountRepository(database.accountDao(), database.transactionDao())
+        val categoryRepository = CategoryRepository(database.categoryDao(), autoBackupManager)
+        val accountRepository = AccountRepository(database.accountDao(), database.transactionDao(), autoBackupManager)
         val backupRepository = BackupRepository(transactionRepository, categoryRepository, autoBackupManager)
 
         CoroutineScope(Dispatchers.IO).launch {

@@ -46,9 +46,9 @@ abstract class HisabDatabase : RoomDatabase() {
 
         if (accountDao.getCount() == 0) {
             val defaultAccounts = listOf(
-                AccountEntity(name = "Primary Bank", type = "PRIMARY", colorHex = "#4CAF50", isPrimary = true),
-                AccountEntity(name = "Secondary Bank", type = "SECONDARY", colorHex = "#2196F3", isPrimary = false),
-                AccountEntity(name = "Savings", type = "SAVINGS", colorHex = "#9C27B0", isPrimary = false)
+                AccountEntity(name = "Primary Bank", type = "PRIMARY", colorHex = "#10B981", isPrimary = true),
+                AccountEntity(name = "Secondary Bank", type = "SECONDARY", colorHex = "#3B82F6", isPrimary = false),
+                AccountEntity(name = "Savings", type = "SAVINGS", colorHex = "#F59E0B", isPrimary = false)
             )
             accountDao.insertAll(defaultAccounts)
         }
@@ -137,9 +137,9 @@ abstract class HisabDatabase : RoomDatabase() {
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
             // Seed accounts
-            db.execSQL("INSERT OR IGNORE INTO accounts (name, type, colorHex, isPrimary) VALUES ('Primary Bank', 'PRIMARY', '#4CAF50', 1);")
-            db.execSQL("INSERT OR IGNORE INTO accounts (name, type, colorHex, isPrimary) VALUES ('Secondary Bank', 'SECONDARY', '#2196F3', 0);")
-            db.execSQL("INSERT OR IGNORE INTO accounts (name, type, colorHex, isPrimary) VALUES ('Savings', 'SAVINGS', '#9C27B0', 0);")
+            db.execSQL("INSERT OR IGNORE INTO accounts (name, type, colorHex, isPrimary) VALUES ('Primary Bank', 'PRIMARY', '#10B981', 1);")
+            db.execSQL("INSERT OR IGNORE INTO accounts (name, type, colorHex, isPrimary) VALUES ('Secondary Bank', 'SECONDARY', '#3B82F6', 0);")
+            db.execSQL("INSERT OR IGNORE INTO accounts (name, type, colorHex, isPrimary) VALUES ('Savings', 'SAVINGS', '#F59E0B', 0);")
 
             // Seed Income Categories
             db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('Salary', 'INCOME', 'AccountBalance', '#4CAF50', 1, 0);")

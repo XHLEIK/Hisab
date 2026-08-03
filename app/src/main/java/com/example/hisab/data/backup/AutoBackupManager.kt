@@ -66,16 +66,27 @@ class AutoBackupManager(
     }
 
     /**
+     * Exports full JSON backup string.
+     */
+    suspend fun exportBackupString(): String = withContext(Dispatchers.IO) {
+        val transactions = database.transactionDao().getAllTransactionsSync()
+        val categories = database.categoryDao().getAllSync()
+        val accounts = database.accountDao().getAllSync()
+        serializeToJson(transactions, categories, accounts)
+    }
+
+    /**
      * Saves backup content to Documents/Hisab/hisab_auto_backup.json using MediaStore or File API.
+     * Guaranteed to overwrite the single canonical backup file without generating duplicates.
      */
     private fun saveToDocumentsFolder(jsonContent: String) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val resolver = context.contentResolver
-                // Query existing file to overwrite
+                // Query existing canonical backup file to overwrite
                 val queryUri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-                val selection = "${MediaStore.Files.FileColumns.DISPLAY_NAME} = ? AND ${MediaStore.Files.FileColumns.RELATIVE_PATH} = ?"
-                val selectionArgs = arrayOf(MAIN_BACKUP_NAME, "Documents/Hisab/")
+                val selection = "${MediaStore.Files.FileColumns.DISPLAY_NAME} = ? AND (${MediaStore.Files.FileColumns.RELATIVE_PATH} = ? OR ${MediaStore.Files.FileColumns.RELATIVE_PATH} = ?)"
+                val selectionArgs = arrayOf(MAIN_BACKUP_NAME, "Documents/Hisab/", "Documents/Hisab")
 
                 val existingUri = resolver.query(queryUri, arrayOf(MediaStore.Files.FileColumns._ID), selection, selectionArgs, null)?.use { cursor ->
                     if (cursor.moveToFirst()) {
@@ -94,7 +105,7 @@ class AutoBackupManager(
                 }
 
                 targetUri?.let { uri ->
-                    resolver.openOutputStream(uri, "rwt")?.use { out ->
+                    resolver.openOutputStream(uri, "wt")?.use { out ->
                         out.write(jsonContent.toByteArray(Charsets.UTF_8))
                     }
                 }
@@ -110,6 +121,28 @@ class AutoBackupManager(
     }
 
     /**
+     * Smart Import: Attempts to read Documents/Hisab/hisab_auto_backup.json automatically.
+     * Returns true if successfully imported, false if file not found or failed.
+     */
+    suspend fun smartImportFromDocuments(): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val jsonStr = readFromDocumentsFolder()
+                ?: run {
+                    val internalFile = File(File(context.filesDir, "backups"), MAIN_BACKUP_NAME)
+                    if (internalFile.exists()) internalFile.readText(Charsets.UTF_8) else null
+                }
+
+            if (!jsonStr.isNullOrBlank()) {
+                return@withContext restoreFromJson(jsonStr)
+            }
+            false
+        } catch (e: Exception) {
+            Log.e(TAG, "Smart import failed", e)
+            false
+        }
+    }
+
+    /**
      * Attempts auto-restore if database is empty on fresh install.
      */
     suspend fun restoreIfEmpty(): Boolean = withContext(Dispatchers.IO) {
@@ -118,9 +151,9 @@ class AutoBackupManager(
                 return@withContext false
             }
 
-            // Check internal backup file first
+            // Check internal backup file first, then public Documents folder
             val internalFile = File(File(context.filesDir, "backups"), MAIN_BACKUP_NAME)
-            val jsonStr = if (internalFile.exists()) {
+            val jsonStr = if (internalFile.exists() && internalFile.length() > 0) {
                 internalFile.readText(Charsets.UTF_8)
             } else {
                 readFromDocumentsFolder()
@@ -181,20 +214,68 @@ class AutoBackupManager(
             val categoriesArr = root.optJSONArray("categories")
             val accountsArr = root.optJSONArray("accounts")
 
-            // De-duplicate Accounts
-            val existingAccounts = database.accountDao().getAllSync().map { it.name }.toSet()
-            if (accountsArr != null) {
+            // Intelligent Account Synchronization & De-duplication
+            val currentAccounts = database.accountDao().getAllSync().toMutableList()
+            val matchedAccountIds = mutableSetOf<Long>()
+
+            if (accountsArr != null && accountsArr.length() > 0) {
                 for (i in 0 until accountsArr.length()) {
                     val obj = accountsArr.getJSONObject(i)
-                    val accName = obj.getString("name")
-                    if (!existingAccounts.contains(accName)) {
-                        val account = AccountEntity(
-                            name = accName,
-                            type = obj.optString("type", "PRIMARY"),
-                            colorHex = obj.optString("colorHex", "#4CAF50"),
-                            isPrimary = obj.optBoolean("isPrimary", false)
+                    val impName = obj.getString("name")
+                    val impType = obj.optString("type", "PRIMARY")
+                    val impColorHex = obj.optString("colorHex", "#10B981")
+                    val impIsPrimary = obj.optBoolean("isPrimary", false)
+
+                    // 1. Exact name match FIRST
+                    val exactMatch = currentAccounts.firstOrNull { it.name.equals(impName, ignoreCase = true) }
+                    if (exactMatch != null) {
+                        val updated = exactMatch.copy(
+                            name = impName,
+                            type = impType,
+                            colorHex = impColorHex,
+                            isPrimary = impIsPrimary
                         )
-                        database.accountDao().insert(account)
+                        database.accountDao().update(updated)
+                        matchedAccountIds.add(exactMatch.id)
+                    } else {
+                        // 2. Same account type match (e.g. map default "Primary Bank" -> imported "HDFC Primary")
+                        val sameTypeUnmatched = currentAccounts.firstOrNull { acc ->
+                            acc.id !in matchedAccountIds && acc.type.equals(impType, ignoreCase = true)
+                        }
+                        if (sameTypeUnmatched != null) {
+                            val oldName = sameTypeUnmatched.name
+                            val updated = sameTypeUnmatched.copy(
+                                name = impName,
+                                type = impType,
+                                colorHex = impColorHex,
+                                isPrimary = impIsPrimary
+                            )
+                            database.accountDao().update(updated)
+                            matchedAccountIds.add(sameTypeUnmatched.id)
+                            // Sync any existing local transactions to use new name
+                            database.transactionDao().updateAccountName(oldName, impName)
+                            database.transactionDao().updateToAccountName(oldName, impName)
+                        } else {
+                            // 3. Insert new account
+                            val newAccount = AccountEntity(
+                                name = impName,
+                                type = impType,
+                                colorHex = impColorHex,
+                                isPrimary = impIsPrimary
+                            )
+                            val newId = database.accountDao().insert(newAccount)
+                            matchedAccountIds.add(newId)
+                        }
+                    }
+                }
+
+                // 4. Remove any remaining default accounts in DB that were NOT matched by backup JSON and have 0 transactions
+                val existingTxs = database.transactionDao().getAllTransactionsSync()
+                val remainingUnmatched = database.accountDao().getAllSync().filter { it.id !in matchedAccountIds }
+                for (unmatched in remainingUnmatched) {
+                    val count = existingTxs.count { it.account == unmatched.name || it.toAccount == unmatched.name }
+                    if (count == 0) {
+                        database.accountDao().delete(unmatched)
                     }
                 }
             }
