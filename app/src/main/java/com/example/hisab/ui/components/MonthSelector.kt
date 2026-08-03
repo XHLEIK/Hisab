@@ -47,13 +47,13 @@ fun MonthSelector(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(
             onClick = { onMonthChange(selectedMonth.minusMonths(1)) },
-            modifier = Modifier.size(36.dp)
+            modifier = Modifier.size(38.dp)
         ) {
             Icon(
                 imageVector = Icons.Filled.ChevronLeft,
@@ -62,44 +62,44 @@ fun MonthSelector(
             )
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(8.dp))
 
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 .border(
-                    width = if (isCurrentMonth) 1.dp else 0.dp,
-                    color = if (isCurrentMonth) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                    else MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(12.dp)
+                    width = 1.dp,
+                    color = if (isCurrentMonth) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                    else colors.cardBorder,
+                    shape = RoundedCornerShape(20.dp)
                 )
                 .clickable { showPicker = true }
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(horizontal = 18.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = DateUtils.formatMonthYear(selectedMonth),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     color = colors.textPrimary
                 )
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Icon(
                     imageVector = Icons.Filled.ArrowDropDown,
                     contentDescription = "Select Month & Year",
-                    tint = colors.textSecondary,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(8.dp))
 
         IconButton(
             onClick = { onMonthChange(selectedMonth.plusMonths(1)) },
-            modifier = Modifier.size(36.dp),
+            modifier = Modifier.size(38.dp),
             enabled = !isCurrentMonth
         ) {
             Icon(

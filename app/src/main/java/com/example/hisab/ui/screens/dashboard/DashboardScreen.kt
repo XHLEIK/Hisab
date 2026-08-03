@@ -128,7 +128,7 @@ fun DashboardScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             // ── Header ───────────────────────────────────
             item {

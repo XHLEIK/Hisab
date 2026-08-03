@@ -78,10 +78,10 @@ fun DashboardKpiGrid(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(22.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .border(1.dp, colors.cardBorder, RoundedCornerShape(20.dp))
-                .padding(18.dp)
+                .border(1.dp, colors.cardBorder, RoundedCornerShape(22.dp))
+                .padding(20.dp)
         ) {
             Column {
                 Row(
@@ -92,7 +92,7 @@ fun DashboardKpiGrid(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(40.dp)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center
@@ -101,20 +101,20 @@ fun DashboardKpiGrid(
                                 imageVector = Icons.Filled.AccountBalanceWallet,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(22.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
                                 text = "Net Balance",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = colors.textSecondary
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.textPrimary
                             )
                             Text(
                                 text = "Monthly Net Balance",
-                                style = MaterialTheme.typography.labelSmall,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = colors.textTertiary
                             )
                         }
@@ -125,9 +125,9 @@ fun DashboardKpiGrid(
                     val badgeColor = if (isPositive) Color(0xFF10B981) else Color(0xFFEF4444)
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(badgeColor.copy(alpha = 0.12f))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(badgeColor.copy(alpha = 0.15f))
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
                     ) {
                         Text(
                             text = if (isPositive) "On Track" else "Deficit",
@@ -152,7 +152,7 @@ fun DashboardKpiGrid(
         // ── SUB-ROW: Income, Expenses, Savings ──────────────────────────────────
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             MinimalMetricCard(
                 title = "Income",
@@ -197,9 +197,9 @@ private fun MinimalMetricCard(
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .border(1.dp, colors.cardBorder, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(18.dp))
+            .background(accentColor.copy(alpha = 0.08f))
+            .border(1.dp, accentColor.copy(alpha = 0.25f), RoundedCornerShape(18.dp))
             .padding(12.dp)
     ) {
         Column {
@@ -211,7 +211,7 @@ private fun MinimalMetricCard(
                     modifier = Modifier
                         .size(24.dp)
                         .clip(CircleShape)
-                        .background(accentColor.copy(alpha = 0.12f)),
+                        .background(accentColor.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -223,8 +223,8 @@ private fun MinimalMetricCard(
                 }
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
                     color = colors.textSecondary
                 )
             }

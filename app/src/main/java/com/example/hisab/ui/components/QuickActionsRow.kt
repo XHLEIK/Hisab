@@ -46,7 +46,7 @@ fun QuickActionsRow(
         MinimalActionPill(
             label = "Income",
             icon = Icons.AutoMirrored.Filled.ArrowBack,
-            accentColor = Color(0xFF10B981), // Emerald
+            accentColor = Color(0xFF10B981), // Emerald Green
             modifier = Modifier.weight(1f),
             onClick = { onAddType(TransactionType.INCOME) }
         )
@@ -60,7 +60,7 @@ fun QuickActionsRow(
         MinimalActionPill(
             label = "Transfer",
             icon = Icons.Filled.SwapHoriz,
-            accentColor = Color(0xFF3B82F6), // Sapphire Blue
+            accentColor = Color(0xFF3B82F6), // Blue
             modifier = Modifier.weight(1f),
             onClick = { onAddType(TransactionType.TRANSFER) }
         )
@@ -86,15 +86,15 @@ private fun MinimalActionPill(
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .clip(RoundedCornerShape(14.dp))
+            .background(accentColor.copy(alpha = 0.12f))
             .border(
                 width = 1.dp,
-                color = colors.cardBorder,
-                shape = RoundedCornerShape(12.dp)
+                color = accentColor.copy(alpha = 0.3f),
+                shape = RoundedCornerShape(14.dp)
             )
             .clickable { onClick() }
-            .padding(vertical = 10.dp),
+            .padding(vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -103,23 +103,23 @@ private fun MinimalActionPill(
         ) {
             Box(
                 modifier = Modifier
-                    .size(20.dp)
+                    .size(22.dp)
                     .clip(RoundedCornerShape(6.dp))
-                    .background(accentColor.copy(alpha = 0.15f)),
+                    .background(accentColor.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = accentColor,
-                    modifier = Modifier.size(12.dp)
+                    modifier = Modifier.size(13.dp)
                 )
             }
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
                 color = colors.textPrimary
             )
         }
