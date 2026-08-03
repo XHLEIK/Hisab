@@ -170,12 +170,30 @@ class AutoBackupManager(
     }
 
     private fun readFromDocumentsFolder(): String? {
+        // 1. Direct POSIX File Scan (Fast & guaranteed when storage permission is granted)
+        val posixPaths = listOf(
+            File("/storage/emulated/0/Documents/Hisab", MAIN_BACKUP_NAME),
+            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "Hisab/$MAIN_BACKUP_NAME"),
+            File("/sdcard/Documents/Hisab", MAIN_BACKUP_NAME)
+        )
+        for (f in posixPaths) {
+            try {
+                if (f.exists() && f.length() > 0) {
+                    val content = f.readText(Charsets.UTF_8)
+                    if (content.isNotBlank()) return content
+                }
+            } catch (e: Exception) {
+                // POSIX read fallback
+            }
+        }
+
+        // 2. MediaStore Query
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val resolver = context.contentResolver
                 val queryUri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-                val selection = "${MediaStore.Files.FileColumns.DISPLAY_NAME} = ? AND ${MediaStore.Files.FileColumns.RELATIVE_PATH} LIKE ?"
-                val selectionArgs = arrayOf(MAIN_BACKUP_NAME, "%Documents/Hisab%")
+                val selection = "${MediaStore.Files.FileColumns.DISPLAY_NAME} = ?"
+                val selectionArgs = arrayOf(MAIN_BACKUP_NAME)
 
                 val targetUri = resolver.query(queryUri, arrayOf(MediaStore.Files.FileColumns._ID), selection, selectionArgs, null)?.use { cursor ->
                     if (cursor.moveToFirst()) {
@@ -188,18 +206,10 @@ class AutoBackupManager(
                     resolver.openInputStream(targetUri)?.use { stream ->
                         stream.bufferedReader(Charsets.UTF_8).readText()
                     }
-                } else {
-                    val docsDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "Hisab")
-                    val file = File(docsDir, MAIN_BACKUP_NAME)
-                    if (file.exists()) file.readText(Charsets.UTF_8) else null
-                }
-            } else {
-                val docsDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "Hisab")
-                val file = File(docsDir, MAIN_BACKUP_NAME)
-                if (file.exists()) file.readText(Charsets.UTF_8) else null
-            }
+                } else null
+            } else null
         } catch (e: Exception) {
-            Log.w(TAG, "Failed reading backup from Documents folder", e)
+            Log.w(TAG, "Failed reading backup from MediaStore", e)
             null
         }
     }

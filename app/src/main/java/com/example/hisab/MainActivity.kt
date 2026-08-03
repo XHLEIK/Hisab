@@ -1,12 +1,17 @@
 package com.example.hisab
 
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
@@ -17,59 +22,45 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import android.os.Build
-import androidx.activity.result.contract.ActivityResultContracts
 import com.example.hisab.data.repository.AccountRepository
 import com.example.hisab.data.repository.BackupRepository
 import com.example.hisab.data.repository.CategoryRepository
 import com.example.hisab.data.repository.TransactionRepository
+import com.example.hisab.ui.components.AutoRestoreLoadingDialog
+import com.example.hisab.ui.components.StoragePermissionDialog
 import com.example.hisab.ui.navigation.HisabNavHost
 import com.example.hisab.ui.navigation.Screen
 import com.example.hisab.ui.theme.HisabAppTheme
-
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
 
+    private var onPermissionResultCallback: (() -> Unit)? = null
+
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { _ -> }
+    ) { _ ->
+        onPermissionResultCallback?.invoke()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-        // Request storage permission so it appears in Android App Info -> Permissions
-        try {
-            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
-                permissionLauncher.launch(
-                    arrayOf(
-                        android.Manifest.permission.READ_EXTERNAL_STORAGE,
-                        android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-                    )
-                )
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                permissionLauncher.launch(
-                    arrayOf(
-                        android.Manifest.permission.READ_MEDIA_IMAGES
-                    )
-                )
-            }
-        } catch (e: Exception) {
-            // Permission request fallback
-        }
 
         val database = (application as HisabApplication).database
         val autoBackupManager = com.example.hisab.data.backup.AutoBackupManager(applicationContext, database)
@@ -78,16 +69,113 @@ class MainActivity : ComponentActivity() {
         val accountRepository = AccountRepository(database.accountDao(), database.transactionDao(), autoBackupManager)
         val backupRepository = BackupRepository(transactionRepository, categoryRepository, autoBackupManager)
 
-        CoroutineScope(Dispatchers.IO).launch {
-            database.ensureDefaults()
-            // Auto restore if fresh install & database is empty
-            autoBackupManager.restoreIfEmpty()
-            // Fix any stale account names in transactions (e.g. if user renamed accounts)
-            accountRepository.syncAccountNames()
-        }
-
         setContent {
             HisabAppTheme {
+                var showPermissionDialog by remember { mutableStateOf(false) }
+                var showRestoreLoading by remember { mutableStateOf(false) }
+
+                fun requestSystemPermissions() {
+                    onPermissionResultCallback = {
+                        showPermissionDialog = false
+                        // Trigger backup scan after permissions granted
+                        showRestoreLoading = true
+                        CoroutineScope(Dispatchers.IO).launch {
+                            database.ensureDefaults()
+                            val restored = autoBackupManager.restoreIfEmpty()
+                            accountRepository.syncAccountNames()
+                            withContext(Dispatchers.Main) {
+                                showRestoreLoading = false
+                                if (restored) {
+                                    Toast.makeText(
+                                        applicationContext,
+                                        "Auto-backup file detected! Financial data restored successfully.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                        }
+                    }
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        try {
+                            if (!Environment.isExternalStorageManager()) {
+                                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                                    data = Uri.parse("package:$packageName")
+                                }
+                                startActivity(intent)
+                            }
+                        } catch (e: Exception) {
+                            // Fallback
+                        }
+                        permissionLauncher.launch(
+                            arrayOf(
+                                android.Manifest.permission.READ_EXTERNAL_STORAGE,
+                                android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+                            )
+                        )
+                    } else {
+                        permissionLauncher.launch(
+                            arrayOf(
+                                android.Manifest.permission.READ_EXTERNAL_STORAGE,
+                                android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+                            )
+                        )
+                    }
+                }
+
+                LaunchedEffect(Unit) {
+                    val hasStoragePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        Environment.isExternalStorageManager() ||
+                                checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+                    } else {
+                        checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+                    }
+
+                    if (!hasStoragePermission) {
+                        showPermissionDialog = true
+                    } else {
+                        // Scan for backup file with loading modal
+                        showRestoreLoading = true
+                        CoroutineScope(Dispatchers.IO).launch {
+                            database.ensureDefaults()
+                            val restored = autoBackupManager.restoreIfEmpty()
+                            accountRepository.syncAccountNames()
+                            withContext(Dispatchers.Main) {
+                                showRestoreLoading = false
+                                if (restored) {
+                                    Toast.makeText(
+                                        applicationContext,
+                                        "Auto-backup file detected! Financial data restored successfully.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (showPermissionDialog) {
+                    StoragePermissionDialog(
+                        onGrantRequested = {
+                            requestSystemPermissions()
+                        },
+                        onDismiss = {
+                            showPermissionDialog = false
+                            // Initialize default database without restore
+                            CoroutineScope(Dispatchers.IO).launch {
+                                database.ensureDefaults()
+                                accountRepository.syncAccountNames()
+                            }
+                        }
+                    )
+                }
+
+                if (showRestoreLoading) {
+                    AutoRestoreLoadingDialog(
+                        statusMessage = "Scanning Documents/Hisab for auto-backup file..."
+                    )
+                }
+
                 HisabApp(
                     transactionRepository = transactionRepository,
                     categoryRepository = categoryRepository,
