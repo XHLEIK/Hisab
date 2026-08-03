@@ -40,15 +40,20 @@ import com.example.hisab.data.model.CategoryBreakdown
 import com.example.hisab.ui.theme.HisabTheme
 import com.example.hisab.util.CurrencyFormatter
 
-// Vibrant modern pastel palette matching the user screenshot
+// Vibrant modern pastel palette with 12 distinct colors matching the reference screenshot
 val ModernDonutPalette = listOf(
-    Color(0xFFA3E635), // Soft Lime Green
-    Color(0xFFF87171), // Soft Coral Red
-    Color(0xFFFACC15), // Soft Golden Yellow
-    Color(0xFFC084FC), // Soft Lavender Purple
-    Color(0xFF38BDF8), // Soft Sky Blue
-    Color(0xFF2DD4BF), // Soft Teal
-    Color(0xFFFB923C)  // Soft Orange
+    Color(0xFFA3E635), // 1. Lime Green
+    Color(0xFFF87171), // 2. Coral Pink/Red
+    Color(0xFFFACC15), // 3. Golden Yellow
+    Color(0xFFC084FC), // 4. Lavender Purple
+    Color(0xFF38BDF8), // 5. Sky Blue
+    Color(0xFF2DD4BF), // 6. Mint Teal
+    Color(0xFFFB923C), // 7. Soft Orange
+    Color(0xFFF472B6), // 8. Hot Pink
+    Color(0xFF818CF8), // 9. Indigo Blue
+    Color(0xFF34D399), // 10. Emerald Green
+    Color(0xFFE879F9), // 11. Magenta
+    Color(0xFF0EA5E9)  // 12. Ocean Cyan
 )
 
 @Composable
@@ -75,7 +80,7 @@ fun DonutChart(
             contentAlignment = Alignment.Center
         ) {
             Canvas(modifier = Modifier.size(220.dp)) {
-                val strokeWidth = 26.dp.toPx()
+                val strokeWidth = 28.dp.toPx()
                 val radius = (size.minDimension - strokeWidth) / 2
                 val topLeft = Offset(
                     (size.width - radius * 2) / 2,
@@ -95,9 +100,10 @@ fun DonutChart(
                 )
 
                 if (data.isNotEmpty()) {
-                    val gapDegrees = if (data.size > 1) 12f else 0f
+                    // Increased gap angle to 18 degrees for prominent rounded segment separation
+                    val gapDegrees = if (data.size > 1) 18f else 0f
                     val totalGapDegrees = data.size * gapDegrees
-                    val availableDegrees = (360f - totalGapDegrees).coerceAtLeast(180f)
+                    val availableDegrees = (360f - totalGapDegrees).coerceAtLeast(160f)
 
                     var currentAngle = -90f
 
@@ -106,11 +112,8 @@ fun DonutChart(
                         val drawSweep = itemSweep.coerceAtLeast(1f)
                         val startAngle = currentAngle + (gapDegrees / 2f)
 
-                        val color = try {
-                            Color(android.graphics.Color.parseColor(item.colorHex))
-                        } catch (e: Exception) {
-                            ModernDonutPalette[index % ModernDonutPalette.size]
-                        }
+                        // Assign unique palette color by index to guarantee 100% color differentiation
+                        val color = ModernDonutPalette[index % ModernDonutPalette.size]
 
                         drawArc(
                             color = color,
@@ -186,11 +189,8 @@ fun DonutChart(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             data.take(8).forEachIndexed { index, item ->
-                val color = try {
-                    Color(android.graphics.Color.parseColor(item.colorHex))
-                } catch (e: Exception) {
-                    ModernDonutPalette[index % ModernDonutPalette.size]
-                }
+                // Use index-based palette color to match the chart 100%
+                val color = ModernDonutPalette[index % ModernDonutPalette.size]
 
                 Box(
                     modifier = Modifier
