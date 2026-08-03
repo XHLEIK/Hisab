@@ -5,9 +5,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -16,7 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,43 +35,49 @@ import com.example.hisab.ui.theme.HisabTheme
 @Composable
 fun QuickActionsRow(
     onAddType: (TransactionType) -> Unit,
-    onOpenSetLimit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    val colors = HisabTheme.colors
+
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 20.dp, vertical = 4.dp)
     ) {
-        MinimalActionPill(
-            label = "Income",
-            icon = Icons.AutoMirrored.Filled.ArrowBack,
-            accentColor = Color(0xFF10B981), // Emerald Green
-            modifier = Modifier.weight(1f),
-            onClick = { onAddType(TransactionType.INCOME) }
+        Text(
+            text = "Quick Actions",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = colors.textPrimary,
+            modifier = Modifier.padding(bottom = 8.dp)
         )
-        MinimalActionPill(
-            label = "Expense",
-            icon = Icons.AutoMirrored.Filled.ArrowForward,
-            accentColor = Color(0xFFEF4444), // Coral Red
-            modifier = Modifier.weight(1f),
-            onClick = { onAddType(TransactionType.EXPENSE) }
-        )
-        MinimalActionPill(
-            label = "Transfer",
-            icon = Icons.Filled.SwapHoriz,
-            accentColor = Color(0xFF3B82F6), // Blue
-            modifier = Modifier.weight(1f),
-            onClick = { onAddType(TransactionType.TRANSFER) }
-        )
-        MinimalActionPill(
-            label = "Limit",
-            icon = Icons.Filled.Tune,
-            accentColor = Color(0xFFF59E0B), // Amber
-            modifier = Modifier.weight(1f),
-            onClick = onOpenSetLimit
-        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            MinimalActionPill(
+                label = "+ Income",
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                accentColor = Color(0xFF10B981), // Emerald Green
+                modifier = Modifier.weight(1f),
+                onClick = { onAddType(TransactionType.INCOME) }
+            )
+            MinimalActionPill(
+                label = "- Expense",
+                icon = Icons.AutoMirrored.Filled.ArrowForward,
+                accentColor = Color(0xFFEF4444), // Coral Red
+                modifier = Modifier.weight(1f),
+                onClick = { onAddType(TransactionType.EXPENSE) }
+            )
+            MinimalActionPill(
+                label = "⇄ Transfer",
+                icon = Icons.Filled.SwapHoriz,
+                accentColor = Color(0xFF3B82F6), // Sapphire Blue
+                modifier = Modifier.weight(1f),
+                onClick = { onAddType(TransactionType.TRANSFER) }
+            )
+        }
     }
 }
 
@@ -86,15 +93,15 @@ private fun MinimalActionPill(
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
+            .height(48.dp)
+            .clip(RoundedCornerShape(12.dp))
             .background(accentColor.copy(alpha = 0.12f))
             .border(
                 width = 1.dp,
                 color = accentColor.copy(alpha = 0.3f),
-                shape = RoundedCornerShape(14.dp)
+                shape = RoundedCornerShape(12.dp)
             )
-            .clickable { onClick() }
-            .padding(vertical = 12.dp),
+            .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -118,7 +125,7 @@ private fun MinimalActionPill(
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 color = colors.textPrimary
             )

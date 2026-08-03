@@ -14,11 +14,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -39,6 +38,7 @@ fun AccountsOverviewWidget(
     modifier: Modifier = Modifier
 ) {
     val colors = HisabTheme.colors
+    val listState = rememberLazyListState()
 
     Column(
         modifier = modifier
@@ -54,8 +54,8 @@ fun AccountsOverviewWidget(
         ) {
             Text(
                 text = "Accounts Overview",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
                 color = colors.textPrimary
             )
             Text(
@@ -68,11 +68,12 @@ fun AccountsOverviewWidget(
         }
 
         LazyRow(
+            state = listState,
             modifier = Modifier.fillMaxWidth(),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            items(accountBalances.entries.toList(), key = { it.key }) { (accName, balance) ->
+            itemsIndexed(accountBalances.entries.toList(), key = { _, item -> item.key }) { _, (accName, balance) ->
                 val icon = CategoryIconMapper.getAccountIcon(accName)
                 val lowerName = accName.lowercase()
                 val accentColor = when {
@@ -85,7 +86,7 @@ fun AccountsOverviewWidget(
 
                 Box(
                     modifier = Modifier
-                        .width(155.dp)
+                        .width(165.dp)
                         .clip(RoundedCornerShape(16.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                         .border(1.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
@@ -127,6 +128,31 @@ fun AccountsOverviewWidget(
                             maxLines = 1
                         )
                     }
+                }
+            }
+        }
+
+        // Scroll Indicator Dots
+        if (accountBalances.size > 1) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val firstVisible = listState.firstVisibleItemIndex
+                accountBalances.entries.forEachIndexed { index, _ ->
+                    val isSelected = index == firstVisible
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 3.dp)
+                            .size(if (isSelected) 7.dp else 5.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else colors.textTertiary.copy(alpha = 0.3f)
+                            )
+                    )
                 }
             }
         }

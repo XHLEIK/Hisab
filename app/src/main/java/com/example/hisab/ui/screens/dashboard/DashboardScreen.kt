@@ -104,31 +104,13 @@ fun DashboardScreen(
     val isEndOfMonth = today.dayOfMonth >= today.lengthOfMonth() - 1
 
     Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    addSheetInitialType = TransactionType.EXPENSE
-                    showAddSheet = true
-                },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = CircleShape,
-                modifier = Modifier.size(60.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Add,
-                    contentDescription = "Add transaction",
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-        },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // ── Header ───────────────────────────────────
             item {
@@ -194,36 +176,29 @@ fun DashboardScreen(
                 }
             }
 
-            // ── Month Selector ───────────────────────────
-            item {
-                MonthSelector(
-                    selectedMonth = selectedMonth,
-                    onMonthChange = { viewModel.selectMonth(it) }
-                )
-            }
-
-            // ── 4 KPI Grid (Net Balance Hero + Income, Expenses, Savings Sub-cards) ──
+            // ── 1. Master Hero Card (Month Selector + Net Balance + 3-Column Metrics) ──
             item {
                 DashboardKpiGrid(
+                    selectedMonth = selectedMonth,
+                    onMonthChange = { viewModel.selectMonth(it) },
                     summary = summary,
                     netBalance = primaryAndSecondaryBalance,
-                    savingsAmount = savingsAmount,
-                    savingsRate = savingsRate
+                    accountCount = accounts.size,
+                    savingsAmount = savingsAmount
                 )
             }
 
-            // ── Quick Action Pills (+ Income, - Expense, ⇄ Transfer, ⚡ Limit) ──
+            // ── 2. Quick Actions Section (+ Income, - Expense, ⇄ Transfer) ──
             item {
                 QuickActionsRow(
                     onAddType = { selectedType ->
                         addSheetInitialType = selectedType
                         showAddSheet = true
-                    },
-                    onOpenSetLimit = { showSetLimitDialog = true }
+                    }
                 )
             }
 
-            // ── Accounts Overview Cards (Horizontal Carousel) ──
+            // ── 3. Accounts Overview Section (LazyRow + Scroll Dots) ──
             item {
                 com.example.hisab.ui.components.AccountsOverviewWidget(
                     accountBalances = accountBalances,
@@ -231,7 +206,7 @@ fun DashboardScreen(
                 )
             }
 
-            // ── Spending Limit Pace Widget ──────────────
+            // ── 4. Monthly Budget Progress Card ──────────
             item {
                 SpendingLimitWidget(
                     status = limitStatus,
@@ -240,7 +215,7 @@ fun DashboardScreen(
                 )
             }
 
-            // ── Top Spending Categories Breakdown ──────
+            // ── 5. Top Expense Categories ───────────────
             item {
                 com.example.hisab.ui.components.TopCategorySpendWidget(
                     topCategories = topCategories,
