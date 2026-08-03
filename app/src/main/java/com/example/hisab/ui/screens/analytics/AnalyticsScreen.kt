@@ -295,9 +295,16 @@ fun AnalyticsScreen(
 
                 if (filteredCategoryBreakdown.isNotEmpty()) {
                     val totalAmount = filteredCategoryBreakdown.sumOf { it.totalAmount }
+                    val chartTitle = when (categoryFilter) {
+                        CategoryFilterType.ALL -> "Total Spending"
+                        CategoryFilterType.INCOME -> "Total Income"
+                        CategoryFilterType.EXPENSE -> "Total Expenses"
+                        CategoryFilterType.TRANSFERS -> "Total Savings"
+                    }
                     DonutChart(
                         data = filteredCategoryBreakdown,
                         totalAmount = totalAmount,
+                        centerTitle = chartTitle,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                 } else {

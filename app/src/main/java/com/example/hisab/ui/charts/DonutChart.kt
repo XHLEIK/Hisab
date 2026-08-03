@@ -3,6 +3,8 @@ package com.example.hisab.ui.charts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +16,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,14 +37,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.hisab.data.model.CategoryBreakdown
-import com.example.hisab.ui.theme.ChartColors
 import com.example.hisab.ui.theme.HisabTheme
 import com.example.hisab.util.CurrencyFormatter
+
+// Vibrant modern pastel palette matching the user screenshot
+val ModernDonutPalette = listOf(
+    Color(0xFFA3E635), // Soft Lime Green
+    Color(0xFFF87171), // Soft Coral Red
+    Color(0xFFFACC15), // Soft Golden Yellow
+    Color(0xFFC084FC), // Soft Lavender Purple
+    Color(0xFF38BDF8), // Soft Sky Blue
+    Color(0xFF2DD4BF), // Soft Teal
+    Color(0xFFFB923C)  // Soft Orange
+)
 
 @Composable
 fun DonutChart(
     data: List<CategoryBreakdown>,
     totalAmount: Double,
+    centerTitle: String = "Total Spending",
     modifier: Modifier = Modifier
 ) {
     val colors = HisabTheme.colors
@@ -50,15 +67,15 @@ fun DonutChart(
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        // Donut
+        // ── Modern Rounded Donut Chart Ring ──────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(220.dp),
+                .height(240.dp),
             contentAlignment = Alignment.Center
         ) {
-            Canvas(modifier = Modifier.size(200.dp)) {
-                val strokeWidth = 36.dp.toPx()
+            Canvas(modifier = Modifier.size(220.dp)) {
+                val strokeWidth = 26.dp.toPx()
                 val radius = (size.minDimension - strokeWidth) / 2
                 val topLeft = Offset(
                     (size.width - radius * 2) / 2,
@@ -66,111 +83,174 @@ fun DonutChart(
                 )
                 val arcSize = Size(radius * 2, radius * 2)
 
-                var startAngle = -90f
+                // Background track ring
+                drawArc(
+                    color = Color.White.copy(alpha = 0.05f),
+                    startAngle = 0f,
+                    sweepAngle = 360f,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = arcSize,
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                )
 
-                data.forEachIndexed { index, item ->
-                    val sweepAngle = (item.percentage / 100f * 360f * animationProgress.value).toFloat()
-                    val color = try {
-                        Color(android.graphics.Color.parseColor(item.colorHex))
-                    } catch (e: Exception) {
-                        ChartColors[index % ChartColors.size]
+                if (data.isNotEmpty()) {
+                    val gapDegrees = if (data.size > 1) 12f else 0f
+                    val totalGapDegrees = data.size * gapDegrees
+                    val availableDegrees = (360f - totalGapDegrees).coerceAtLeast(180f)
+
+                    var currentAngle = -90f
+
+                    data.forEachIndexed { index, item ->
+                        val itemSweep = (item.percentage / 100f * availableDegrees * animationProgress.value).toFloat()
+                        val drawSweep = itemSweep.coerceAtLeast(1f)
+                        val startAngle = currentAngle + (gapDegrees / 2f)
+
+                        val color = try {
+                            Color(android.graphics.Color.parseColor(item.colorHex))
+                        } catch (e: Exception) {
+                            ModernDonutPalette[index % ModernDonutPalette.size]
+                        }
+
+                        drawArc(
+                            color = color,
+                            startAngle = startAngle,
+                            sweepAngle = drawSweep,
+                            useCenter = false,
+                            topLeft = topLeft,
+                            size = arcSize,
+                            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                        )
+
+                        currentAngle += itemSweep + gapDegrees
                     }
-
-                    drawArc(
-                        color = color,
-                        startAngle = startAngle,
-                        sweepAngle = sweepAngle,
-                        useCenter = false,
-                        topLeft = topLeft,
-                        size = arcSize,
-                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                    )
-                    startAngle += sweepAngle
                 }
             }
 
-            // Center text
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // ── Center Content: Title, Amount & Growth Chip ─────────────────────
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
                 Text(
-                    text = "Total",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = colors.textTertiary
+                    text = centerTitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.textSecondary
                 )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
                 Text(
                     text = CurrencyFormatter.format(totalAmount),
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = colors.textPrimary
                 )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Micro growth indicator chip (matching screenshot)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF10B981).copy(alpha = 0.15f))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "+2.5%",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF10B981)
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Icon(
+                            imageVector = Icons.Filled.ArrowUpward,
+                            contentDescription = null,
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
-        // Legend
+        // ── Modern Category Legend ──────────────────────────────────────────────
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             data.take(8).forEachIndexed { index, item ->
                 val color = try {
                     Color(android.graphics.Color.parseColor(item.colorHex))
                 } catch (e: Exception) {
-                    ChartColors[index % ChartColors.size]
+                    ModernDonutPalette[index % ModernDonutPalette.size]
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .border(1.dp, colors.cardBorder, RoundedCornerShape(14.dp))
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
                 ) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .clip(CircleShape)
-                                .then(
-                                    Modifier.drawBehind {
-                                        drawCircle(color = color)
-                                    }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .clip(CircleShape)
+                                    .background(color)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = item.categoryName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = colors.textPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = CurrencyFormatter.format(item.totalAmount),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(color.copy(alpha = 0.15f))
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "${String.format("%.1f", item.percentage)}%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = color
                                 )
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = item.categoryName,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = colors.textPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = CurrencyFormatter.format(item.totalAmount),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "${String.format("%.1f", item.percentage)}%",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = colors.textSecondary
-                        )
+                            }
+                        }
                     }
                 }
             }
         }
     }
-}
-
-private fun Modifier.drawBehind(onDraw: androidx.compose.ui.graphics.drawscope.DrawScope.() -> Unit): Modifier {
-    return this.then(
-        Modifier.size(10.dp)
-    )
 }
