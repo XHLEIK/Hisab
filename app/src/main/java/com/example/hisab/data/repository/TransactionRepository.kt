@@ -238,6 +238,9 @@ class TransactionRepository(
     fun getAllAccounts(): Flow<List<String>> =
         transactionDao.getAllAccounts()
 
+    fun getAllTransactionsFlow(): Flow<List<TransactionEntity>> =
+        transactionDao.getAllTransactionsFlow()
+
     suspend fun getAllTransactionsSync(): List<TransactionEntity> =
         transactionDao.getAllTransactionsSync()
 }

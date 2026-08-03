@@ -154,7 +154,8 @@ interface TransactionDao {
     @Query("SELECT DISTINCT account FROM transactions UNION SELECT DISTINCT toAccount FROM transactions WHERE toAccount IS NOT NULL")
     suspend fun getAllDistinctAccountNamesSync(): List<String>
 
-    // ── All Transactions (for export) ────────────────────
+    @Query("SELECT * FROM transactions ORDER BY date DESC, createdAt DESC")
+    fun getAllTransactionsFlow(): Flow<List<TransactionEntity>>
 
     @Query("SELECT * FROM transactions ORDER BY date DESC, createdAt DESC")
     suspend fun getAllTransactionsSync(): List<TransactionEntity>

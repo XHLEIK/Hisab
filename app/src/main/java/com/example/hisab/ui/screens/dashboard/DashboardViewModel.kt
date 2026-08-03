@@ -126,12 +126,13 @@ class DashboardViewModel(
         initialValue = emptyList()
     )
 
+    // ── All-Time Live Account Balances for Accounts Overview ─────────────
     val accountBalances: StateFlow<Map<String, Double>> = combine(
-        _selectedMonth.flatMapLatest { transactionRepository.getTransactionsForMonth(it) },
+        transactionRepository.getAllTransactionsFlow(),
         accounts
-    ) { txns, accList ->
+    ) { allTxns, accList ->
         val balances = accList.associateWith { 0.0 }.toMutableMap()
-        txns.forEach { tx ->
+        allTxns.forEach { tx ->
             when (tx.type) {
                 TransactionType.INCOME -> {
                     balances[tx.account] = (balances[tx.account] ?: 0.0) + tx.amount
@@ -182,27 +183,22 @@ class DashboardViewModel(
         initialValue = 0.0
     )
 
-    // ── Primary + Secondary Combined Remaining Balance ──────────────
-    val primaryAndSecondaryBalance: StateFlow<Double> = accountBalances
-        .map { balances ->
-            balances.filterKeys { accName ->
-                val lower = accName.lowercase()
-                !lower.contains("cash") && !lower.contains("savings") && !lower.contains("saving")
-            }.values.sum()
-        }
+    // ── Monthly Net Balance for Hero Card ────────────────────────────
+    val primaryAndSecondaryBalance: StateFlow<Double> = monthlySummary
+        .map { summary -> summary.netBalance }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = 0.0
         )
 
-    // ── Total Accumulated Savings ───────────────────────────────────
+    // ── Month-wise Savings Transferred in Selected Month ─────────────
     val totalSavingsAmount: StateFlow<Double> = _selectedMonth
         .flatMapLatest { month ->
             transactionRepository.getTransactionsForMonth(month)
         }
         .map { txns ->
-            // Strictly sum of transfers to Savings accounts (returns 0.0 when no transfers exist)
+            // Strictly sum of transfers to Savings accounts in the selected month
             txns.filter { 
                 it.type == TransactionType.TRANSFER && 
                 (it.toAccount?.contains("Savings", ignoreCase = true) == true || 

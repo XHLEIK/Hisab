@@ -113,7 +113,7 @@ fun DashboardKpiGrid(
                                 color = colors.textSecondary
                             )
                             Text(
-                                text = "Primary + Secondary Bank",
+                                text = "Monthly Net Balance",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = colors.textTertiary
                             )
