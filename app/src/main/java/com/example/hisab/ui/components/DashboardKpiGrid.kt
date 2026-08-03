@@ -88,12 +88,12 @@ fun DashboardKpiGrid(
             .padding(18.dp)
     ) {
         Column {
-            // ── Top Row: Month Selector + Status Badge ──────────────────────────
-            Row(
+            // ── Top Row: Month Selector Aligned Center + Status Badge Top Right ──
+            Box(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                contentAlignment = Alignment.Center
             ) {
+                // Centered Month Selector
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = { onMonthChange(selectedMonth.minusMonths(1)) },
@@ -145,11 +145,12 @@ fun DashboardKpiGrid(
                     }
                 }
 
-                // Micro Status Badge
+                // Micro Status Badge (Top Right)
                 val isPositive = netBalance >= 0
                 val badgeColor = if (isPositive) Color(0xFF10B981) else Color(0xFFEF4444)
                 Box(
                     modifier = Modifier
+                        .align(Alignment.CenterEnd)
                         .clip(RoundedCornerShape(8.dp))
                         .background(badgeColor.copy(alpha = 0.15f))
                         .padding(horizontal = 8.dp, vertical = 4.dp)

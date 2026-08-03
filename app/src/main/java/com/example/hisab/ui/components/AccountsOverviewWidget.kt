@@ -131,30 +131,5 @@ fun AccountsOverviewWidget(
                 }
             }
         }
-
-        // Scroll Indicator Dots
-        if (accountBalances.size > 1) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val firstVisible = listState.firstVisibleItemIndex
-                accountBalances.entries.forEachIndexed { index, _ ->
-                    val isSelected = index == firstVisible
-                    Box(
-                        modifier = Modifier
-                            .padding(horizontal = 3.dp)
-                            .size(if (isSelected) 7.dp else 5.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (isSelected) MaterialTheme.colorScheme.primary
-                                else colors.textTertiary.copy(alpha = 0.3f)
-                            )
-                    )
-                }
-            }
-        }
     }
 }

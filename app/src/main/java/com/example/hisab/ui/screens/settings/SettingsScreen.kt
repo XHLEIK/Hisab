@@ -111,7 +111,9 @@ fun SettingsScreen(
 
     var selectedExportFormat by remember { mutableStateOf<ExportFormat?>(null) }
     var showExportFormatDialog by remember { mutableStateOf(false) }
-    var showTermsDialog by remember { mutableStateOf(false) }
+    var showOpenSourceDialog by remember { mutableStateOf(false) }
+    var showPrivacyNoticeDialog by remember { mutableStateOf(false) }
+    var showUserAgreementDialog by remember { mutableStateOf(false) }
 
     val backupPrefs = remember { com.example.hisab.data.backup.BackupPreferences(context) }
     val isAutoBackupEnabled by backupPrefs.isAutoBackupEnabled.collectAsState(initial = true)
@@ -281,7 +283,13 @@ fun SettingsScreen(
 
             // ── Data & Backup Section ────────────────
             item {
-                SectionTitle(icon = Icons.Outlined.FolderOpen, title = "Data & Backup")
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp)
+                ) {
+                    SectionTitle(icon = Icons.Outlined.FolderOpen, title = "Data & Backup")
+                }
             }
 
             item {
@@ -358,7 +366,13 @@ fun SettingsScreen(
 
             // ── About & Credits Section ────────────────────────
             item {
-                SectionTitle(icon = Icons.Outlined.Code, title = "About & Credits")
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp)
+                ) {
+                    SectionTitle(icon = Icons.Outlined.Code, title = "About & Credits")
+                }
             }
 
             item {
@@ -367,12 +381,28 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 8.dp)
                 ) {
-                    Text(
-                        text = "Hisab v2.0",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = colors.textPrimary
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Hisab v2.1.0",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.textPrimary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "Build 210",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Hisab is a privacy-first, offline personal finance tracker designed for modern budget management.",
@@ -401,9 +431,27 @@ fun SettingsScreen(
             item {
                 SettingsItem(
                     icon = Icons.Outlined.Code,
-                    title = "Terms & Conditions",
-                    subtitle = "Offline data privacy, usage terms, and open-source license",
-                    onClick = { showTermsDialog = true }
+                    title = "Open Source Licenses",
+                    subtitle = "MIT License, Jetpack Compose, Room, Kotlin Coroutines",
+                    onClick = { showOpenSourceDialog = true }
+                )
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Outlined.Description,
+                    title = "Privacy Notice",
+                    subtitle = "100% Offline Policy, Zero Network Tracking, Local Safety",
+                    onClick = { showPrivacyNoticeDialog = true }
+                )
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Outlined.Person,
+                    title = "User Agreement",
+                    subtitle = "End-User Terms, Local Backup Ownership & Usage Rules",
+                    onClick = { showUserAgreementDialog = true }
                 )
             }
 
@@ -551,11 +599,11 @@ fun SettingsScreen(
         )
     }
 
-    // Terms & Conditions Dialog
-    if (showTermsDialog) {
+    // Open Source Licenses Dialog
+    if (showOpenSourceDialog) {
         AlertDialog(
-            onDismissRequest = { showTermsDialog = false },
-            title = { Text("Terms & Conditions", fontWeight = FontWeight.Bold) },
+            onDismissRequest = { showOpenSourceDialog = false },
+            title = { Text("Open Source Licenses", fontWeight = FontWeight.Bold) },
             text = {
                 Column(
                     modifier = Modifier
@@ -563,24 +611,97 @@ fun SettingsScreen(
                         .padding(vertical = 4.dp)
                 ) {
                     Text(
-                        text = "Hisab Privacy & Usage Policy",
+                        text = "Hisab Open Source Software",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "1. 100% Offline & Private: Hisab processes all financial records, accounts, and budgets strictly on your local device storage. No data is sent to external servers or cloud services.\n\n" +
-                               "2. Data Ownership: Auto-backups are saved to your public Documents folder (Documents/Hisab/). You maintain complete control over your financial data.\n\n" +
-                               "3. Open Source License: Developed by Subham Bose (GitHub: @XHLEIK) under the MIT License.",
+                        text = "• MIT License — Subham Bose (@XHLEIK)\n" +
+                               "• Android Jetpack Compose (Apache 2.0 License)\n" +
+                               "• Room Persistence Database (Apache 2.0 License)\n" +
+                               "• Kotlin Coroutines & Flows (Apache 2.0 License)\n" +
+                               "• AndroidX Core KTX & Lifecycle (Apache 2.0 License)\n" +
+                               "• Material Design 3 Components (Apache 2.0 License)",
                         style = MaterialTheme.typography.bodySmall,
                         color = colors.textSecondary
                     )
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showTermsDialog = false }) {
+                TextButton(onClick = { showOpenSourceDialog = false }) {
                     Text("Close", fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
+    // Privacy Notice Dialog
+    if (showPrivacyNoticeDialog) {
+        AlertDialog(
+            onDismissRequest = { showPrivacyNoticeDialog = false },
+            title = { Text("Privacy Notice", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .verticalScroll(rememberScrollState())
+                        .padding(vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "100% Offline & Private Policy",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "1. Local On-Device Storage: All financial data, transactions, bank accounts, and budgets are saved exclusively in an encrypted Room SQLite database on your device.\n\n" +
+                               "2. Zero Analytics & Tracking: Hisab collects NO telemetry, analytics, advertising IDs, or crash logs. No data ever leaves your device.\n\n" +
+                               "3. Automatic Backup Safety: Local backup JSON/CSV files are written strictly to Documents/Hisab/ for convenient restoration.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.textSecondary
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPrivacyNoticeDialog = false }) {
+                    Text("Close", fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
+    // User Agreement Dialog
+    if (showUserAgreementDialog) {
+        AlertDialog(
+            onDismissRequest = { showUserAgreementDialog = false },
+            title = { Text("User Agreement", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .verticalScroll(rememberScrollState())
+                        .padding(vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "End-User Terms of Agreement",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "1. Financial Records Ownership: You retain full ownership and sole responsibility over your financial records and backup files.\n\n" +
+                               "2. Free & Open Source Use: You are granted a non-exclusive license to use, modify, and distribute Hisab under the MIT License.\n\n" +
+                               "3. Disclaimer of Warranty: Hisab is provided 'AS IS' without warranties of any kind. Subham Bose is not liable for data loss arising from device damage or manual file deletion.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.textSecondary
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showUserAgreementDialog = false }) {
+                    Text("Accept & Close", fontWeight = FontWeight.Bold)
                 }
             }
         )

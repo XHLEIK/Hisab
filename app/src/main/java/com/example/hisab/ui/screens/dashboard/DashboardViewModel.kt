@@ -189,9 +189,14 @@ class DashboardViewModel(
         initialValue = 0.0
     )
 
-    // ── Monthly Net Balance for Hero Card ────────────────────────────
-    val primaryAndSecondaryBalance: StateFlow<Double> = monthlySummary
-        .map { summary -> summary.netBalance }
+    // ── Primary + Secondary Live Account Balance for Hero Card ─────────
+    val primaryAndSecondaryBalance: StateFlow<Double> = accountBalances
+        .map { balances ->
+            val filtered = balances.filterKeys {
+                !it.contains("savings", ignoreCase = true) && !it.contains("saving", ignoreCase = true)
+            }
+            if (filtered.isNotEmpty()) filtered.values.sum() else balances.values.sum()
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
