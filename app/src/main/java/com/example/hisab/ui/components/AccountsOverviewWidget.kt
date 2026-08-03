@@ -84,12 +84,19 @@ fun AccountsOverviewWidget(
                     else -> androidx.compose.ui.graphics.Color(0xFF14B8A6) // Teal
                 }
 
+                val cardGradient = androidx.compose.ui.graphics.Brush.linearGradient(
+                    colors = listOf(
+                        accentColor.copy(alpha = 0.14f),
+                        MaterialTheme.colorScheme.surfaceVariant
+                    )
+                )
+
                 Box(
                     modifier = Modifier
                         .width(165.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .border(1.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                        .background(cardGradient)
+                        .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
                         .padding(14.dp)
                 ) {
                     Column {

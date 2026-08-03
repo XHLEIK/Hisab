@@ -78,13 +78,20 @@ fun DashboardKpiGrid(
 
     val isCurrentMonth = DateUtils.isCurrentMonth(selectedMonth)
 
+    val heroGradient = androidx.compose.ui.graphics.Brush.linearGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.surfaceVariant,
+            Color(0xFF1E293B).copy(alpha = 0.7f)
+        )
+    )
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .clip(RoundedCornerShape(22.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .border(1.dp, colors.cardBorder, RoundedCornerShape(22.dp))
+            .background(heroGradient)
+            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f), RoundedCornerShape(22.dp))
             .padding(18.dp)
     ) {
         Column {
@@ -184,7 +191,7 @@ fun DashboardKpiGrid(
             )
 
             Text(
-                text = "Across $accountCount Accounts",
+                text = "Primary + Secondary Accounts",
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.textTertiary
             )

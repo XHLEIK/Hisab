@@ -1,4 +1,4 @@
-# Hisab (हिसाब) - Smart Offline-First Personal Finance Tracker
+# Hisab (हिसाब) v2.1.0 - Smart Offline-First Personal Finance Tracker
 
 **Hisab** is a modern, privacy-focused, offline-first personal expense and finance tracker built for Android using **Jetpack Compose**, **Room Database**, **Material 3**, and **Custom Canvas Data Visualizations**.
 
@@ -6,41 +6,47 @@ Designed with a sleek, minimalist dark UI (inspired by Revolut and Apple Wallet)
 
 ---
 
-## ✨ Features
+## ✨ Features (v2.1.0)
 
-### 1. 📊 Minimalist Dashboard & Financial Hub
-- **Hero Net Balance Overview**: Instant visibility into combined Primary Bank & Secondary Bank balances.
-- **Micro-Metric Cards**: Real-time tracking of Income, Expenses, and Savings.
-- **Accounts Carousel**: Quick balance cards for Primary Bank, Secondary Account, and Cash Wallet.
-- **Top Spending Categories**: Visual progress breakdown of top 3 monthly expense categories.
+### 1. 📊 Master Hero Card & Financial Hub
+- **Unified Master Hero Card**: Centered Month/Year selector (`< August 2026 >`), status badge (`On Track` / `Deficit`), and `Net Balance` (`Primary + Secondary Accounts`).
+- **3-Column Micro Metrics**: Income (`+₹15,287`), Expenses (`-₹7,840`), and Savings (`₹2,408`) separated by clean vertical dividers.
+- **Sleek Quick Actions**: Instant access pills for `Income`, `Expense`, and `Transfer`.
+- **Accounts Overview**: Cool gradient cards for Primary Bank, Secondary Account, and Savings Account.
+- **Top Expense Categories**: Full-width category progress rows sitting directly on screen background.
 
-### 2. 💸 Multi-Account Transaction Management
+### 2. 💸 Multi-Account & Transfer Management
 - **Transaction Types**: Support for **Expense**, **Income**, and **Transfer** entries.
 - **Transfer Categories**: Categorize transfers into *Savings*, *Investment*, *Stocks*, *Fixed Deposit*, *Mutual Funds*, and *Other Transfer*.
 - **Quick Entry Keypad**: Custom numeric keypad for ultra-fast transaction logging.
 - **Material Vector Icons**: Clean, emoji-free vector icon system across all categories and accounts.
 
-### 3. 📈 Advanced Analytics & Visualizations
+### 3. 📈 Modern Analytics & Visualizations
+- **Donut Chart**: Rounded-cap arcs with 18-degree wide gaps, 12-tone subtle pastel palette, center total readout, and status badge (`+2.5% ↑`).
 - **Income, Expense & Transfers Bar Chart**: Granular trend analysis with weekly navigation controls (`← / →`) and fixed half-month views.
 - **Daily Trends Line Chart**: Interactive canvas line chart supporting Expense line, Income line, and Both (Overlay) modes.
-- **Category Breakdown Donut Chart**: Interactive category distribution with legend.
 - **Top Expenses Leaderboard**: Ranked leaderboard of highest monthly expenses.
 - **Spending Heatmap**: Calendar view highlighting daily spending intensity.
 
 ### 4. ⚡ Spending Limits & Budget Pace
-- **Flexible Limits**: Set Daily, Weekly, Monthly, or Specific-Day spending limits.
+- **Monthly Budget Progress Card**: Live spending limit tracking with spent vs limit text readout and progress bar.
 - **Safe Daily Pace**: Real-time calculation of daily allowable spend based on remaining monthly budget.
 - **Visual Budget Health**: Status indicators (*On Track*, *Warning*, *Exceeded*).
 
 ### 5. 📄 Executive Reports & Data Export
-- **PDF Balance Sheet**: Multi-page A4 executive financial statement featuring canvas-drawn charts, summary KPI cards, category breakdown tables, and transaction ledgers.
+- **PDF Balance Sheet**: Multi-page A4 executive financial statement featuring canvas-drawn 30-day whole-month line & bar charts, summary KPI cards, category breakdown tables, and chronological transaction ledgers.
 - **Excel Workbook (.xlsx)**: Styled multi-sheet workbooks generated using Apache POI with headers, cell borders, currency formatting, and auto-sized columns.
 - **CSV & JSON**: Plain-text spreadsheet exports and raw data backup files.
 
-### 6. 🛡️ Auto-Backup & Zero-Data-Loss Restore
-- **Background Auto-Backup**: Automatically saves encrypted/checksummed JSON backups to `Documents/Hisab/hisab_auto_backup.json` after every mutation.
-- **Scoped Storage & MediaStore Integration**: Robust discovery using Android MediaStore API for seamless background restoration across app reinstalls and updates.
-- **100% De-duplication Engine**: Transaction fingerprinting prevents any duplicate entries during manual or automatic restoration.
+### 6. 🛡️ Auto-Backup & Scoped Storage Restoration
+- **Background Auto-Backup**: Automatically saves encrypted/checksummed JSON backups to `Documents/Hisab/hisab_auto_backup.json` after every transaction mutation.
+- **Scoped Storage & MediaStore Integration**: Robust discovery using Android MediaStore API for automatic background restoration upon app reinstall.
+- **100% De-duplication Engine**: Transaction fingerprinting prevents any duplicate entries during restoration.
+
+### 7. ⚙️ Settings, Licenses & Privacy
+- **App Build**: `v2.1.0 (Build 210)`
+- **Open Source Licenses**: MIT License, Jetpack Compose, Room, Kotlin Coroutines, Material 3.
+- **Privacy Notice & User Agreement**: 100% Offline Policy & Local Storage safety notices.
 
 ---
 
@@ -113,6 +119,7 @@ Hisab is built with privacy as a foundational principle:
 
 ---
 
-## 📜 License
+## 📜 License & Credits
 
-Distributed under the MIT License. See `LICENSE` for more information.
+- Developed by **Subham Bose** (GitHub: [@XHLEIK](https://github.com/XHLEIK))
+- Distributed under the **MIT License**.

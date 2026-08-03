@@ -57,21 +57,21 @@ fun QuickActionsRow(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             MinimalActionPill(
-                label = "+ Income",
+                label = "Income",
                 icon = Icons.AutoMirrored.Filled.ArrowBack,
                 accentColor = Color(0xFF10B981), // Emerald Green
                 modifier = Modifier.weight(1f),
                 onClick = { onAddType(TransactionType.INCOME) }
             )
             MinimalActionPill(
-                label = "- Expense",
+                label = "Expense",
                 icon = Icons.AutoMirrored.Filled.ArrowForward,
                 accentColor = Color(0xFFEF4444), // Coral Red
                 modifier = Modifier.weight(1f),
                 onClick = { onAddType(TransactionType.EXPENSE) }
             )
             MinimalActionPill(
-                label = "⇄ Transfer",
+                label = "Transfer",
                 icon = Icons.Filled.SwapHoriz,
                 accentColor = Color(0xFF3B82F6), // Sapphire Blue
                 modifier = Modifier.weight(1f),
