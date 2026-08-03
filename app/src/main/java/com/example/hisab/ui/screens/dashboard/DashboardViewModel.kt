@@ -52,6 +52,12 @@ class DashboardViewModel(
     private val limitRepository: SpendingLimitRepository? = null
 ) : ViewModel() {
 
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            transactionRepository.repairCorruptedTransferCategories()
+        }
+    }
+
     private val _selectedMonth = MutableStateFlow(YearMonth.now())
     val selectedMonth: StateFlow<YearMonth> = _selectedMonth.asStateFlow()
 

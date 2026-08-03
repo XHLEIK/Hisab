@@ -159,6 +159,9 @@ interface TransactionDao {
 
     @Query("SELECT * FROM transactions ORDER BY date DESC, createdAt DESC")
     suspend fun getAllTransactionsSync(): List<TransactionEntity>
+
+    @Query("UPDATE transactions SET categoryId = (SELECT id FROM categories WHERE type = 'TRANSFER' AND name = 'Savings' LIMIT 1) WHERE type = 'TRANSFER' AND (categoryId IN (SELECT id FROM categories WHERE type != 'TRANSFER') OR categoryId NOT IN (SELECT id FROM categories))")
+    suspend fun repairCorruptedTransferCategories()
 }
 
 /**

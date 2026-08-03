@@ -384,19 +384,17 @@ fun QuickAddSheet(
             val canSave = amountText.isNotBlank() &&
                     amountText.toDoubleOrNull() != null &&
                     amountText.toDouble() > 0 &&
-                    (type != TransactionType.TRANSFER && selectedCategoryId > 0 ||
-                     type == TransactionType.TRANSFER && accounts.size >= 2 && selectedAccount != selectedToAccount)
+                    selectedCategoryId > 0 &&
+                    (type != TransactionType.TRANSFER || (accounts.size >= 2 && selectedAccount != selectedToAccount))
 
             Button(
                 onClick = {
                     val amount = amountText.toDoubleOrNull() ?: return@Button
-                    val transferCatId = categories.firstOrNull { it.name.equals("Transfer", ignoreCase = true) }?.id
-                        ?: categories.firstOrNull()?.id ?: 1L
                     val transaction = TransactionEntity(
                         id = editTransaction?.id ?: 0,
                         amount = amount,
                         type = type,
-                        categoryId = if (type == TransactionType.TRANSFER) transferCatId else selectedCategoryId,
+                        categoryId = selectedCategoryId,
                         account = selectedAccount,
                         toAccount = if (type == TransactionType.TRANSFER) selectedToAccount else null,
                         date = selectedDate,

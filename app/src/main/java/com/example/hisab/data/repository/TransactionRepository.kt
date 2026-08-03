@@ -243,4 +243,12 @@ class TransactionRepository(
 
     suspend fun getAllTransactionsSync(): List<TransactionEntity> =
         transactionDao.getAllTransactionsSync()
+
+    suspend fun repairCorruptedTransferCategories() {
+        try {
+            transactionDao.repairCorruptedTransferCategories()
+        } catch (e: Exception) {
+            // Ignore if categories table not yet populated
+        }
+    }
 }
