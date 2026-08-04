@@ -9,6 +9,7 @@ import android.util.Log
 import com.example.hisab.data.db.HisabDatabase
 import com.example.hisab.data.db.entity.AccountEntity
 import com.example.hisab.data.db.entity.CategoryEntity
+import com.example.hisab.data.db.entity.PendingTransactionEntity
 import com.example.hisab.data.db.entity.TransactionEntity
 import com.example.hisab.data.model.TransactionType
 import kotlinx.coroutines.Dispatchers
@@ -16,8 +17,6 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.security.MessageDigest
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -31,12 +30,12 @@ class AutoBackupManager(
 
     companion object {
         private const val TAG = "AutoBackupManager"
-        private const val BACKUP_VERSION = 4
+        private const val BACKUP_VERSION = 5
         private const val MAIN_BACKUP_NAME = "hisab_auto_backup.json"
     }
 
     /**
-     * Performs a full backup of accounts, categories, and transactions.
+     * Performs a full backup of accounts, categories, transactions, and pending bank transactions.
      * Writes to Documents/Hisab/ on external storage (or App Internal fallback if restricted).
      */
     suspend fun performBackup(): Result<File> = withContext(Dispatchers.IO) {
@@ -44,8 +43,9 @@ class AutoBackupManager(
             val transactions = database.transactionDao().getAllTransactionsSync()
             val categories = database.categoryDao().getAllSync()
             val accounts = database.accountDao().getAllSync()
+            val pendingTxs = database.pendingTransactionDao().getAllPendingSync()
 
-            val jsonContent = serializeToJson(transactions, categories, accounts)
+            val jsonContent = serializeToJson(transactions, categories, accounts, pendingTxs)
 
             // Write to local internal storage first (always guaranteed)
             val internalDir = File(context.filesDir, "backups")
@@ -57,7 +57,7 @@ class AutoBackupManager(
             saveToDocumentsFolder(jsonContent)
 
             backupPrefs.updateLastBackupTime()
-            Log.d(TAG, "Auto-backup performed successfully. Transactions: ${transactions.size}")
+            Log.d(TAG, "Auto-backup performed successfully. Transactions: ${transactions.size}, Accounts: ${accounts.size}, Pending: ${pendingTxs.size}")
             Result.success(internalFile)
         } catch (e: Exception) {
             Log.e(TAG, "Auto-backup failed", e)
@@ -72,7 +72,8 @@ class AutoBackupManager(
         val transactions = database.transactionDao().getAllTransactionsSync()
         val categories = database.categoryDao().getAllSync()
         val accounts = database.accountDao().getAllSync()
-        serializeToJson(transactions, categories, accounts)
+        val pendingTxs = database.pendingTransactionDao().getAllPendingSync()
+        serializeToJson(transactions, categories, accounts, pendingTxs)
     }
 
     /**
@@ -151,7 +152,6 @@ class AutoBackupManager(
                 return@withContext false
             }
 
-            // Check internal backup file first, then public Documents folder
             val internalFile = File(File(context.filesDir, "backups"), MAIN_BACKUP_NAME)
             val jsonStr = if (internalFile.exists() && internalFile.length() > 0) {
                 internalFile.readText(Charsets.UTF_8)
@@ -170,7 +170,7 @@ class AutoBackupManager(
     }
 
     private fun readFromDocumentsFolder(): String? {
-        // 1. Direct POSIX File Scan (Fast & guaranteed when storage permission is granted)
+        // 1. Direct POSIX File Scan
         val posixPaths = listOf(
             File("/storage/emulated/0/Documents/Hisab", MAIN_BACKUP_NAME),
             File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "Hisab/$MAIN_BACKUP_NAME"),
@@ -182,8 +182,7 @@ class AutoBackupManager(
                     val content = f.readText(Charsets.UTF_8)
                     if (content.isNotBlank()) return content
                 }
-            } catch (e: Exception) {
-                // POSIX read fallback
+            } catch (_: Exception) {
             }
         }
 
@@ -215,7 +214,7 @@ class AutoBackupManager(
     }
 
     /**
-     * Parses JSON string and restores accounts, categories, and transactions into database with 100% DE-DUPLICATION.
+     * Parses JSON string and restores accounts (with bank links), categories, transactions, and pending bank transactions into database.
      */
     suspend fun restoreFromJson(jsonStr: String): Boolean = withContext(Dispatchers.IO) {
         try {
@@ -223,6 +222,7 @@ class AutoBackupManager(
             val transactionsArr = root.getJSONArray("transactions")
             val categoriesArr = root.optJSONArray("categories")
             val accountsArr = root.optJSONArray("accounts")
+            val pendingArr = root.optJSONArray("pendingTransactions")
 
             // Intelligent Account Synchronization & De-duplication
             val currentAccounts = database.accountDao().getAllSync().toMutableList()
@@ -235,6 +235,8 @@ class AutoBackupManager(
                     val impType = obj.optString("type", "PRIMARY")
                     val impColorHex = obj.optString("colorHex", "#10B981")
                     val impIsPrimary = obj.optBoolean("isPrimary", false)
+                    val impBankCode = if (obj.has("bankCode") && !obj.isNull("bankCode")) obj.getString("bankCode") else null
+                    val impAccountLast4 = if (obj.has("accountLast4") && !obj.isNull("accountLast4")) obj.getString("accountLast4") else null
 
                     // 1. Exact name match FIRST
                     val exactMatch = currentAccounts.firstOrNull { it.name.equals(impName, ignoreCase = true) }
@@ -243,12 +245,14 @@ class AutoBackupManager(
                             name = impName,
                             type = impType,
                             colorHex = impColorHex,
-                            isPrimary = impIsPrimary
+                            isPrimary = impIsPrimary,
+                            bankCode = impBankCode ?: exactMatch.bankCode,
+                            accountLast4 = impAccountLast4 ?: exactMatch.accountLast4
                         )
                         database.accountDao().update(updated)
                         matchedAccountIds.add(exactMatch.id)
                     } else {
-                        // 2. Same account type match (e.g. map default "Primary Bank" -> imported "HDFC Primary")
+                        // 2. Same account type match
                         val sameTypeUnmatched = currentAccounts.firstOrNull { acc ->
                             acc.id !in matchedAccountIds && acc.type.equals(impType, ignoreCase = true)
                         }
@@ -258,7 +262,9 @@ class AutoBackupManager(
                                 name = impName,
                                 type = impType,
                                 colorHex = impColorHex,
-                                isPrimary = impIsPrimary
+                                isPrimary = impIsPrimary,
+                                bankCode = impBankCode ?: sameTypeUnmatched.bankCode,
+                                accountLast4 = impAccountLast4 ?: sameTypeUnmatched.accountLast4
                             )
                             database.accountDao().update(updated)
                             matchedAccountIds.add(sameTypeUnmatched.id)
@@ -271,7 +277,9 @@ class AutoBackupManager(
                                 name = impName,
                                 type = impType,
                                 colorHex = impColorHex,
-                                isPrimary = impIsPrimary
+                                isPrimary = impIsPrimary,
+                                bankCode = impBankCode,
+                                accountLast4 = impAccountLast4
                             )
                             val newId = database.accountDao().insert(newAccount)
                             matchedAccountIds.add(newId)
@@ -367,6 +375,39 @@ class AutoBackupManager(
                 restoredCount++
             }
 
+            // Restore Pending Bank Transactions if present
+            if (pendingArr != null && pendingArr.length() > 0) {
+                val existingPending = database.pendingTransactionDao().getAllPendingSync()
+                val existingPendingFingerprints = existingPending.map { "${it.amount}_${it.rawSmsBody}" }.toSet()
+
+                for (i in 0 until pendingArr.length()) {
+                    val obj = pendingArr.getJSONObject(i)
+                    val pAmount = obj.getDouble("amount")
+                    val pType = obj.getString("type")
+                    val pBankName = obj.getString("bankName")
+                    val pLast4 = if (obj.has("accountLast4") && !obj.isNull("accountLast4")) obj.getString("accountLast4") else null
+                    val pPayee = if (obj.has("merchantOrPayee") && !obj.isNull("merchantOrPayee")) obj.getString("merchantOrPayee") else null
+                    val pRawSms = obj.getString("rawSmsBody")
+                    val pSender = if (obj.has("senderHeader") && !obj.isNull("senderHeader")) obj.getString("senderHeader") else null
+                    val pTimestamp = obj.optLong("timestamp", System.currentTimeMillis())
+
+                    val pf = "${pAmount}_${pRawSms}"
+                    if (!existingPendingFingerprints.contains(pf)) {
+                        val pendingEntity = PendingTransactionEntity(
+                            amount = pAmount,
+                            type = pType,
+                            bankName = pBankName,
+                            accountLast4 = pLast4,
+                            merchantOrPayee = pPayee,
+                            rawSmsBody = pRawSms,
+                            senderHeader = pSender,
+                            timestamp = pTimestamp
+                        )
+                        database.pendingTransactionDao().insert(pendingEntity)
+                    }
+                }
+            }
+
             Log.d(TAG, "Restored $restoredCount non-duplicate transactions from backup.")
             true
         } catch (e: Exception) {
@@ -378,7 +419,8 @@ class AutoBackupManager(
     private fun serializeToJson(
         transactions: List<TransactionEntity>,
         categories: List<CategoryEntity>,
-        accounts: List<AccountEntity>
+        accounts: List<AccountEntity>,
+        pendingTxs: List<PendingTransactionEntity> = emptyList()
     ): String {
         val categoryMap = categories.associateBy { it.id }
         val root = JSONObject()
@@ -386,7 +428,7 @@ class AutoBackupManager(
         root.put("version", BACKUP_VERSION)
         root.put("timestamp", System.currentTimeMillis())
 
-        // Accounts
+        // Accounts with Bank Link Metadata
         val accArray = JSONArray()
         accounts.forEach { acc ->
             val obj = JSONObject().apply {
@@ -395,6 +437,8 @@ class AutoBackupManager(
                 put("type", acc.type)
                 put("colorHex", acc.colorHex)
                 put("isPrimary", acc.isPrimary)
+                if (acc.bankCode != null) put("bankCode", acc.bankCode)
+                if (acc.accountLast4 != null) put("accountLast4", acc.accountLast4)
             }
             accArray.put(obj)
         }
@@ -433,6 +477,25 @@ class AutoBackupManager(
             txArray.put(obj)
         }
         root.put("transactions", txArray)
+
+        // Pending Bank Transactions
+        if (pendingTxs.isNotEmpty()) {
+            val pendingArray = JSONArray()
+            pendingTxs.forEach { pt ->
+                val obj = JSONObject().apply {
+                    put("amount", pt.amount)
+                    put("type", pt.type)
+                    put("bankName", pt.bankName)
+                    if (pt.accountLast4 != null) put("accountLast4", pt.accountLast4)
+                    if (pt.merchantOrPayee != null) put("merchantOrPayee", pt.merchantOrPayee)
+                    put("rawSmsBody", pt.rawSmsBody)
+                    if (pt.senderHeader != null) put("senderHeader", pt.senderHeader)
+                    put("timestamp", pt.timestamp)
+                }
+                pendingArray.put(obj)
+            }
+            root.put("pendingTransactions", pendingArray)
+        }
 
         // Calculate SHA-256 checksum of raw content
         val rawBytes = root.toString().toByteArray(Charsets.UTF_8)
