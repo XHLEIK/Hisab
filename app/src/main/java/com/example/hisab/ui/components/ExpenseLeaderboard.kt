@@ -28,10 +28,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.hisab.data.db.entity.CategoryEntity
 import com.example.hisab.data.db.entity.TransactionEntity
+import com.example.hisab.data.model.TransactionType
 import com.example.hisab.ui.theme.ExpenseRed
 import com.example.hisab.ui.theme.HisabTheme
+import com.example.hisab.util.CategoryIconMapper
 import com.example.hisab.util.CurrencyFormatter
-import com.example.hisab.util.DateUtils
+
+private data class CategoryExpenseSummary(
+    val categoryId: Long,
+    val totalAmount: Double,
+    val transactionCount: Int
+)
 
 @Composable
 fun ExpenseLeaderboard(
@@ -41,9 +48,22 @@ fun ExpenseLeaderboard(
 ) {
     val colors = HisabTheme.colors
     val categoryMap = categories.associateBy { it.id }
-    val maxExpenseAmount = expenses.firstOrNull()?.amount ?: 1.0
 
-    if (expenses.isEmpty()) {
+    val categorySummaries = expenses
+        .filter { it.type == TransactionType.EXPENSE }
+        .groupBy { it.categoryId }
+        .map { (catId, list) ->
+            CategoryExpenseSummary(
+                categoryId = catId,
+                totalAmount = list.sumOf { it.amount },
+                transactionCount = list.size
+            )
+        }
+        .sortedByDescending { it.totalAmount }
+
+    val maxExpenseAmount = categorySummaries.firstOrNull()?.totalAmount ?: 1.0
+
+    if (categorySummaries.isEmpty()) {
         Box(
             modifier = modifier
                 .fillMaxWidth()
@@ -65,10 +85,10 @@ fun ExpenseLeaderboard(
             .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        expenses.take(10).forEachIndexed { index, tx ->
+        categorySummaries.take(10).forEachIndexed { index, item ->
             val rank = index + 1
-            val category = categoryMap[tx.categoryId]
-            val categoryName = category?.name ?: "Expense"
+            val category = categoryMap[item.categoryId]
+            val categoryName = category?.name ?: "Other Expense"
             val iconName = category?.iconName ?: "MoreHoriz"
             val colorHex = category?.colorHex ?: "#FF5252"
 
@@ -84,7 +104,7 @@ fun ExpenseLeaderboard(
                 else -> colors.textSecondary
             }
 
-            val progress = (tx.amount / maxExpenseAmount).toFloat().coerceIn(0f, 1f)
+            val progress = (item.totalAmount / maxExpenseAmount).toFloat().coerceIn(0f, 1f)
 
             Box(
                 modifier = Modifier
@@ -131,7 +151,7 @@ fun ExpenseLeaderboard(
                             contentAlignment = Alignment.Center
                         ) {
                             androidx.compose.material3.Icon(
-                                imageVector = com.example.hisab.util.CategoryIconMapper.getIcon(iconName),
+                                imageVector = CategoryIconMapper.getIcon(iconName),
                                 contentDescription = categoryName,
                                 tint = parsedCatColor,
                                 modifier = Modifier.size(18.dp)
@@ -150,29 +170,18 @@ fun ExpenseLeaderboard(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = DateUtils.formatShort(tx.date),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = colors.textTertiary
-                                )
-                                if (tx.notes.isNotBlank()) {
-                                    Text(
-                                        text = " • ${tx.notes}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = colors.textSecondary,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
+                            Text(
+                                text = "${item.transactionCount} payment${if (item.transactionCount > 1) "s" else ""}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = colors.textSecondary
+                            )
                         }
 
                         Spacer(modifier = Modifier.width(8.dp))
 
-                        // Amount
+                        // Total sum of category
                         Text(
-                            text = CurrencyFormatter.format(tx.amount),
+                            text = CurrencyFormatter.format(item.totalAmount),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = ExpenseRed
