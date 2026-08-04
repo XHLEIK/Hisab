@@ -40,7 +40,11 @@ import com.example.hisab.data.db.entity.CategoryEntity
 import com.example.hisab.data.model.TransactionType
 import com.example.hisab.ui.theme.HisabTheme
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import com.example.hisab.util.CategoryIconMapper
 
 @Composable
@@ -56,8 +60,33 @@ fun CategoryEditDialog(
     var type by remember { mutableStateOf(category?.type ?: initialType) }
     var selectedIcon by remember { mutableStateOf(category?.iconName ?: "ShoppingCart") }
     var selectedColorHex by remember { mutableStateOf(category?.colorHex ?: "#4CAF50") }
-
+    var iconSearchQuery by remember { mutableStateOf("") }
     val iconOptions = CategoryIconMapper.availableIcons
+
+    val filteredIconOptions = remember(iconSearchQuery) {
+        if (iconSearchQuery.isBlank()) {
+            iconOptions
+        } else {
+            val q = iconSearchQuery.trim().lowercase()
+            iconOptions.filter { (key, _) ->
+                key.lowercase().contains(q) || when (q) {
+                    "shirt", "tshirt", "cloth", "dress", "apparel", "t-shirt" -> key.contains("Checkroom", ignoreCase = true)
+                    "wash", "washing", "machine", "laundry", "clean" -> key.contains("LocalLaundryService", ignoreCase = true)
+                    "coffee", "tea", "cafe", "drink" -> key.contains("Coffee", ignoreCase = true)
+                    "food", "snack", "burger", "pizza", "dining" -> key.contains("Fastfood", ignoreCase = true) || key.contains("Restaurant", ignoreCase = true)
+                    "pet", "dog", "cat", "animal" -> key.contains("Pets", ignoreCase = true)
+                    "gas", "fuel", "petrol" -> key.contains("LocalGasStation", ignoreCase = true)
+                    "bus", "travel", "transport" -> key.contains("Bus", ignoreCase = true) || key.contains("Flight", ignoreCase = true)
+                    "wifi", "net", "internet" -> key.contains("Wifi", ignoreCase = true)
+                    "game", "gaming" -> key.contains("Esports", ignoreCase = true)
+                    "salon", "hair", "barber", "grooming" -> key.contains("ContentCut", ignoreCase = true)
+                    "repair", "tool", "fix", "hardware" -> key.contains("Build", ignoreCase = true)
+                    "hospital", "doctor", "health", "medicine", "pharmacy" -> key.contains("Hospital", ignoreCase = true) || key.contains("Medical", ignoreCase = true)
+                    else -> key.lowercase().contains(q)
+                }
+            }
+        }
+    }
 
     val colorOptions = listOf(
         "#4CAF50", "#FF5252", "#2196F3", "#9C27B0", "#FF9800",
@@ -86,7 +115,7 @@ fun CategoryEditDialog(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Category Name") },
-                    placeholder = { Text("e.g. Groceries, Coffee, Freelance") },
+                    placeholder = { Text("e.g. Groceries, Coffee, Clothes") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -184,42 +213,86 @@ fun CategoryEditDialog(
                     }
                 }
 
-                // Icon Selector
-                Text(
-                    text = "Category Icon",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = colors.textSecondary
-                )
+                // Icon Search & Selector
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    iconOptions.forEach { (iconKey, vector) ->
-                        val isSelected = iconKey == selectedIcon
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                                    else MaterialTheme.colorScheme.surfaceVariant
+                    Text(
+                        text = "Category Icon",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = colors.textSecondary
+                    )
+                    if (iconSearchQuery.isNotEmpty()) {
+                        Text(
+                            text = "${filteredIconOptions.size} icons",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                OutlinedTextField(
+                    value = iconSearchQuery,
+                    onValueChange = { iconSearchQuery = it },
+                    placeholder = { Text("Search icon (e.g. shirt, wash, coffee, gas)...", style = MaterialTheme.typography.bodySmall) },
+                    singleLine = true,
+                    leadingIcon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.Search, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                    trailingIcon = {
+                        if (iconSearchQuery.isNotEmpty()) {
+                            androidx.compose.material3.IconButton(onClick = { iconSearchQuery = "" }) {
+                                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Outlined.Close, contentDescription = null, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = colors.cardBorder
+                    )
+                )
+
+                if (filteredIconOptions.isEmpty()) {
+                    Text(
+                        text = "No icons found for '$iconSearchQuery'",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.textSecondary,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        filteredIconOptions.forEach { (iconKey, vector) ->
+                            val isSelected = iconKey == selectedIcon
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                        else MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                                    .border(
+                                        1.dp,
+                                        if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                        CircleShape
+                                    )
+                                    .clickable { selectedIcon = iconKey },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = vector,
+                                    contentDescription = iconKey,
+                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else colors.textSecondary,
+                                    modifier = Modifier.size(22.dp)
                                 )
-                                .border(
-                                    1.dp,
-                                    if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                    CircleShape
-                                )
-                                .clickable { selectedIcon = iconKey },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = vector,
-                                contentDescription = iconKey,
-                                tint = if (isSelected) MaterialTheme.colorScheme.primary else colors.textSecondary,
-                                modifier = Modifier.size(22.dp)
-                            )
+                            }
                         }
                     }
                 }

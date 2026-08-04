@@ -32,7 +32,7 @@ class AccountRepository(
         autoBackupManager?.performBackup()
     }
 
-    suspend fun updateBankMapping(account: AccountEntity, bankCode: String, accountLast4: String?) {
+    suspend fun updateBankMapping(account: AccountEntity, bankCode: String?, accountLast4: String?) {
         val updated = account.copy(bankCode = bankCode, accountLast4 = accountLast4)
         accountDao.update(updated)
         autoBackupManager?.performBackup()

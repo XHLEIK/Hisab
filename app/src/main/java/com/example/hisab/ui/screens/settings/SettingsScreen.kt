@@ -42,6 +42,8 @@ import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.Sync
@@ -569,19 +571,33 @@ fun SettingsScreen(
                         }
                     }
 
+                    val isBankLinked = !account.bankCode.isNullOrEmpty()
                     OutlinedButton(
                         onClick = {
                             val acc = account
                             selectedAccountForActions = null
-                            bankSelectionAccount = acc
+                            if (isBankLinked) {
+                                viewModel.updateAccountBankMapping(acc, null, null)
+                            } else {
+                                bankSelectionAccount = acc
+                            }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.Sms, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                            Icon(
+                                imageVector = if (isBankLinked) Icons.Filled.LinkOff else Icons.Filled.Sms,
+                                contentDescription = null,
+                                tint = if (isBankLinked) colors.expense else MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Link Bank for SMS Auto-Detect", fontWeight = FontWeight.Bold)
+                            Text(
+                                text = if (isBankLinked) "Unlink Bank Account" else "Link Bank for SMS Auto-Detect",
+                                color = if (isBankLinked) colors.expense else MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
 
