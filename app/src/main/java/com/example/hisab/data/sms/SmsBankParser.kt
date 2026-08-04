@@ -194,7 +194,14 @@ object SmsBankParser {
             lowerBody.contains("secret code") ||
             lowerBody.contains("login pin") ||
             lowerBody.contains("do not share") ||
-            lowerBody.contains("passcode")
+            lowerBody.contains("passcode") ||
+            lowerBody.contains("failed") ||
+            lowerBody.contains("declined") ||
+            lowerBody.contains("unsuccessful") ||
+            lowerBody.contains("reversed") ||
+            lowerBody.contains("cancelled") ||
+            lowerBody.contains("canceled") ||
+            lowerBody.contains("rejected")
         ) {
             return true
         }

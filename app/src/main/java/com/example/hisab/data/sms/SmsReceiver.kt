@@ -89,7 +89,7 @@ class SmsReceiver : BroadcastReceiver() {
                 val twoMinAgo = System.currentTimeMillis() - 120_000
                 val matchingOppositePending = pendingDao.findMatchingOppositePending(parsed.amount, oppositeType, twoMinAgo)
 
-                if (matchingOppositePending != null) {
+                if (matchingOppositePending != null && !matchingOppositePending.bankName.equals(parsed.bankName, ignoreCase = true)) {
                     // Auto-Merge DEBIT + CREDIT alerts into a single TRANSFER transaction!
                     val accounts = accountDao.getAllSync()
                     val debitBankName = if (parsed.type == "DEBIT") parsed.bankName else matchingOppositePending.bankName

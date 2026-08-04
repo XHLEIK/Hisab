@@ -67,7 +67,7 @@ object SmsNotificationHelper {
         val db = HisabDatabase.getDatabase(context)
         val categoryDao = db.categoryDao()
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val notificationId = (pending.id xor System.currentTimeMillis()).toInt() and 0x7FFFFFFF
+        val notificationId = (pending.id * 1000L).toInt() and 0x7FFFFFFF
 
         val formattedAmount = CurrencyFormatter.format(pending.amount)
         val title: String

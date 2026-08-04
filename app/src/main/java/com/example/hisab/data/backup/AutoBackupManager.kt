@@ -329,10 +329,10 @@ class AutoBackupManager(
                 }
             }
 
-            // De-duplicate Transactions using fingerprint
+            // De-duplicate Transactions using fingerprint (including createdAt millisecond timestamp)
             val existingTransactions = database.transactionDao().getAllTransactionsSync()
             val existingTxFingerprints = existingTransactions.map { tx ->
-                "${tx.amount}_${tx.type}_${tx.account}_${tx.toAccount}_${tx.date}_${tx.notes}"
+                "${tx.amount}_${tx.type}_${tx.account}_${tx.toAccount}_${tx.date}_${tx.notes}_${tx.createdAt}"
             }.toSet()
 
             var restoredCount = 0
@@ -347,8 +347,9 @@ class AutoBackupManager(
                 val account = obj.optString("account", "Primary Bank")
                 val toAccount = if (obj.has("toAccount")) obj.optString("toAccount") else null
                 val notes = obj.optString("notes", "")
+                val createdAt = obj.optLong("createdAt", System.currentTimeMillis())
 
-                val fingerprint = "${amount}_${type}_${account}_${toAccount}_${date}_${notes}"
+                val fingerprint = "${amount}_${type}_${account}_${toAccount}_${date}_${notes}_${createdAt}"
                 if (existingTxFingerprints.contains(fingerprint)) {
                     continue // Skip duplicate
                 }
