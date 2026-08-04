@@ -59,6 +59,8 @@ import com.example.hisab.ui.theme.HisabTheme
 import com.example.hisab.util.DateUtils
 import java.time.LocalDate
 
+import androidx.compose.foundation.layout.statusBarsPadding
+
 @Composable
 fun DashboardScreen(
     transactionRepository: TransactionRepository,
@@ -106,7 +108,8 @@ fun DashboardScreen(
     val isEndOfMonth = today.dayOfMonth >= today.lengthOfMonth() - 1
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -119,6 +122,7 @@ fun DashboardScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .statusBarsPadding()
                         .padding(horizontal = 20.dp)
                         .padding(top = 16.dp, bottom = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,

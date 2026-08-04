@@ -60,6 +60,8 @@ import com.example.hisab.ui.components.MonthSelector
 import com.example.hisab.ui.theme.HisabTheme
 import com.example.hisab.util.CurrencyFormatter
 
+import androidx.compose.foundation.layout.statusBarsPadding
+
 @Composable
 fun AnalyticsScreen(
     transactionRepository: TransactionRepository,
@@ -114,7 +116,9 @@ fun AnalyticsScreen(
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = colors.textPrimary,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                    modifier = Modifier
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 )
 
                 MonthSelector(

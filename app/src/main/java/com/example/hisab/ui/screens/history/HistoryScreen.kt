@@ -53,6 +53,8 @@ import com.example.hisab.ui.theme.HisabTheme
 import com.example.hisab.util.CurrencyFormatter
 import com.example.hisab.util.DateUtils
 
+import androidx.compose.foundation.layout.statusBarsPadding
+
 @Composable
 fun HistoryScreen(
     transactionRepository: TransactionRepository,
@@ -115,7 +117,9 @@ fun HistoryScreen(
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = colors.textPrimary,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
+            modifier = Modifier
+                .statusBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 16.dp)
         )
 
         // ── Month Selector ───────────────────────────

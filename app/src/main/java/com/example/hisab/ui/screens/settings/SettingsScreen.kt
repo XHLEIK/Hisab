@@ -91,6 +91,8 @@ import com.example.hisab.ui.components.CategoryEditDialog
 import com.example.hisab.ui.theme.HisabTheme
 import com.example.hisab.util.CategoryIconMapper
 
+import androidx.compose.foundation.layout.statusBarsPadding
+
 @Composable
 fun SettingsScreen(
     categoryRepository: CategoryRepository,
@@ -181,7 +183,9 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = colors.textPrimary,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
+                    modifier = Modifier
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 16.dp)
                 )
             }
 
