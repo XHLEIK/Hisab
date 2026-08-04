@@ -203,18 +203,42 @@ class DashboardViewModel(
             initialValue = 0.0
         )
 
-    // ── Month-wise Savings Transferred in Selected Month ─────────────
+    private fun isSavingsAccount(accountName: String?): Boolean {
+        if (accountName == null) return false
+        val lower = accountName.lowercase()
+        return lower.contains("savings") || lower.contains("saving")
+    }
+
+    // ── Month-wise Net Savings Transferred & Adjusted in Selected Month ─────────────
     val totalSavingsAmount: StateFlow<Double> = _selectedMonth
         .flatMapLatest { month ->
             transactionRepository.getTransactionsForMonth(month)
         }
         .map { txns ->
-            // Strictly sum of transfers to Savings accounts in the selected month
-            txns.filter { 
-                it.type == TransactionType.TRANSFER && 
-                (it.toAccount?.contains("Savings", ignoreCase = true) == true || 
-                 it.toAccount?.contains("SAVING", ignoreCase = true) == true)
-            }.sumOf { it.amount }
+            txns.sumOf { tx ->
+                var delta = 0.0
+                when (tx.type) {
+                    TransactionType.INCOME -> {
+                        if (isSavingsAccount(tx.account)) {
+                            delta += tx.amount
+                        }
+                    }
+                    TransactionType.EXPENSE -> {
+                        if (isSavingsAccount(tx.account)) {
+                            delta -= tx.amount
+                        }
+                    }
+                    TransactionType.TRANSFER -> {
+                        if (isSavingsAccount(tx.toAccount)) {
+                            delta += tx.amount
+                        }
+                        if (isSavingsAccount(tx.account)) {
+                            delta -= tx.amount
+                        }
+                    }
+                }
+                delta
+            }
         }
         .stateIn(
             scope = viewModelScope,
