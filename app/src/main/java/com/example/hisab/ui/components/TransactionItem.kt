@@ -11,7 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,11 +27,9 @@ import androidx.compose.ui.unit.dp
 import com.example.hisab.data.db.entity.TransactionEntity
 import com.example.hisab.data.model.TransactionType
 import com.example.hisab.ui.theme.HisabTheme
+import com.example.hisab.util.CategoryIconMapper
 import com.example.hisab.util.CurrencyFormatter
 import com.example.hisab.util.DateUtils
-
-import androidx.compose.material3.Icon
-import com.example.hisab.util.CategoryIconMapper
 
 @Composable
 fun TransactionItem(
@@ -46,10 +45,29 @@ fun TransactionItem(
     val isTransfer = transaction.type == TransactionType.TRANSFER
     val isExpense = transaction.type == TransactionType.EXPENSE
 
+    val transferColor = Color(0xFF64B5F6) // Muted cyan blue for transfers
+    val incomeColor = Color(0xFF00E676) // Bright green for income
+    val expenseColor = Color(0xFFFF5252) // Bright coral red for expenses
+
+    val defaultPrimary = MaterialTheme.colorScheme.primary
+    val parsedColor = remember(categoryColor, isTransfer, defaultPrimary) {
+        try {
+            if (categoryColor.isNotBlank()) {
+                Color(android.graphics.Color.parseColor(categoryColor))
+            } else if (isTransfer) {
+                Color(0xFF64B5F6)
+            } else {
+                defaultPrimary
+            }
+        } catch (e: Exception) {
+            if (isTransfer) Color(0xFF64B5F6) else defaultPrimary
+        }
+    }
+
     val amountColor = when {
-        isTransfer -> MaterialTheme.colorScheme.primary
-        isExpense -> colors.expense
-        else -> colors.income
+        isTransfer -> parsedColor
+        isExpense -> expenseColor
+        else -> incomeColor
     }
     val amountPrefix = when {
         isTransfer -> "⇄ "
@@ -65,35 +83,26 @@ fun TransactionItem(
         else CategoryIconMapper.getIcon("MoreHoriz")
     }
 
-    val defaultPrimary = MaterialTheme.colorScheme.primary
-    val parsedColor = remember(categoryColor, defaultPrimary) {
-        try {
-            Color(android.graphics.Color.parseColor(categoryColor))
-        } catch (e: Exception) {
-            defaultPrimary
-        }
-    }
-
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Category icon circle
+        // Category icon container
         Box(
             modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(parsedColor.copy(alpha = 0.15f)),
+                .size(40.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(parsedColor.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = iconVector,
                 contentDescription = displayName,
                 tint = parsedColor,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(20.dp)
             )
         }
 
@@ -107,16 +116,18 @@ fun TransactionItem(
             Text(
                 text = displayName,
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
                 color = colors.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            
+
             val subtitleText = remember(transaction, isTransfer, showDate) {
                 if (isTransfer) {
-                    val accDirection = "${transaction.account} → ${transaction.toAccount ?: "Account"}"
-                    if (transaction.notes.isNotBlank()) "$accDirection • ${transaction.notes}" else accDirection
+                    val fromAcc = transaction.account
+                    val toAcc = transaction.toAccount ?: "Account"
+                    val accDirection = "$fromAcc → $toAcc"
+                    if (transaction.notes.isNotBlank()) "$accDirection  •  ${transaction.notes}" else accDirection
                 } else if (transaction.notes.isNotBlank()) {
                     transaction.notes
                 } else if (showDate) {
@@ -141,9 +152,8 @@ fun TransactionItem(
         Text(
             text = "$amountPrefix${CurrencyFormatter.format(transaction.amount)}",
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
             color = amountColor
         )
     }
 }
-

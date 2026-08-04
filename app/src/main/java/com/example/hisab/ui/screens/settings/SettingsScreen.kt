@@ -3,10 +3,14 @@ package com.example.hisab.ui.screens.settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.material3.RadioButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,19 +24,27 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.Gavel
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Description
@@ -41,9 +53,9 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -54,7 +66,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,10 +74,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.hisab.data.db.entity.AccountEntity
 import com.example.hisab.data.db.entity.CategoryEntity
+import com.example.hisab.data.export.ExportFormat
 import com.example.hisab.data.model.TransactionType
 import com.example.hisab.data.repository.AccountRepository
 import com.example.hisab.data.repository.BackupRepository
@@ -74,9 +89,7 @@ import com.example.hisab.data.repository.CategoryRepository
 import com.example.hisab.ui.components.AddAccountDialog
 import com.example.hisab.ui.components.CategoryEditDialog
 import com.example.hisab.ui.theme.HisabTheme
-import java.time.LocalDate
-
-import com.example.hisab.data.export.ExportFormat
+import com.example.hisab.util.CategoryIconMapper
 
 @Composable
 fun SettingsScreen(
@@ -100,6 +113,15 @@ fun SettingsScreen(
     val transferCategories = remember(categories) { categories.filter { it.type == TransactionType.TRANSFER } }
 
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Collapsible Accordion States
+    var isIncomeExpanded by remember { mutableStateOf(true) }
+    var isExpenseExpanded by remember { mutableStateOf(true) }
+    var isTransferExpanded by remember { mutableStateOf(true) }
+
+    // Action Modal States
+    var selectedCategoryForActions by remember { mutableStateOf<CategoryEntity?>(null) }
+    var selectedAccountForActions by remember { mutableStateOf<AccountEntity?>(null) }
 
     var categoryToEdit by remember { mutableStateOf<CategoryEntity?>(null) }
     var showAddCategoryType by remember { mutableStateOf<TransactionType?>(null) }
@@ -159,16 +181,16 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = colors.textPrimary,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
                 )
             }
 
-            // ── Account Management Section ─────────────
+            // ── 1. Accounts Management Section (Sleek Fintech Cards) ─────────
             item {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -184,99 +206,91 @@ fun SettingsScreen(
             }
 
             items(accounts, key = { "acc_${it.id}" }) { account ->
-                AccountRow(
+                AccountCard(
                     account = account,
-                    onEdit = { accountToEdit = account },
-                    onDelete = { accountToDelete = account }
+                    onClick = { selectedAccountForActions = account }
                 )
             }
 
             item { Spacer(modifier = Modifier.height(20.dp)) }
 
-            // ── Categories Management Section ────────
+            // ── 2. Collapsible Income Categories ────────────────
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SectionTitle(icon = Icons.Outlined.Category, title = "Income Categories")
-                    TextButton(onClick = { showAddCategoryType = TransactionType.INCOME }) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Add", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
+                CategoryAccordionHeader(
+                    icon = Icons.Outlined.Category,
+                    title = "Income Categories",
+                    count = incomeCategories.size,
+                    isExpanded = isIncomeExpanded,
+                    onToggle = { isIncomeExpanded = !isIncomeExpanded }
+                )
             }
 
-            items(incomeCategories, key = { "inc_${it.id}" }) { category ->
-                CategoryRow(
-                    category = category,
-                    onEdit = { categoryToEdit = category },
-                    onDelete = { categoryToDelete = category }
-                )
+            item {
+                AnimatedVisibility(
+                    visible = isIncomeExpanded,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    CategoryGrid(
+                        categories = incomeCategories,
+                        onCategoryClick = { selectedCategoryForActions = it },
+                        onAddClick = { showAddCategoryType = TransactionType.INCOME }
+                    )
+                }
             }
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
 
+            // ── 3. Collapsible Expense Categories ───────────────
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SectionTitle(icon = Icons.Outlined.Category, title = "Expense Categories")
-                    TextButton(onClick = { showAddCategoryType = TransactionType.EXPENSE }) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Add", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
+                CategoryAccordionHeader(
+                    icon = Icons.Outlined.Category,
+                    title = "Expense Categories",
+                    count = expenseCategories.size,
+                    isExpanded = isExpenseExpanded,
+                    onToggle = { isExpenseExpanded = !isExpenseExpanded }
+                )
             }
 
-            items(expenseCategories, key = { "exp_${it.id}" }) { category ->
-                CategoryRow(
-                    category = category,
-                    onEdit = { categoryToEdit = category },
-                    onDelete = { categoryToDelete = category }
-                )
+            item {
+                AnimatedVisibility(
+                    visible = isExpenseExpanded,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    CategoryGrid(
+                        categories = expenseCategories,
+                        onCategoryClick = { selectedCategoryForActions = it },
+                        onAddClick = { showAddCategoryType = TransactionType.EXPENSE }
+                    )
+                }
             }
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
 
+            // ── 4. Collapsible Transfer Categories ──────────────
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SectionTitle(icon = Icons.Outlined.Category, title = "Transfer Categories")
-                    TextButton(onClick = { showAddCategoryType = TransactionType.TRANSFER }) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Add", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
+                CategoryAccordionHeader(
+                    icon = Icons.Outlined.Category,
+                    title = "Transfer Categories",
+                    count = transferCategories.size,
+                    isExpanded = isTransferExpanded,
+                    onToggle = { isTransferExpanded = !isTransferExpanded }
+                )
             }
 
-            items(transferCategories, key = { "trf_${it.id}" }) { category ->
-                CategoryRow(
-                    category = category,
-                    onEdit = { categoryToEdit = category },
-                    onDelete = { categoryToDelete = category }
-                )
+            item {
+                AnimatedVisibility(
+                    visible = isTransferExpanded,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    CategoryGrid(
+                        categories = transferCategories,
+                        onCategoryClick = { selectedCategoryForActions = it },
+                        onAddClick = { showAddCategoryType = TransactionType.TRANSFER }
+                    )
+                }
             }
 
             item { Spacer(modifier = Modifier.height(20.dp)) }
@@ -286,80 +300,100 @@ fun SettingsScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     SectionTitle(icon = Icons.Outlined.FolderOpen, title = "Data & Backup")
                 }
             }
 
             item {
-                Row(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(colors.surfaceCard)
+                        .border(0.5.dp, colors.cardBorder, RoundedCornerShape(16.dp))
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Box(
+                    Column {
+                        // 1. Auto Backup Row
+                        Row(
                             modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Filled.CloudUpload,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Sync,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Column {
+                                    Text(
+                                        text = "Auto Backup",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = colors.textPrimary
+                                    )
+                                    Text(
+                                        text = "Saves to Documents/Hisab/ after every transaction",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = colors.textSecondary
+                                    )
+                                }
+                            }
+                            androidx.compose.material3.Switch(
+                                checked = isAutoBackupEnabled,
+                                onCheckedChange = { viewModel.setAutoBackupEnabled(context, it) }
                             )
                         }
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column {
-                            Text(
-                                text = "Auto Backup",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = colors.textPrimary
-                            )
-                            Text(
-                                text = "Saves to Documents/Hisab/ after every transaction",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = colors.textSecondary
-                            )
-                        }
+
+                        androidx.compose.material3.HorizontalDivider(
+                            color = colors.cardBorder.copy(alpha = 0.5f),
+                            thickness = 0.5.dp
+                        )
+
+                        // 2. Export Report Row
+                        SettingsItem(
+                            icon = Icons.Filled.FileDownload,
+                            title = "Export Report",
+                            subtitle = "Generate professional balance sheet (PDF, XLSX, CSV, JSON)",
+                            onClick = { showExportFormatDialog = true }
+                        )
+
+                        androidx.compose.material3.HorizontalDivider(
+                            color = colors.cardBorder.copy(alpha = 0.5f),
+                            thickness = 0.5.dp
+                        )
+
+                        // 3. Import Backup Row
+                        SettingsItem(
+                            icon = Icons.Filled.FileUpload,
+                            title = "Import Backup",
+                            subtitle = "Restore transactions from a JSON or CSV backup file",
+                            onClick = {
+                                viewModel.smartImportBackup(context) {
+                                    importLauncher.launch(arrayOf("application/json", "text/csv", "text/comma-separated-values", "*/*"))
+                                }
+                            }
+                        )
                     }
-                    androidx.compose.material3.Switch(
-                        checked = isAutoBackupEnabled,
-                        onCheckedChange = { viewModel.setAutoBackupEnabled(context, it) }
-                    )
                 }
-            }
-
-            item {
-                SettingsItem(
-                    icon = Icons.Filled.CloudUpload,
-                    title = "Export Report",
-                    subtitle = "Generate professional balance sheet (PDF, XLSX, CSV, JSON)",
-                    onClick = { showExportFormatDialog = true }
-                )
-            }
-
-            item {
-                SettingsItem(
-                    icon = Icons.Filled.CloudDownload,
-                    title = "Import Backup",
-                    subtitle = "Restore transactions from a JSON or CSV backup file",
-                    onClick = {
-                        viewModel.smartImportBackup(context) {
-                            importLauncher.launch(arrayOf("application/json", "text/csv", "text/comma-separated-values", "*/*"))
-                        }
-                    }
-                )
             }
 
             item { Spacer(modifier = Modifier.height(20.dp)) }
@@ -369,98 +403,255 @@ fun SettingsScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     SectionTitle(icon = Icons.Outlined.Code, title = "About & Credits")
                 }
             }
 
             item {
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp)
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(colors.surfaceCard)
+                        .border(0.5.dp, colors.cardBorder, RoundedCornerShape(16.dp))
+                        .padding(vertical = 4.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "Hisab v2.1.0",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Box(
+                    Column {
+                        // Header App Info Row
+                        Column(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
                         ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Hisab v2.2.2",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = colors.textPrimary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "Build 222",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Build 210",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                text = "Hisab is a privacy-first, offline personal finance tracker designed for modern budget management.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.textSecondary
                             )
                         }
+
+                        androidx.compose.material3.HorizontalDivider(
+                            color = colors.cardBorder.copy(alpha = 0.5f),
+                            thickness = 0.5.dp
+                        )
+
+                        // Developer Credit Item
+                        SettingsItem(
+                            icon = Icons.Filled.Code,
+                            title = "Developer Credit",
+                            subtitle = "Subham Bose  •  GitHub: @XHLEIK",
+                            onClick = {
+                                try {
+                                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/XHLEIK"))
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    // Fallback
+                                }
+                            }
+                        )
+
+                        androidx.compose.material3.HorizontalDivider(
+                            color = colors.cardBorder.copy(alpha = 0.5f),
+                            thickness = 0.5.dp
+                        )
+
+                        // Open Source Licenses Item
+                        SettingsItem(
+                            icon = Icons.Filled.Terminal,
+                            title = "Open Source Licenses",
+                            subtitle = "Apache License 2.0, Jetpack Compose, Room, Kotlin Coroutines",
+                            onClick = { showOpenSourceDialog = true }
+                        )
+
+                        androidx.compose.material3.HorizontalDivider(
+                            color = colors.cardBorder.copy(alpha = 0.5f),
+                            thickness = 0.5.dp
+                        )
+
+                        // Privacy Notice Item
+                        SettingsItem(
+                            icon = Icons.Filled.Shield,
+                            title = "Privacy Notice",
+                            subtitle = "100% Offline Policy, Zero Network Tracking, Local Safety",
+                            onClick = { showPrivacyNoticeDialog = true }
+                        )
+
+                        androidx.compose.material3.HorizontalDivider(
+                            color = colors.cardBorder.copy(alpha = 0.5f),
+                            thickness = 0.5.dp
+                        )
+
+                        // User Agreement Item
+                        SettingsItem(
+                            icon = Icons.Filled.Gavel,
+                            title = "User Agreement",
+                            subtitle = "End-User Terms, Local Backup Ownership & Usage Rules",
+                            onClick = { showUserAgreementDialog = true }
+                        )
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Hisab is a privacy-first, offline personal finance tracker designed for modern budget management.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colors.textSecondary
-                    )
                 }
             }
 
-            item {
-                SettingsItem(
-                    icon = Icons.Filled.AccountBalance,
-                    title = "Developer Credit",
-                    subtitle = "Subham Bose  •  GitHub: @XHLEIK",
-                    onClick = {
-                        try {
-                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/XHLEIK"))
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            // Fallback
-                        }
-                    }
-                )
-            }
-
-            item {
-                SettingsItem(
-                    icon = Icons.Outlined.Code,
-                    title = "Open Source Licenses",
-                    subtitle = "MIT License, Jetpack Compose, Room, Kotlin Coroutines",
-                    onClick = { showOpenSourceDialog = true }
-                )
-            }
-
-            item {
-                SettingsItem(
-                    icon = Icons.Outlined.Description,
-                    title = "Privacy Notice",
-                    subtitle = "100% Offline Policy, Zero Network Tracking, Local Safety",
-                    onClick = { showPrivacyNoticeDialog = true }
-                )
-            }
-
-            item {
-                SettingsItem(
-                    icon = Icons.Outlined.Person,
-                    title = "User Agreement",
-                    subtitle = "End-User Terms, Local Backup Ownership & Usage Rules",
-                    onClick = { showUserAgreementDialog = true }
-                )
-            }
-
-            item { Spacer(modifier = Modifier.height(32.dp)) }
+            item { Spacer(modifier = Modifier.height(115.dp)) }
         }
 
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
+
+    // ── Account Action Modal (No Set as Primary) ─────────────────────────
+    if (selectedAccountForActions != null) {
+        val account = selectedAccountForActions!!
+        AlertDialog(
+            onDismissRequest = { selectedAccountForActions = null },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = CategoryIconMapper.getAccountIcon(account.name),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(text = account.name, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            val acc = account
+                            selectedAccountForActions = null
+                            accountToEdit = acc
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Edit Account Details", fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    if (!account.isPrimary) {
+                        TextButton(
+                            onClick = {
+                                val acc = account
+                                selectedAccountForActions = null
+                                accountToDelete = acc
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Delete, contentDescription = null, tint = colors.expense, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Delete Account", color = colors.expense, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { selectedAccountForActions = null }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
+
+    // ── Category Action Modal ─────────────────────────────────────────────
+    if (selectedCategoryForActions != null) {
+        val category = selectedCategoryForActions!!
+        AlertDialog(
+            onDismissRequest = { selectedCategoryForActions = null },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = CategoryIconMapper.getIcon(category.iconName),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(text = category.name, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            val cat = category
+                            selectedCategoryForActions = null
+                            categoryToEdit = cat
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Edit Category", fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    TextButton(
+                        onClick = {
+                            val cat = category
+                            selectedCategoryForActions = null
+                            categoryToDelete = cat
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.Delete, contentDescription = null, tint = colors.expense, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Delete Category", color = colors.expense, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { selectedCategoryForActions = null }) {
+                    Text("Close")
+                }
+            }
         )
     }
 
@@ -543,7 +734,7 @@ fun SettingsScreen(
         var editedAccountName by remember(accountToEdit) { mutableStateOf(accountToEdit!!.name) }
         AlertDialog(
             onDismissRequest = { accountToEdit = null },
-            title = { Text("Edit Account Name", fontWeight = FontWeight.Bold) },
+            title = { Text("Edit Account Details", fontWeight = FontWeight.Bold) },
             text = {
                 Column(modifier = Modifier.padding(top = 8.dp)) {
                     OutlinedTextField(
@@ -611,19 +802,30 @@ fun SettingsScreen(
                         .padding(vertical = 4.dp)
                 ) {
                     Text(
-                        text = "Hisab Open Source Software",
+                        text = "Apache License, Version 2.0",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "• MIT License — Subham Bose (@XHLEIK)\n" +
-                               "• Android Jetpack Compose (Apache 2.0 License)\n" +
-                               "• Room Persistence Database (Apache 2.0 License)\n" +
-                               "• Kotlin Coroutines & Flows (Apache 2.0 License)\n" +
-                               "• AndroidX Core KTX & Lifecycle (Apache 2.0 License)\n" +
-                               "• Material Design 3 Components (Apache 2.0 License)",
+                        text = "Copyright 2026 Subham Bose (@XHLEIK)\n\n" +
+                               "Licensed under the Apache License, Version 2.0 (the \"License\"); " +
+                               "you may not use this software except in compliance with the License. " +
+                               "You may obtain a copy of the License at:\n" +
+                               "http://www.apache.org/licenses/LICENSE-2.0\n\n" +
+                               "Unless required by applicable law or agreed to in writing, software " +
+                               "distributed under the License is distributed on an \"AS IS\" BASIS, " +
+                               "WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. " +
+                               "See the License for the specific language governing permissions and " +
+                               "limitations under the License.\n\n" +
+                               "Third-Party Open Source Libraries & Frameworks:\n" +
+                               "• Android Jetpack Compose (Apache 2.0)\n" +
+                               "• Room Persistence Database (Apache 2.0)\n" +
+                               "• Kotlin Coroutines & Flow (Apache 2.0)\n" +
+                               "• Gson JSON Library (Apache 2.0)\n" +
+                               "• Apache POI Excel Library (Apache 2.0)\n" +
+                               "• Material Design 3 Components (Apache 2.0)",
                         style = MaterialTheme.typography.bodySmall,
                         color = colors.textSecondary
                     )
@@ -649,16 +851,16 @@ fun SettingsScreen(
                         .padding(vertical = 4.dp)
                 ) {
                     Text(
-                        text = "100% Offline & Private Policy",
+                        text = "100% Offline & Local Data Privacy",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "1. Local On-Device Storage: All financial data, transactions, bank accounts, and budgets are saved exclusively in an encrypted Room SQLite database on your device.\n\n" +
-                               "2. Zero Analytics & Tracking: Hisab collects NO telemetry, analytics, advertising IDs, or crash logs. No data ever leaves your device.\n\n" +
-                               "3. Automatic Backup Safety: Local backup JSON/CSV files are written strictly to Documents/Hisab/ for convenient restoration.",
+                        text = "1. Zero Network Data Collection: Hisab operates completely offline without internet permissions, analytics trackers, advertising identifiers, or third-party telemetry. No personal or financial data ever leaves your device.\n\n" +
+                               "2. Local Storage Safety: All income, expense, account balances, and budget records are stored strictly on your local device inside a sandboxed SQLite database.\n\n" +
+                               "3. User Backup Control: Auto-backup and exported files stored in local storage (Documents/Hisab/) remain entirely under your manual control.",
                         style = MaterialTheme.typography.bodySmall,
                         color = colors.textSecondary
                     )
@@ -666,7 +868,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showPrivacyNoticeDialog = false }) {
-                    Text("Close", fontWeight = FontWeight.Bold)
+                    Text("I Understand", fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -684,16 +886,16 @@ fun SettingsScreen(
                         .padding(vertical = 4.dp)
                 ) {
                     Text(
-                        text = "End-User Terms of Agreement",
+                        text = "End-User Terms & Ownership Agreement",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "1. Financial Records Ownership: You retain full ownership and sole responsibility over your financial records and backup files.\n\n" +
-                               "2. Free & Open Source Use: You are granted a non-exclusive license to use, modify, and distribute Hisab under the MIT License.\n\n" +
-                               "3. Disclaimer of Warranty: Hisab is provided 'AS IS' without warranties of any kind. Subham Bose is not liable for data loss arising from device damage or manual file deletion.",
+                        text = "1. Financial Records Ownership: You retain 100% ownership, control, and responsibility over all financial records and data entered into Hisab.\n\n" +
+                               "2. Local Backup Responsibility: Because Hisab is 100% offline and serverless, you are responsible for maintaining local backup files (Documents/Hisab/) before uninstalling the application or resetting your device.\n\n" +
+                               "3. Limitation of Liability & Warranty: Hisab is provided 'AS IS' under the Apache License 2.0, without implied warranties of any kind. The developer (Subham Bose) is not liable for data loss arising from hardware failure, OS resets, or manual file deletion.",
                         style = MaterialTheme.typography.bodySmall,
                         color = colors.textSecondary
                     )
@@ -701,10 +903,320 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showUserAgreementDialog = false }) {
-                    Text("Accept & Close", fontWeight = FontWeight.Bold)
+                    Text("I Understand", fontWeight = FontWeight.Bold)
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun CategoryGrid(
+    categories: List<CategoryEntity>,
+    onCategoryClick: (CategoryEntity) -> Unit,
+    onAddClick: () -> Unit
+) {
+    val items = remember(categories) {
+        categories.map { CategoryItem.Category(it) } + listOf(CategoryItem.Add)
+    }
+    val rows = remember(items) { items.chunked(4) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        rows.forEach { rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                rowItems.forEach { item ->
+                    Box(modifier = Modifier.weight(1f)) {
+                        when (item) {
+                            is CategoryItem.Category -> {
+                                CategorySquareTile(
+                                    category = item.category,
+                                    onClick = { onCategoryClick(item.category) }
+                                )
+                            }
+                            is CategoryItem.Add -> {
+                                AddCategorySquareTile(
+                                    onClick = onAddClick
+                                )
+                            }
+                        }
+                    }
+                }
+                if (rowItems.size < 4) {
+                    repeat(4 - rowItems.size) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+private sealed class CategoryItem {
+    data class Category(val category: CategoryEntity) : CategoryItem()
+    object Add : CategoryItem()
+}
+
+@Composable
+private fun CategoryAccordionHeader(
+    icon: ImageVector,
+    title: String,
+    count: Int,
+    isExpanded: Boolean,
+    onToggle: () -> Unit
+) {
+    val colors = HisabTheme.colors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggle() }
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = colors.textPrimary
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = "$count",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+
+        Icon(
+            imageVector = if (isExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+            contentDescription = if (isExpanded) "Collapse" else "Expand",
+            tint = colors.textSecondary,
+            modifier = Modifier.size(24.dp)
+        )
+    }
+}
+
+@Composable
+private fun CategorySquareTile(
+    category: CategoryEntity,
+    onClick: () -> Unit
+) {
+    val colors = HisabTheme.colors
+    val defaultColor = MaterialTheme.colorScheme.primary
+    val parsedColor = remember(category, defaultColor) {
+        try {
+            Color(android.graphics.Color.parseColor(category.colorHex))
+        } catch (e: Exception) {
+            defaultColor
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(82.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(colors.surfaceCard)
+            .border(0.5.dp, colors.cardBorder, RoundedCornerShape(12.dp))
+            .clickable { onClick() }
+            .padding(6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(parsedColor.copy(alpha = 0.10f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = CategoryIconMapper.getIcon(category.iconName),
+                    contentDescription = category.name,
+                    tint = parsedColor,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = category.name,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, lineHeight = 13.sp),
+                fontWeight = FontWeight.Medium,
+                color = colors.textPrimary,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                minLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun AddCategorySquareTile(
+    onClick: () -> Unit
+) {
+    val colors = HisabTheme.colors
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(82.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(colors.innerSurface)
+            .border(0.5.dp, colors.cardBorder, RoundedCornerShape(12.dp))
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(colors.cardBorder.copy(alpha = 0.4f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Add Category",
+                    tint = colors.textSecondary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Add",
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, lineHeight = 13.sp),
+                fontWeight = FontWeight.SemiBold,
+                color = colors.textSecondary,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                minLines = 2
+            )
+        }
+    }
+}
+
+@Composable
+private fun AccountCard(
+    account: AccountEntity,
+    onClick: () -> Unit
+) {
+    val colors = HisabTheme.colors
+    val defaultPrimaryColor = MaterialTheme.colorScheme.primary
+    val parsedColor = remember(account, defaultPrimaryColor) {
+        try {
+            if (!account.colorHex.isNullOrBlank()) {
+                Color(android.graphics.Color.parseColor(account.colorHex))
+            } else {
+                val lower = account.name.lowercase()
+                when {
+                    lower.contains("primary") -> Color(0xFF10B981)
+                    lower.contains("secondary") -> Color(0xFF3B82F6)
+                    lower.contains("savings") || lower.contains("saving") -> Color(0xFFF59E0B)
+                    lower.contains("cash") -> Color(0xFF8B5CF6)
+                    else -> Color(0xFF14B8A6)
+                }
+            }
+        } catch (e: Exception) {
+            defaultPrimaryColor
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(colors.surfaceCard)
+            .border(0.5.dp, colors.cardBorder, RoundedCornerShape(12.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(parsedColor.copy(alpha = 0.10f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = CategoryIconMapper.getAccountIcon(account.name),
+                        contentDescription = account.name,
+                        tint = parsedColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Text(
+                    text = account.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.textPrimary
+                )
+            }
+
+            if (account.isPrimary) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFF10B981).copy(alpha = 0.12f))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = "PRIMARY",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF10B981)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -743,7 +1255,7 @@ private fun SettingsItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -780,268 +1292,47 @@ private fun SettingsItem(
 }
 
 @Composable
-private fun AccountRow(
-    account: AccountEntity,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
-    val colors = HisabTheme.colors
-    val parsedColor = remember(account) {
-        try {
-            if (!account.colorHex.isNullOrBlank()) {
-                Color(android.graphics.Color.parseColor(account.colorHex))
-            } else {
-                val lower = account.name.lowercase()
-                when {
-                    lower.contains("primary") -> Color(0xFF10B981)
-                    lower.contains("secondary") -> Color(0xFF3B82F6)
-                    lower.contains("savings") || lower.contains("saving") -> Color(0xFFF59E0B)
-                    lower.contains("cash") -> Color(0xFF8B5CF6)
-                    else -> Color(0xFF14B8A6)
-                }
-            }
-        } catch (e: Exception) {
-            val lower = account.name.lowercase()
-            when {
-                lower.contains("primary") -> Color(0xFF10B981)
-                lower.contains("secondary") -> Color(0xFF3B82F6)
-                lower.contains("savings") || lower.contains("saving") -> Color(0xFFF59E0B)
-                lower.contains("cash") -> Color(0xFF8B5CF6)
-                else -> Color(0xFF14B8A6)
-            }
-        }
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(parsedColor.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = com.example.hisab.util.CategoryIconMapper.getAccountIcon(account.name),
-                contentDescription = account.name,
-                tint = parsedColor,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = account.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary
-                )
-                if (account.isPrimary) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "(Primary)",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = parsedColor
-                    )
-                }
-            }
-            Text(
-                text = account.type,
-                style = MaterialTheme.typography.labelSmall,
-                color = colors.textTertiary
-            )
-        }
-
-        IconButton(
-            onClick = onEdit,
-            modifier = Modifier.size(32.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Edit,
-                contentDescription = "Edit account name",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-
-        if (!account.isPrimary) {
-            Spacer(modifier = Modifier.width(4.dp))
-            IconButton(
-                onClick = onDelete,
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Delete,
-                    contentDescription = "Delete account",
-                    tint = colors.textTertiary,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CategoryRow(
-    category: CategoryEntity,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
-    val colors = HisabTheme.colors
-    val parsedColor = try {
-        Color(android.graphics.Color.parseColor(category.colorHex))
-    } catch (e: Exception) {
-        MaterialTheme.colorScheme.primary
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(parsedColor.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = com.example.hisab.util.CategoryIconMapper.getIcon(category.iconName),
-                contentDescription = category.name,
-                tint = parsedColor,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Text(
-            text = category.name,
-            style = MaterialTheme.typography.bodyMedium,
-            color = colors.textPrimary,
-            modifier = Modifier.weight(1f)
-        )
-
-        IconButton(
-            onClick = onEdit,
-            modifier = Modifier.size(32.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Edit,
-                contentDescription = "Edit category",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.width(4.dp))
-
-        IconButton(
-            onClick = onDelete,
-            modifier = Modifier.size(32.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Delete,
-                contentDescription = "Delete category",
-                tint = colors.textTertiary,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-    }
-}
-
-@Composable
 private fun ExportFormatDialog(
     onDismiss: () -> Unit,
     onFormatSelected: (ExportFormat) -> Unit
 ) {
-    val colors = HisabTheme.colors
-    val formats = ExportFormat.entries
     var selectedFormat by remember { mutableStateOf(ExportFormat.PDF) }
+    val colors = HisabTheme.colors
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Export Financial Report",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = colors.textPrimary
-            )
-        },
+        title = { Text("Export Financial Report", fontWeight = FontWeight.Bold) },
         text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text(
-                    text = "Select your desired report format:",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.textSecondary
-                )
-
-                formats.forEach { fmt ->
-                    val isSelected = fmt == selectedFormat
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Select report format to generate:", style = MaterialTheme.typography.bodySmall, color = colors.textSecondary)
+                ExportFormat.values().forEach { format ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                                else MaterialTheme.colorScheme.surfaceVariant
-                            )
-                            .border(
-                                1.dp,
-                                if (isSelected) MaterialTheme.colorScheme.primary else colors.cardBorder,
-                                RoundedCornerShape(12.dp)
-                            )
-                            .clickable { selectedFormat = fmt }
-                            .padding(14.dp),
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { selectedFormat = format }
+                            .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        androidx.compose.material3.RadioButton(
-                            selected = isSelected,
-                            onClick = { selectedFormat = fmt }
+                        RadioButton(
+                            selected = (selectedFormat == format),
+                            onClick = { selectedFormat = format }
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = fmt.displayName,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else colors.textPrimary
-                            )
-                            Text(
-                                text = "Format: .${fmt.extension}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = colors.textTertiary
-                            )
-                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(format.displayName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
         },
         confirmButton = {
-            androidx.compose.material3.Button(
-                onClick = { onFormatSelected(selectedFormat) },
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("Generate Report")
+            Button(onClick = { onFormatSelected(selectedFormat) }, shape = RoundedCornerShape(12.dp)) {
+                Text("Export")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
         }
     )
 }

@@ -100,6 +100,12 @@ class SettingsViewModel(
         }
     }
 
+    fun setPrimaryAccount(account: AccountEntity) {
+        viewModelScope.launch(Dispatchers.IO) {
+            accountRepository?.setPrimaryAccount(account)
+        }
+    }
+
     fun deleteAccount(account: AccountEntity) {
         viewModelScope.launch(Dispatchers.IO) {
             accountRepository?.deleteAccount(account)

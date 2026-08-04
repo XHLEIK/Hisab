@@ -250,14 +250,35 @@ fun SpendingLimitWidget(
                     strokeCap = StrokeCap.Round
                 )
 
-                // Safe Daily Pace Hint
+                // Safe Daily Pace Hint (Vector Icon & Tint Container)
                 if (safeDailyPace > 0 && !status.isExceeded) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "💡 Safe pace: ${CurrencyFormatter.format(safeDailyPace)}/day remaining for this month",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = colors.textTertiary
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 2.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Filled.Speed,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Safe pace: ${CurrencyFormatter.format(safeDailyPace)}/day remaining for this month",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = colors.textSecondary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             }
         }

@@ -17,6 +17,7 @@ datastorePreferences = "1.1.7"
 googleFonts = "1.7.5"
 poi = "5.2.5"
 gson = "2.11.0"
+haze = "1.5.3"
 
 [libraries]
 poi-ooxml = { group = "org.apache.poi", name = "poi-ooxml", version.ref = "poi" }
@@ -60,6 +61,9 @@ kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 
 # DataStore
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" }
+
+# Backdrop blur (frosted glass nav)
+haze = { group = "dev.chrisbanes.haze", name = "haze", version.ref = "haze" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }

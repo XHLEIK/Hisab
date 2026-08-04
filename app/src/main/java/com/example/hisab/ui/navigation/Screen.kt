@@ -46,6 +46,6 @@ sealed class Screen(
     )
 
     companion object {
-        val bottomNavItems = listOf(Dashboard, Analytics, History, Settings)
+        val bottomNavItems by lazy { listOf(Dashboard, Analytics, History, Settings) }
     }
 }

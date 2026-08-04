@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -99,6 +100,7 @@ fun DashboardScreen(
 
     val colors = HisabTheme.colors
     val categoryMap = remember(categories) { categories.associateBy { it.id } }
+    val groupedTransactions = remember(recentTransactions) { recentTransactions.groupBy { it.date } }
 
     val today = LocalDate.now()
     val isEndOfMonth = today.dayOfMonth >= today.lengthOfMonth() - 1
@@ -256,33 +258,53 @@ fun DashboardScreen(
                     EmptyState()
                 }
             } else {
-                val grouped = recentTransactions.groupBy { it.date }
-                grouped.forEach { (date, transactions) ->
-                    item {
-                        Text(
-                            text = DateUtils.formatRelative(date),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = colors.textTertiary,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
-                        )
-                    }
-                    items(
-                        items = transactions,
-                        key = { it.id }
-                    ) { transaction ->
-                        val category = categoryMap[transaction.categoryId]
-                        TransactionItem(
-                            transaction = transaction,
-                            categoryName = category?.name ?: "Unknown",
-                            categoryColor = category?.colorHex ?: "#607D8B",
-                            categoryIcon = category?.iconName ?: "MoreHoriz",
-                            onClick = { selectedTransactionForOptions = transaction }
-                        )
+                groupedTransactions.forEach { (date, transactions) ->
+                    item(key = "dash_group_$date") {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = DateUtils.formatRelative(date),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.textPrimary,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(colors.surfaceCard)
+                                    .border(0.5.dp, colors.cardBorder, RoundedCornerShape(16.dp))
+                            ) {
+                                Column {
+                                    transactions.forEachIndexed { index, transaction ->
+                                        val category = categoryMap[transaction.categoryId]
+                                        TransactionItem(
+                                            transaction = transaction,
+                                            categoryName = category?.name ?: "Unknown",
+                                            categoryColor = category?.colorHex ?: "#607D8B",
+                                            categoryIcon = category?.iconName ?: "MoreHoriz",
+                                            onClick = { selectedTransactionForOptions = transaction }
+                                        )
+                                        if (index < transactions.size - 1) {
+                                            androidx.compose.material3.HorizontalDivider(
+                                                color = colors.cardBorder.copy(alpha = 0.5f),
+                                                thickness = 0.5.dp,
+                                                modifier = Modifier.padding(horizontal = 16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(80.dp)) }
+            item { Spacer(modifier = Modifier.height(115.dp)) }
         }
     }
 

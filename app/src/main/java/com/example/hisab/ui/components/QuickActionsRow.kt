@@ -15,8 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -58,22 +58,22 @@ fun QuickActionsRow(
         ) {
             MinimalActionPill(
                 label = "Income",
-                icon = Icons.AutoMirrored.Filled.ArrowBack,
-                accentColor = Color(0xFF10B981), // Emerald Green
+                icon = Icons.Filled.Add,
+                accentColor = Color(0xFF00E676), // Bright Green
                 modifier = Modifier.weight(1f),
                 onClick = { onAddType(TransactionType.INCOME) }
             )
             MinimalActionPill(
                 label = "Expense",
-                icon = Icons.AutoMirrored.Filled.ArrowForward,
-                accentColor = Color(0xFFEF4444), // Coral Red
+                icon = Icons.Filled.Remove,
+                accentColor = Color(0xFFFF5252), // Bright Red
                 modifier = Modifier.weight(1f),
                 onClick = { onAddType(TransactionType.EXPENSE) }
             )
             MinimalActionPill(
                 label = "Transfer",
                 icon = Icons.Filled.SwapHoriz,
-                accentColor = Color(0xFF3B82F6), // Sapphire Blue
+                accentColor = Color(0xFF64B5F6), // Bright Blue
                 modifier = Modifier.weight(1f),
                 onClick = { onAddType(TransactionType.TRANSFER) }
             )
@@ -89,8 +89,6 @@ private fun MinimalActionPill(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    val colors = HisabTheme.colors
-
     Box(
         modifier = modifier
             .height(48.dp)
@@ -98,7 +96,7 @@ private fun MinimalActionPill(
             .background(accentColor.copy(alpha = 0.12f))
             .border(
                 width = 1.dp,
-                color = accentColor.copy(alpha = 0.3f),
+                color = accentColor.copy(alpha = 0.30f),
                 shape = RoundedCornerShape(12.dp)
             )
             .clickable { onClick() },
@@ -108,26 +106,18 @@ private fun MinimalActionPill(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(22.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(accentColor.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accentColor,
-                    modifier = Modifier.size(13.dp)
-                )
-            }
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accentColor,
+                modifier = Modifier.size(16.dp)
+            )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
-                color = colors.textPrimary
+                color = accentColor
             )
         }
     }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -61,6 +62,7 @@ fun DonutChart(
     data: List<CategoryBreakdown>,
     totalAmount: Double,
     centerTitle: String = "Total Spending",
+    momChangePercentage: Double = 0.0,
     modifier: Modifier = Modifier
 ) {
     val colors = HisabTheme.colors
@@ -90,7 +92,7 @@ fun DonutChart(
 
                 // Background track ring
                 drawArc(
-                    color = Color.White.copy(alpha = 0.05f),
+                    color = colors.cardBorder.copy(alpha = 0.5f),
                     startAngle = 0f,
                     sweepAngle = 360f,
                     useCenter = false,
@@ -100,7 +102,6 @@ fun DonutChart(
                 )
 
                 if (data.isNotEmpty()) {
-                    // Increased gap angle to 18 degrees for prominent rounded segment separation
                     val gapDegrees = if (data.size > 1) 18f else 0f
                     val totalGapDegrees = data.size * gapDegrees
                     val availableDegrees = (360f - totalGapDegrees).coerceAtLeast(160f)
@@ -112,7 +113,6 @@ fun DonutChart(
                         val drawSweep = itemSweep.coerceAtLeast(1f)
                         val startAngle = currentAngle + (gapDegrees / 2f)
 
-                        // Assign unique palette color by index to guarantee 100% color differentiation
                         val color = ModernDonutPalette[index % ModernDonutPalette.size]
 
                         drawArc(
@@ -130,7 +130,7 @@ fun DonutChart(
                 }
             }
 
-            // ── Center Content: Title, Amount & Growth Chip ─────────────────────
+            // ── Center Content: Title, Amount & Dynamic MoM Growth Chip ──────────
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
@@ -153,25 +153,30 @@ fun DonutChart(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // Micro growth indicator chip (matching screenshot)
+                // Dynamic MoM growth indicator chip
+                val isPositive = momChangePercentage >= 0.0
+                val formattedPercentage = String.format(java.util.Locale.US, "%s%.1f%%", if (isPositive) "+" else "", momChangePercentage)
+                val badgeColor = if (isPositive) Color(0xFF10B981) else Color(0xFFEF4444)
+                val badgeIcon = if (isPositive) Icons.Filled.ArrowUpward else Icons.Filled.ArrowDownward
+
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFF10B981).copy(alpha = 0.15f))
+                        .background(badgeColor.copy(alpha = 0.15f))
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "+2.5%",
+                            text = formattedPercentage,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF10B981)
+                            color = badgeColor
                         )
                         Spacer(modifier = Modifier.width(3.dp))
                         Icon(
-                            imageVector = Icons.Filled.ArrowUpward,
+                            imageVector = badgeIcon,
                             contentDescription = null,
-                            tint = Color(0xFF10B981),
+                            tint = badgeColor,
                             modifier = Modifier.size(12.dp)
                         )
                     }
@@ -189,16 +194,15 @@ fun DonutChart(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             data.take(8).forEachIndexed { index, item ->
-                // Use index-based palette color to match the chart 100%
                 val color = ModernDonutPalette[index % ModernDonutPalette.size]
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .background(colors.innerSurface)
                         .border(1.dp, colors.cardBorder, RoundedCornerShape(14.dp))
-                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -211,14 +215,16 @@ fun DonutChart(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(12.dp)
+                                    .size(14.dp)
                                     .clip(CircleShape)
                                     .background(color)
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Spacer(modifier = Modifier.width(14.dp))
+
                             Text(
                                 text = item.categoryName,
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.SemiBold,
                                 color = colors.textPrimary,
                                 maxLines = 1,
@@ -229,19 +235,21 @@ fun DonutChart(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = CurrencyFormatter.format(item.totalAmount),
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = colors.textPrimary
                             )
-                            Spacer(modifier = Modifier.width(10.dp))
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
+                                    .clip(RoundedCornerShape(8.dp))
                                     .background(color.copy(alpha = 0.15f))
-                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    text = "${String.format("%.1f", item.percentage)}%",
+                                    text = String.format(java.util.Locale.US, "%.1f%%", item.percentage),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = color

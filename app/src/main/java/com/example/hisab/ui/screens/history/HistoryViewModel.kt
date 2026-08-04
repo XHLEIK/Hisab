@@ -3,11 +3,15 @@ package com.example.hisab.ui.screens.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.hisab.data.db.entity.AccountEntity
 import com.example.hisab.data.db.entity.CategoryEntity
 import com.example.hisab.data.db.entity.TransactionEntity
 import com.example.hisab.data.model.TransactionType
+import com.example.hisab.data.repository.AccountRepository
 import com.example.hisab.data.repository.CategoryRepository
 import com.example.hisab.data.repository.TransactionRepository
+import com.example.hisab.util.CurrencyFormatter
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,12 +22,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 import java.time.YearMonth
-
-import com.example.hisab.data.db.entity.AccountEntity
-import com.example.hisab.data.repository.AccountRepository
-import kotlinx.coroutines.Dispatchers
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HistoryViewModel(
@@ -63,31 +62,43 @@ class HistoryViewModel(
         _selectedMonth,
         _selectedType,
         _selectedAccount,
-        _searchQuery
-    ) { month, type, account, query ->
-        FilterParams(month, type, account, query)
-    }.flatMapLatest { params ->
-        val start = params.month.atDay(1)
-        val end = params.month.atEndOfMonth()
-        // Load all transactions for month (with type + search filter in DB for perf)
-        // Account filter is done in-memory to handle renamed accounts correctly
+        _searchQuery,
+        categories
+    ) { month, type, account, query, categoryList ->
+        val catMap = categoryList.associateBy { it.id }
+        val start = month.atDay(1)
+        val end = month.atEndOfMonth()
+
         transactionRepository.getFilteredTransactions(
             startDate = start,
             endDate = end,
-            type = params.type,
-            account = null,   // always null — we filter by account in-memory below
-            searchQuery = params.query.ifBlank { null }
+            type = null, // Filter by type in-memory
+            account = null, // Filter by account in-memory
+            searchQuery = null // Filter by search query in-memory
         ).map { allTxns ->
-            if (params.account == null) {
-                allTxns
-            } else {
-                allTxns.filter { tx ->
-                    tx.account == params.account ||
-                    (tx.type == TransactionType.TRANSFER && tx.toAccount == params.account)
+            allTxns.filter { tx ->
+                val matchesType = (type == null || tx.type == type)
+                val matchesAccount = (account == null || tx.account == account || (tx.type == TransactionType.TRANSFER && tx.toAccount == account))
+
+                val matchesQuery = if (query.isBlank()) {
+                    true
+                } else {
+                    val q = query.trim().lowercase()
+                    val catName = catMap[tx.categoryId]?.name?.lowercase() ?: ""
+                    val notes = tx.notes.lowercase()
+                    val amountStr = tx.amount.toString()
+                    val formattedAmount = CurrencyFormatter.format(tx.amount).lowercase()
+                    val acc = tx.account.lowercase()
+                    val toAcc = tx.toAccount?.lowercase() ?: ""
+
+                    catName.contains(q) || notes.contains(q) || amountStr.contains(q) || formattedAmount.contains(q) || acc.contains(q) || toAcc.contains(q)
                 }
+
+                matchesType && matchesAccount && matchesQuery
             }
         }
-    }.stateIn(
+    }.flatMapLatest { flow -> flow }
+    .stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
@@ -134,13 +145,6 @@ class HistoryViewModel(
             )
         }
     }
-
-    private data class FilterParams(
-        val month: YearMonth,
-        val type: TransactionType?,
-        val account: String?,
-        val query: String
-    )
 
     class Factory(
         private val transactionRepository: TransactionRepository,

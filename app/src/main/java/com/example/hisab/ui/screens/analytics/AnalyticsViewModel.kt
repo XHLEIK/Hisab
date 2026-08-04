@@ -8,7 +8,6 @@ import com.example.hisab.data.db.entity.CategoryEntity
 import com.example.hisab.data.db.entity.TransactionEntity
 import com.example.hisab.data.model.CategoryBreakdown
 import com.example.hisab.data.model.DailyTotal
-import com.example.hisab.data.model.MonthlySummary
 import com.example.hisab.data.model.TransactionType
 import com.example.hisab.data.repository.AccountRepository
 import com.example.hisab.data.repository.CategoryRepository
@@ -25,6 +24,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -88,6 +88,16 @@ class AnalyticsViewModel(
             initialValue = emptyList()
         )
 
+    val previousMonthTransactions: StateFlow<List<TransactionEntity>> = _selectedMonth
+        .flatMapLatest { month ->
+            transactionRepository.getTransactionsForMonth(month.minusMonths(1))
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
     // ── All Transactions (for balance & account calculation) ────────
     private val _allTransactions = MutableStateFlow<List<TransactionEntity>>(emptyList())
     val allTransactions: StateFlow<List<TransactionEntity>> = _allTransactions.asStateFlow()
@@ -103,17 +113,77 @@ class AnalyticsViewModel(
         }
     }
 
-    // ── KPI Overview ──────────────────────────────────────────────
+    // ── KPI Overview Metrics ───────────────────────────────────────
     val todayExpense: StateFlow<Double> = allTransactions.map { txns ->
         val today = LocalDate.now()
         txns.filter { it.type == TransactionType.EXPENSE && it.date == today }.sumOf { it.amount }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val totalExpenseMonthToDate: StateFlow<Double> = monthlyTransactions.map { txns ->
+    val totalExpenseMonthToDate: StateFlow<Double> = combine(monthlyTransactions, _selectedMonth) { txns, month ->
         val today = LocalDate.now()
-        txns.filter { it.type == TransactionType.EXPENSE && (it.date <= today || _selectedMonth.value.isBefore(YearMonth.now())) }
+        val isCurrentMonth = (month == YearMonth.now())
+        txns.filter { it.type == TransactionType.EXPENSE && (!isCurrentMonth || it.date <= today) }
             .sumOf { it.amount }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val totalIncomeMonthToDate: StateFlow<Double> = combine(monthlyTransactions, _selectedMonth) { txns, month ->
+        val today = LocalDate.now()
+        val isCurrentMonth = (month == YearMonth.now())
+        txns.filter { it.type == TransactionType.INCOME && (!isCurrentMonth || it.date <= today) }
+            .sumOf { it.amount }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val monthlySavingsAmount: StateFlow<Double> = combine(totalIncomeMonthToDate, totalExpenseMonthToDate) { income, expense ->
+        income - expense
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val savingsAccountBalance: StateFlow<Double> = combine(allTransactions, accounts) { txns, accList ->
+        val savingsAcc = accList.firstOrNull { 
+            it.name.contains("Savings", ignoreCase = true) || it.type.equals("SAVINGS", ignoreCase = true)
+        }
+        val targetName = savingsAcc?.name ?: "Savings"
+        calculateBalanceForAccount(targetName, txns)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val savingsAccountName: StateFlow<String> = accounts.map { list ->
+        val savingsAcc = list.firstOrNull { 
+            it.name.contains("Savings", ignoreCase = true) || it.type.equals("SAVINGS", ignoreCase = true)
+        }
+        savingsAcc?.name ?: "Savings Bank"
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Savings Bank")
+
+    val dailyBurnRate: StateFlow<Double> = combine(totalExpenseMonthToDate, _selectedMonth) { expense, month ->
+        val isCurrentMonth = (month == YearMonth.now())
+        val daysElapsed = if (isCurrentMonth) {
+            maxOf(1, LocalDate.now().dayOfMonth)
+        } else {
+            month.lengthOfMonth()
+        }
+        expense / daysElapsed
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val savingsRatePercentage: StateFlow<Double> = combine(totalIncomeMonthToDate, totalExpenseMonthToDate) { income, expense ->
+        if (income <= 0.0) {
+            0.0
+        } else {
+            val rate = ((income - expense) / income) * 100.0
+            maxOf(0.0, rate)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val weekendVsWeekdayRatio: StateFlow<Pair<Double, Double>> = monthlyTransactions.map { txns ->
+        val expenses = txns.filter { it.type == TransactionType.EXPENSE }
+        val total = expenses.sumOf { it.amount }
+        if (total <= 0.0) {
+            Pair(0.0, 0.0)
+        } else {
+            val weekend = expenses.filter {
+                it.date.dayOfWeek == DayOfWeek.SATURDAY || it.date.dayOfWeek == DayOfWeek.SUNDAY
+            }.sumOf { it.amount }
+            val weekday = total - weekend
+            Pair((weekend / total) * 100.0, (weekday / total) * 100.0)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Pair(0.0, 0.0))
 
     // Account Balances
     val primaryAccountName: StateFlow<String> = accounts.map { list ->
@@ -150,8 +220,33 @@ class AnalyticsViewModel(
         return balance
     }
 
-    // ── Category Breakdown with Filter ────────────────────────────
+    // ── Category Breakdown with Filter & Dynamic MoM % ─────────────
     val categoryFilter = MutableStateFlow(CategoryFilterType.EXPENSE)
+
+    val categoryBreakdownMomChange: StateFlow<Double> = combine(
+        monthlyTransactions,
+        previousMonthTransactions,
+        categoryFilter
+    ) { currentTxns, prevTxns, filter ->
+        val currentSum = when (filter) {
+            CategoryFilterType.ALL -> currentTxns.sumOf { it.amount }
+            CategoryFilterType.INCOME -> currentTxns.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+            CategoryFilterType.EXPENSE -> currentTxns.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+            CategoryFilterType.TRANSFERS -> currentTxns.filter { it.type == TransactionType.TRANSFER }.sumOf { it.amount }
+        }
+        val prevSum = when (filter) {
+            CategoryFilterType.ALL -> prevTxns.sumOf { it.amount }
+            CategoryFilterType.INCOME -> prevTxns.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+            CategoryFilterType.EXPENSE -> prevTxns.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+            CategoryFilterType.TRANSFERS -> prevTxns.filter { it.type == TransactionType.TRANSFER }.sumOf { it.amount }
+        }
+
+        if (prevSum <= 0.0) {
+            if (currentSum > 0.0) 100.0 else 0.0
+        } else {
+            ((currentSum - prevSum) / prevSum) * 100.0
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     val filteredCategoryBreakdown: StateFlow<List<CategoryBreakdown>> = combine(
         monthlyTransactions,
@@ -168,8 +263,6 @@ class AnalyticsViewModel(
 
         val totalAmount = filteredTxns.sumOf { it.amount }
 
-        // In ALL mode group by (categoryId + type) so income and expense of same
-        // category appear as separate, distinctly colored slices
         val grouped = if (filter == CategoryFilterType.ALL) {
             filteredTxns.groupBy { "${it.categoryId}_${it.type.name}" }
         } else {
@@ -186,9 +279,9 @@ class AnalyticsViewModel(
 
             val rawColor = cat?.colorHex ?: "#607D8B"
             val color = when {
-                isTransfer -> "#00695C"   // dark teal-green — different shade of green from income
-                isIncome -> rawColor       // keep original category color (Salary = #4CAF50 green, etc.)
-                else -> rawColor           // original color for expense
+                isTransfer -> "#00695C"
+                isIncome -> rawColor
+                else -> rawColor
             }
 
             val name = when {
@@ -210,7 +303,7 @@ class AnalyticsViewModel(
         }.sortedByDescending { it.totalAmount }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // ── Spending Calendar (Daily Expense & Income Totals) ─────────
+    // ── Daily Expense & Income Totals ─────────
     val dailyExpenseTotals: StateFlow<List<DailyTotal>> = _selectedMonth
         .flatMapLatest { month ->
             transactionRepository.getDailyExpenseTotals(month)
@@ -234,7 +327,7 @@ class AnalyticsViewModel(
     // ── Time Filtered Bar Chart ────────────────────────────────────
     val barChartFilter = MutableStateFlow(BarChartTimeFilter.MONTHLY)
     val barChartSpecificDate = MutableStateFlow(LocalDate.now())
-    val weekOffset = MutableStateFlow(0) // 0 = current week, -1 = last week, etc.
+    val weekOffset = MutableStateFlow(0)
 
     fun navigateWeek(delta: Int) {
         weekOffset.value += delta
@@ -340,7 +433,7 @@ class AnalyticsViewModel(
             }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-private data class Tuple4<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
+    private data class Tuple4<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
 
     // ── Expense Leaderboard ───────────────────────────────────────
     val topExpensesLeaderboard: StateFlow<List<TransactionEntity>> = monthlyTransactions.map { txns ->

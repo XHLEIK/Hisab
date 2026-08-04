@@ -46,6 +46,15 @@ class AccountRepository(
         autoBackupManager?.performBackup()
     }
 
+    suspend fun setPrimaryAccount(account: AccountEntity) {
+        val all = accountDao.getAllSync()
+        all.forEach { acc ->
+            val updated = acc.copy(isPrimary = (acc.id == account.id))
+            accountDao.update(updated)
+        }
+        autoBackupManager?.performBackup()
+    }
+
     suspend fun getAllAccountsSync(): List<AccountEntity> =
         accountDao.getAllSync()
 
