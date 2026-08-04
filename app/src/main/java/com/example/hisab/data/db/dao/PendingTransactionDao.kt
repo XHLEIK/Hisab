@@ -21,6 +21,9 @@ interface PendingTransactionDao {
     @Delete
     suspend fun delete(pending: PendingTransactionEntity)
 
+    @Query("SELECT * FROM pending_transactions WHERE amount = :amount AND type = :oppositeType AND timestamp >= :minTimestamp ORDER BY timestamp DESC LIMIT 1")
+    suspend fun findMatchingOppositePending(amount: Double, oppositeType: String, minTimestamp: Long): PendingTransactionEntity?
+
     @Query("DELETE FROM pending_transactions WHERE id = :id")
     suspend fun deleteById(id: Long)
 

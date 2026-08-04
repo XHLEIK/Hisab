@@ -5,12 +5,16 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
 import android.telephony.SmsMessage
+import com.example.hisab.data.backup.AutoBackupManager
 import com.example.hisab.data.db.HisabDatabase
 import com.example.hisab.data.db.entity.PendingTransactionEntity
+import com.example.hisab.data.db.entity.TransactionEntity
+import com.example.hisab.data.model.TransactionType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.security.MessageDigest
+import java.time.LocalDate
 
 class SmsReceiver : BroadcastReceiver() {
 
@@ -47,17 +51,93 @@ class SmsReceiver : BroadcastReceiver() {
             try {
                 val db = HisabDatabase.getDatabase(context)
                 val pendingDao = db.pendingTransactionDao()
+                val transactionDao = db.transactionDao()
+                val accountDao = db.accountDao()
+                val categoryDao = db.categoryDao()
 
                 // De-duplication Hash Check (7-day window)
                 val msgHash = computeHash("$sender-${parsed.amount}-${parsed.type}-${rawBody.take(30)}")
                 val prefs = context.getSharedPreferences("sms_processed_hashes", Context.MODE_PRIVATE)
 
                 if (prefs.contains(msgHash)) {
-                    // Duplicate SMS, ignore
                     return@launch
                 }
 
-                // Save hash
+                // 1. Manual Entry Auto-Reconciliation Check (Past 24 Hours)
+                val txType = if (parsed.type == "CREDIT") TransactionType.INCOME else TransactionType.EXPENSE
+                val matchingManual = transactionDao.findMatchingManualTransaction(
+                    parsed.amount,
+                    txType.name,
+                    LocalDate.now().minusDays(1)
+                )
+
+                if (matchingManual != null) {
+                    // Suppress alert as it was already manually logged
+                    prefs.edit().putBoolean(msgHash, true).apply()
+                    return@launch
+                }
+
+                // 2. Reconciliation Hash Check (Suppresses redundant CREDIT SMS if transfer was already logged)
+                val reconKey = "recon_${parsed.amount}_${parsed.type}"
+                if (prefs.contains(reconKey)) {
+                    prefs.edit().remove(reconKey).putBoolean(msgHash, true).apply()
+                    return@launch
+                }
+
+                // 3. 120-Second Inter-Account Transfer Auto-Merge Engine
+                val oppositeType = if (parsed.type == "DEBIT") "CREDIT" else "DEBIT"
+                val twoMinAgo = System.currentTimeMillis() - 120_000
+                val matchingOppositePending = pendingDao.findMatchingOppositePending(parsed.amount, oppositeType, twoMinAgo)
+
+                if (matchingOppositePending != null) {
+                    // Auto-Merge DEBIT + CREDIT alerts into a single TRANSFER transaction!
+                    val accounts = accountDao.getAllSync()
+                    val debitBankName = if (parsed.type == "DEBIT") parsed.bankName else matchingOppositePending.bankName
+                    val creditBankName = if (parsed.type == "CREDIT") parsed.bankName else matchingOppositePending.bankName
+
+                    val sourceAccount = accounts.firstOrNull { it.bankCode.equals(debitBankName, ignoreCase = true) }
+                        ?: accounts.firstOrNull { it.isPrimary } ?: accounts.firstOrNull()
+                    val targetAccount = accounts.firstOrNull { it.bankCode.equals(creditBankName, ignoreCase = true) }
+                        ?: accounts.firstOrNull { it.name.contains("Savings", ignoreCase = true) } ?: accounts.lastOrNull()
+
+                    val sourceName = sourceAccount?.name ?: debitBankName
+                    val targetName = targetAccount?.name ?: creditBankName
+
+                    val transferCategories = categoryDao.getAllSync().filter { it.type == TransactionType.TRANSFER }
+                    val categoryId = transferCategories.firstOrNull()?.id ?: 1L
+
+                    val transferTx = TransactionEntity(
+                        amount = parsed.amount,
+                        type = TransactionType.TRANSFER,
+                        categoryId = categoryId,
+                        date = LocalDate.now(),
+                        account = sourceName,
+                        toAccount = targetName,
+                        notes = "Auto-merged inter-account transfer ($debitBankName -> $creditBankName)"
+                    )
+
+                    val newTxId = transactionDao.insert(transferTx)
+
+                    // Delete the opposite pending transaction from DB
+                    pendingDao.deleteById(matchingOppositePending.id)
+                    prefs.edit().putBoolean(msgHash, true).apply()
+
+                    // Auto-backup
+                    val autoBackupManager = AutoBackupManager(context, db)
+                    autoBackupManager.performBackup()
+
+                    // Post 3-second Auto-Merge Toast Notification with [ Undo ] button
+                    SmsNotificationHelper.postAutoMergeSuccessNotification(
+                        context,
+                        newTxId,
+                        sourceName,
+                        targetName,
+                        parsed.amount
+                    )
+                    return@launch
+                }
+
+                // If not auto-merged, save hash and insert pending transaction
                 prefs.edit().putBoolean(msgHash, true).apply()
 
                 val pendingEntity = PendingTransactionEntity(

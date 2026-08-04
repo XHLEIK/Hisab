@@ -129,6 +129,11 @@ class MainActivity : ComponentActivity() {
                 }
 
                 LaunchedEffect(Unit) {
+                    // Run SMS Catch-Up Sync in background
+                    CoroutineScope(Dispatchers.IO).launch {
+                        com.example.hisab.data.sms.SmsCatchUpSync.runSync(applicationContext)
+                    }
+
                     val hasStoragePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         Environment.isExternalStorageManager() ||
                                 checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED

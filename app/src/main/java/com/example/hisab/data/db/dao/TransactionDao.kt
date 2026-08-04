@@ -30,6 +30,9 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun getById(id: Long): TransactionEntity?
 
+    @Query("SELECT * FROM transactions WHERE amount = :amount AND type = :type AND date >= :minDate ORDER BY createdAt DESC LIMIT 1")
+    suspend fun findMatchingManualTransaction(amount: Double, type: String, minDate: LocalDate): TransactionEntity?
+
     // ── Monthly Queries ──────────────────────────────────
 
     @Query("""
