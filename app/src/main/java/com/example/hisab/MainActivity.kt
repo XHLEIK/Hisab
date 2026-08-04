@@ -72,6 +72,7 @@ class MainActivity : ComponentActivity() {
         val categoryRepository = CategoryRepository(database.categoryDao(), autoBackupManager)
         val accountRepository = AccountRepository(database.accountDao(), database.transactionDao(), autoBackupManager)
         val backupRepository = BackupRepository(transactionRepository, categoryRepository, autoBackupManager)
+        val pendingTransactionRepository = com.example.hisab.data.repository.PendingTransactionRepository(database.pendingTransactionDao())
 
         setContent {
             HisabAppTheme {
@@ -184,7 +185,8 @@ class MainActivity : ComponentActivity() {
                     transactionRepository = transactionRepository,
                     categoryRepository = categoryRepository,
                     accountRepository = accountRepository,
-                    backupRepository = backupRepository
+                    backupRepository = backupRepository,
+                    pendingTransactionRepository = pendingTransactionRepository
                 )
             }
         }
@@ -196,7 +198,8 @@ fun HisabApp(
     transactionRepository: TransactionRepository,
     categoryRepository: CategoryRepository,
     accountRepository: AccountRepository,
-    backupRepository: BackupRepository
+    backupRepository: BackupRepository,
+    pendingTransactionRepository: com.example.hisab.data.repository.PendingTransactionRepository
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -217,6 +220,7 @@ fun HisabApp(
                 categoryRepository = categoryRepository,
                 accountRepository = accountRepository,
                 backupRepository = backupRepository,
+                pendingTransactionRepository = pendingTransactionRepository,
                 modifier = Modifier
                     .fillMaxSize()
                     .haze(hazeState)

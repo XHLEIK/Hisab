@@ -32,6 +32,12 @@ class AccountRepository(
         autoBackupManager?.performBackup()
     }
 
+    suspend fun updateBankMapping(account: AccountEntity, bankCode: String, accountLast4: String?) {
+        val updated = account.copy(bankCode = bankCode, accountLast4 = accountLast4)
+        accountDao.update(updated)
+        autoBackupManager?.performBackup()
+    }
+
     suspend fun updateAccount(oldName: String, account: AccountEntity) {
         if (oldName != account.name && transactionDao != null) {
             transactionDao.updateAccountName(oldName, account.name)

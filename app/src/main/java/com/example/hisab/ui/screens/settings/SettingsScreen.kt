@@ -43,7 +43,9 @@ import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.Code
@@ -124,6 +126,7 @@ fun SettingsScreen(
     // Action Modal States
     var selectedCategoryForActions by remember { mutableStateOf<CategoryEntity?>(null) }
     var selectedAccountForActions by remember { mutableStateOf<AccountEntity?>(null) }
+    var bankSelectionAccount by remember { mutableStateOf<AccountEntity?>(null) }
 
     var categoryToEdit by remember { mutableStateOf<CategoryEntity?>(null) }
     var showAddCategoryType by remember { mutableStateOf<TransactionType?>(null) }
@@ -432,7 +435,7 @@ fun SettingsScreen(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "Hisab v2.2.3",
+                                    text = "Hisab v2.3.0",
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = colors.textPrimary
@@ -445,7 +448,7 @@ fun SettingsScreen(
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Text(
-                                        text = "Build 223",
+                                        text = "Build 230",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary
@@ -566,6 +569,22 @@ fun SettingsScreen(
                         }
                     }
 
+                    OutlinedButton(
+                        onClick = {
+                            val acc = account
+                            selectedAccountForActions = null
+                            bankSelectionAccount = acc
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.Sms, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Link Bank for SMS Auto-Detect", fontWeight = FontWeight.Bold)
+                        }
+                    }
+
                     if (!account.isPrimary) {
                         TextButton(
                             onClick = {
@@ -655,6 +674,16 @@ fun SettingsScreen(
                 TextButton(onClick = { selectedCategoryForActions = null }) {
                     Text("Close")
                 }
+            }
+        )
+    }
+
+    if (bankSelectionAccount != null) {
+        com.example.hisab.ui.components.BankSelectionSheet(
+            account = bankSelectionAccount!!,
+            onDismiss = { bankSelectionAccount = null },
+            onSaveBankMapping = { acc, bankCode, accountLast4 ->
+                viewModel.updateAccountBankMapping(acc, bankCode, accountLast4)
             }
         )
     }

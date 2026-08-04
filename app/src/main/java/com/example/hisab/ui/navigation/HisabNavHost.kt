@@ -14,6 +14,8 @@ import com.example.hisab.ui.screens.dashboard.DashboardScreen
 import com.example.hisab.ui.screens.history.HistoryScreen
 import com.example.hisab.ui.screens.settings.SettingsScreen
 
+import com.example.hisab.data.repository.PendingTransactionRepository
+
 @Composable
 fun HisabNavHost(
     navController: NavHostController,
@@ -21,6 +23,7 @@ fun HisabNavHost(
     categoryRepository: CategoryRepository,
     accountRepository: AccountRepository,
     backupRepository: BackupRepository,
+    pendingTransactionRepository: PendingTransactionRepository? = null,
     modifier: Modifier = Modifier,
     onAddTransaction: () -> Unit = {}
 ) {
@@ -34,6 +37,7 @@ fun HisabNavHost(
                 transactionRepository = transactionRepository,
                 categoryRepository = categoryRepository,
                 accountRepository = accountRepository,
+                pendingTransactionRepository = pendingTransactionRepository,
                 onAddTransaction = onAddTransaction,
                 onSeeAllTransactions = {
                     navController.navigate(Screen.History.route) {

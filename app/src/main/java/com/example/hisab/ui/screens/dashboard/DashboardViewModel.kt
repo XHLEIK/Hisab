@@ -32,6 +32,9 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
+import com.example.hisab.data.db.entity.PendingTransactionEntity
+import com.example.hisab.data.repository.PendingTransactionRepository
+
 data class SpendingLimitStatus(
     val isEnabled: Boolean = false,
     val limitType: LimitType = LimitType.DAILY,
@@ -49,7 +52,8 @@ class DashboardViewModel(
     private val transactionRepository: TransactionRepository,
     private val categoryRepository: CategoryRepository,
     private val accountRepository: AccountRepository? = null,
-    private val limitRepository: SpendingLimitRepository? = null
+    private val limitRepository: SpendingLimitRepository? = null,
+    private val pendingTransactionRepository: PendingTransactionRepository? = null
 ) : ViewModel() {
 
     init {
@@ -57,6 +61,9 @@ class DashboardViewModel(
             transactionRepository.repairCorruptedTransferCategories()
         }
     }
+
+    val pendingTransactions: StateFlow<List<PendingTransactionEntity>> = (pendingTransactionRepository?.getAllPendingFlow() ?: flowOf(emptyList()))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _selectedMonth = MutableStateFlow(YearMonth.now())
     val selectedMonth: StateFlow<YearMonth> = _selectedMonth.asStateFlow()
@@ -349,15 +356,48 @@ class DashboardViewModel(
         }
     }
 
+    fun approvePendingTransaction(pending: PendingTransactionEntity, categoryName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val txType = if (pending.type == "CREDIT") TransactionType.INCOME else TransactionType.EXPENSE
+            val categories = categoryRepository.getAllCategoriesSync()
+            val matchedCat = categories.firstOrNull { it.name.equals(categoryName, ignoreCase = true) && it.type == txType }
+                ?: categories.firstOrNull { it.type == txType }
+            val catId = matchedCat?.id ?: 1L
+
+            val accounts = accountRepository?.getAllAccountsSync() ?: emptyList()
+            val primary = accounts.firstOrNull { it.isPrimary } ?: accounts.firstOrNull()
+            val accName = primary?.name ?: "Primary Bank"
+
+            val newTx = TransactionEntity(
+                amount = pending.amount,
+                type = txType,
+                categoryId = catId,
+                date = LocalDate.now(),
+                account = accName,
+                notes = "Auto-logged from SMS"
+            )
+
+            transactionRepository.insert(newTx)
+            pendingTransactionRepository?.delete(pending)
+        }
+    }
+
+    fun dismissPendingTransaction(pending: PendingTransactionEntity) {
+        viewModelScope.launch(Dispatchers.IO) {
+            pendingTransactionRepository?.delete(pending)
+        }
+    }
+
     class Factory(
         private val transactionRepository: TransactionRepository,
         private val categoryRepository: CategoryRepository,
         private val accountRepository: AccountRepository? = null,
-        private val limitRepository: SpendingLimitRepository? = null
+        private val limitRepository: SpendingLimitRepository? = null,
+        private val pendingTransactionRepository: PendingTransactionRepository? = null
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return DashboardViewModel(transactionRepository, categoryRepository, accountRepository, limitRepository) as T
+            return DashboardViewModel(transactionRepository, categoryRepository, accountRepository, limitRepository, pendingTransactionRepository) as T
         }
     }
 }

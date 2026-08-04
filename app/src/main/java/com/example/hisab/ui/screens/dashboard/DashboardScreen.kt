@@ -61,11 +61,15 @@ import java.time.LocalDate
 
 import androidx.compose.foundation.layout.statusBarsPadding
 
+import com.example.hisab.data.repository.PendingTransactionRepository
+import com.example.hisab.ui.components.PendingTransactionsCard
+
 @Composable
 fun DashboardScreen(
     transactionRepository: TransactionRepository,
     categoryRepository: CategoryRepository,
     accountRepository: AccountRepository? = null,
+    pendingTransactionRepository: PendingTransactionRepository? = null,
     onAddTransaction: () -> Unit = {},
     onSeeAllTransactions: () -> Unit = {}
 ) {
@@ -75,9 +79,12 @@ fun DashboardScreen(
             transactionRepository,
             categoryRepository,
             accountRepository,
-            SpendingLimitRepository(context)
+            SpendingLimitRepository(context),
+            pendingTransactionRepository
         )
     )
+
+    val pendingTransactions by viewModel.pendingTransactions.collectAsState()
 
     val selectedMonth by viewModel.selectedMonth.collectAsState()
     val summary by viewModel.monthlySummary.collectAsState()
@@ -191,6 +198,15 @@ fun DashboardScreen(
                     netBalance = primaryAndSecondaryBalance,
                     accountCount = accounts.size,
                     savingsAmount = savingsAmount
+                )
+            }
+
+            // ── 1b. Pending SMS Transactions Banner Card ──
+            item {
+                PendingTransactionsCard(
+                    pendingTransactions = pendingTransactions,
+                    onApprove = { pending, category -> viewModel.approvePendingTransaction(pending, category) },
+                    onDismiss = { pending -> viewModel.dismissPendingTransaction(pending) }
                 )
             }
 

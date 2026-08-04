@@ -20,13 +20,17 @@ import com.example.hisab.data.model.TransactionType
 
 import androidx.room.migration.Migration
 
+import com.example.hisab.data.db.dao.PendingTransactionDao
+import com.example.hisab.data.db.entity.PendingTransactionEntity
+
 @Database(
     entities = [
         TransactionEntity::class,
         CategoryEntity::class,
         BudgetEntity::class,
         RecurringRuleEntity::class,
-        AccountEntity::class
+        AccountEntity::class,
+        PendingTransactionEntity::class
     ],
     version = 4,
     exportSchema = false
@@ -39,6 +43,7 @@ abstract class HisabDatabase : RoomDatabase() {
     abstract fun budgetDao(): BudgetDao
     abstract fun recurringRuleDao(): RecurringRuleDao
     abstract fun accountDao(): AccountDao
+    abstract fun pendingTransactionDao(): PendingTransactionDao
 
     suspend fun ensureDefaults() {
         val accountDao = accountDao()
@@ -93,17 +98,36 @@ abstract class HisabDatabase : RoomDatabase() {
     companion object {
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // 1. Move existing 'Investment' category from INCOME to TRANSFER
+                // 1. Add bankCode and accountLast4 columns to accounts table
+                db.execSQL("ALTER TABLE accounts ADD COLUMN bankCode TEXT DEFAULT NULL;")
+                db.execSQL("ALTER TABLE accounts ADD COLUMN accountLast4 TEXT DEFAULT NULL;")
+
+                // 2. Create pending_transactions table
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS pending_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        amount REAL NOT NULL,
+                        type TEXT NOT NULL,
+                        bankName TEXT NOT NULL,
+                        accountLast4 TEXT,
+                        merchantOrPayee TEXT,
+                        rawSmsBody TEXT NOT NULL,
+                        senderHeader TEXT,
+                        timestamp INTEGER NOT NULL
+                    );
+                """.trimIndent())
+
+                // 3. Move existing 'Investment' category from INCOME to TRANSFER
                 db.execSQL("UPDATE categories SET type = 'TRANSFER', colorHex = '#4CAF50' WHERE name = 'Investment' AND type = 'INCOME';")
 
-                // 2. Update existing transactions associated with 'Investment' category to type TRANSFER
+                // 4. Update existing transactions associated with 'Investment' category to type TRANSFER
                 db.execSQL("""
                     UPDATE transactions 
                     SET type = 'TRANSFER' 
                     WHERE categoryId IN (SELECT id FROM categories WHERE name = 'Investment' AND type = 'TRANSFER');
                 """.trimIndent())
 
-                // 3. Insert new default Transfer categories if they don't exist
+                // 5. Insert new default Transfer categories if they don't exist
                 db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('Savings', 'TRANSFER', 'Savings', '#9C27B0', 1, 0);")
                 db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('Stocks', 'TRANSFER', 'ShowChart', '#2196F3', 1, 2);")
                 db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('Fixed Deposit', 'TRANSFER', 'Lock', '#FF9800', 1, 3);")

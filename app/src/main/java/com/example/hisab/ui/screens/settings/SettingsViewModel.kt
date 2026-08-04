@@ -100,6 +100,12 @@ class SettingsViewModel(
         }
     }
 
+    fun updateAccountBankMapping(account: AccountEntity, bankCode: String, accountLast4: String?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            accountRepository?.updateBankMapping(account, bankCode, accountLast4)
+        }
+    }
+
     fun setPrimaryAccount(account: AccountEntity) {
         viewModelScope.launch(Dispatchers.IO) {
             accountRepository?.setPrimaryAccount(account)
