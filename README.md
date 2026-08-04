@@ -1,13 +1,13 @@
 <p align="center">
   <img src="docs/logo.png" width="128" height="128" alt="Hisab Logo" />
-  <h1 align="center">Hisab (हिसाब) v2.3.0</h1>
-  <p align="center"><b>Smart Offline-First Personal Finance Tracker for Android</b></p>
+  <h1 align="center">Hisab (हिसाब) v3.0</h1>
+  <p align="center"><b>Smart Offline-First Personal Finance Tracker for Android (Final Publishing Release)</b></p>
   <p align="center">
-    <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v-2.3.0.apk">
-      <img src="https://img.shields.io/badge/📥_Download_APK-v2.3.0-00E5A0?style=for-the-badge&logo=android&logoColor=black" alt="Download APK" />
+    <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v-3.0.0.apk">
+      <img src="https://img.shields.io/badge/📥_Download_APK-v3.0.0-00E5A0?style=for-the-badge&logo=android&logoColor=black" alt="Download APK" />
     </a>
-    <a href="https://github.com/XHLEIK/Hisab/releases/tag/v2.3.0">
-      <img src="https://img.shields.io/badge/GitHub-v2.3.0_Release-blue?style=for-the-badge&logo=github" alt="GitHub Release" />
+    <a href="https://github.com/XHLEIK/Hisab/releases/tag/v3.0.0">
+      <img src="https://img.shields.io/badge/GitHub-v3.0.0_Release-blue?style=for-the-badge&logo=github" alt="GitHub Release" />
     </a>
     <a href="LICENSE">
       <img src="https://img.shields.io/badge/License-Apache_2.0-orange?style=for-the-badge" alt="License" />
@@ -17,71 +17,81 @@
 
 ---
 
-## 📲 Click to Download APK (v2.3.0)
+## 📲 Click to Download APK (v3.0.0 Final Release)
 
 <p align="center">
-  <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v-2.3.0.apk">
-    <img src="https://img.shields.io/badge/⚡_DIRECT_DOWNLOAD-Hisab__v--2.3.0.apk-00E5A0?style=for-the-badge&logo=android&logoColor=black" alt="Direct APK Download" />
+  <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v-3.0.0.apk">
+    <img src="https://img.shields.io/badge/⚡_DIRECT_DOWNLOAD-Hisab__v--3.0.0.apk-00E5A0?style=for-the-badge&logo=android&logoColor=black" alt="Direct APK Download" />
   </a>
 </p>
 
-- **APK File**: `Hisab_v-2.3.0.apk`
-- **File Location**: [`releases/Hisab_v-2.3.0.apk`](https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v-2.3.0.apk)
-- **Latest Tag**: [`v2.3.0`](https://github.com/XHLEIK/Hisab/releases/tag/v2.3.0)
+- **APK File**: `Hisab_v-3.0.0.apk`
+- **File Location**: [`releases/Hisab_v-3.0.0.apk`](https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v-3.0.0.apk)
+- **Latest Tag**: [`v3.0.0`](https://github.com/XHLEIK/Hisab/releases/tag/v3.0.0)
 
 ---
 
 ## 📌 Overview
 
-**Hisab** is a modern, privacy-focused, 100% offline-first personal expense and finance tracker built for Android using **Jetpack Compose**, **Room Database**, **Material 3**, and **Custom Canvas Visualizations**.
+**Hisab** is a state-of-the-art, 100% offline-first personal finance tracker built for Android using **Jetpack Compose**, **Room Database v5**, **Material 3**, and **Custom Canvas Graphics**.
 
-Designed with a sleek, adaptive fintech UI supporting both **Light Mode** and **Dark Mode**, Hisab gives users total financial control with multi-account tracking, intelligent spending limits, comprehensive charts, and professional financial export capabilities—all while keeping your data strictly 100% private on your local device.
+Designed with a sleek, adaptive fintech UI supporting both **Light Mode** and **Dark Mode**, Hisab gives users total financial clarity with multi-account management, automated bank SMS transaction detection, dynamic notification category pagination, inter-account auto-merging, 24-hour delayed SMS catch-up sync, 40+ searchable category icons, and executive PDF/Excel financial statement exports—all while keeping your financial data strictly 100% private on your local device.
 
 ---
 
-## ✨ Features (v2.3.0 Major Release)
+## ✨ Key Features (v3.0 Final Publishing Update)
 
-### 1. 🤖 Automated SMS Payment Detection & 1-Tap Notification Logging
-- **Multi-Stage SMS Parser**: Real-time parsing of incoming bank transaction SMS using TRAI DLT header validation (`-T` Transactional / `-S` Service). Automatically rejects marketing (`-P`) and government (`-G`) noise.
-- **Strict 3-Button Interactive Notifications**:
-  - **Debit (Payment)**: `[ 🛒 Groceries ]`, `[ 🛍️ Shopping ]`, `[ ⇄ Transfer ]`.
-  - **Credit (Income)**: `[ 💼 Salary ]`, `[ 💻 Business ]`, `[ 🎁 Other ]`.
-- **In-Place Transfer Swapping**: Tapping `[ ⇄ Transfer ]` replaces the action row instantly with `[ 🏦 Secondary Bank ]` and `[ 🐷 Savings ]` right inside the notification shade without launching the app.
-- **Zero Data Loss `PendingTransactions` Queue**: If a notification is swiped or ignored, the transaction is saved safely to `pending_transactions` in Room DB. A **Pending Bank Transactions Card** appears at the top of the Dashboard for 1-tap in-app approval.
-- **Multi-PDU Concatenation & `goAsync()` Reliability**: Handles long bank SMS disclaimers split across multiple PDU chunks and uses `goAsync()` on `Dispatchers.IO` to prevent OS process termination mid-write.
+### 1. 🤖 Automated Bank SMS Transaction Engine
+- **Multi-Stage SMS Parser**: Real-time parsing of incoming bank transaction SMS using TRAI DLT header validation (`-T` Transactional / `-S` Service). Automatically filters out promotional (`-P`), government (`-G`), and failed/declined/reversed transaction noise.
+- **Dynamic 3-Button Notification Category Pagination**:
+  - Respects Android's 3-action button OS limit while offering unlimited category browsing.
+  - **Debit (Payment)**: `[ 🛒 Groceries ]`, `[ 🛍️ Shopping ]`, `[ 🔄 More... ]`.
+  - **Credit (Income)**: `[ 💼 Salary ]`, `[ ⇄ Transfer In ]`, `[ 🔄 More Income... ]`.
+  - Tapping `[ 🔄 More... ]` updates the notification shade **in-place** via deterministic notification IDs without opening the app or creating duplicate notification cards.
+- **Credit Inward Transfer Source Picker**:
+  - Tapping `[ ⇄ Transfer In ]` on a credit alert transforms the notification layout in-place to list source accounts (`[ 🏦 Secondary Bank ]`, `[ 🐷 Savings ]`, `[ 🔄 More Accounts... ]`).
+  - Automatically logs a single `TRANSFER` entry (`Savings → Primary Bank`), synchronizing both account balances.
+- **120-Second Inter-Account Transfer Auto-Merging**:
+  - Automatically correlates DEBIT and CREDIT SMS alerts from distinct accounts received within 120 seconds into a single `TRANSFER` transaction (`Primary Bank → Savings`).
+  - Displays a 3-second auto-dismissing toast: `"✓ Auto-Detected Transfer: Primary Bank → Savings (₹500)"` with an `[ Undo ]` action button.
+- **24-Hour Delayed SMS Catch-Up Sync (`SmsCatchUpSync.kt`)**:
+  - Background scanning of device SMS inbox for the last 24 hours on app launch (safely guarded with `READ_SMS` permission checks).
+  - Reconciles manual entries automatically and adds unlogged bank alerts directly to the **Pending Transactions Card** on the Dashboard for 1-tap review.
 
-### 2. 💰 Accurate Savings Movement Accounting
-- **Net Monthly Savings Calculation**: The Master Hero Card's Savings metric dynamically tracks both incoming savings (transfers/income into Savings) and outgoing savings (transfers out of Savings or expenses paid from Savings), ensuring perfect 1:1 balance synchronization with Accounts Overview.
+### 2. 🏦 Multi-Account & Searchable 46+ Bank Linking
+- **Searchable Bank Selector**: Link 46+ Indian banks (SBI, Bank of Baroda, HDFC, ICICI, Axis, PNB, Canara, Kotak, Union, Federal, AU, Payments Banks, Neo-banks, etc.) and account last 4 digits.
+- **Dynamic Unlink Action in Settings**:
+  - Linked accounts display green status badges (`Linked: Bank (A/C **1234)`).
+  - Tapping a linked account presents an **"Unlink Bank Account"** action (`LinkOff` icon in red) that cleanly unlinks the bank mapping and triggers auto-backup.
 
-### 3. ⚡ 60 FPS Performance & Floating Glass Navigation
-- **Floating Glassmorphic Dock**: Ultra-smooth floating bottom navigation with 88% surface opacity, 16.dp GPU-optimized backdrop blur, and crisp active indicators.
-- **Scroll Padding Clearance**: Full 115.dp bottom clearance across all screens so no content is obscured behind the navigation bar.
-- **Full Edge-to-Edge Height**: Zero artificial status bar gaps; layouts fill 100% of the display height across all devices.
+### 3. 🎨 Searchable 40+ Category Icon Library
+- **40+ Material Icons**: Includes T-Shirt/Apparel (`Checkroom`), Washing Machine (`LocalLaundryService`), Coffee (`Coffee`), Fastfood (`Fastfood`), Pets (`Pets`), Fuel (`LocalGasStation`), Bus (`DirectionsBus`), Bike (`TwoWheeler`), Repairs (`Build`), Medicine (`MedicalServices`), Gaming (`SportsEsports`), Headphones, TV, WiFi, Electricity, Water, Salon, etc.
+- **Real-Time Icon Search Bar**: Instantly filter category icons in the Add/Edit Category dialog by typing keywords like `"shirt"`, `"wash"`, `"coffee"`, `"fuel"`, `"game"`, `"pet"`.
 
-### 4. 📊 Master Hero Card & Financial Hub
-- **Subtle Modern Hero Card**: Adaptive single-surface container featuring centered Month/Year selector (`< August 2026 >`), status badge (`On Track` / `Deficit`), and `Net Balance` (`Primary + Secondary Accounts`).
+### 4. 💰 Accurate Savings Movement & Hero Card Metrics
+- **Net Monthly Savings Calculation**: The Master Hero Card Savings metric dynamically factors both incoming savings (transfers/income into Savings) and outgoing savings (transfers out of Savings or direct expenses paid from Savings), ensuring 100% 1:1 balance synchronization with Accounts Overview.
+
+### 5. ⚡ 60 FPS Performance & Floating Glass Dock
+- **Floating Glassmorphic Navigation Bar**: Ultra-smooth bottom dock with 88% surface opacity, 16.dp backdrop blur, and crisp active indicators.
+- **Full Edge-to-Edge Display Height**: Layouts utilize 100% of display height across all device aspect ratios with zero artificial top gaps.
+
+### 6. 📊 Master Financial Hub & Analytics
+- **Hero Card**: Adaptive container featuring Month/Year selector (`< August 2026 >`), status badge (`On Track` / `Deficit`), and `Net Balance` (`Primary + Secondary`).
 - **3-Column Micro Metrics**: Income (`+₹15,602`), Expenses (`-₹7,851`), and Savings (`₹2,558`) separated by clean vertical dividers.
-- **Sleek Quick Actions**: Instant access pills for `Income`, `Expense`, and `Transfer`.
-- **Accounts Overview**: Adaptive cards for Primary Bank, Secondary Account, and Savings Account.
-
-### 5. 💸 Multi-Account & Bank Linking
-- **Bank Provider Linking**: Map Bank Providers (SBI, Bank of Baroda, HDFC, ICICI, Axis, PNB, Canara, Kotak, Union Bank, etc.) and last 4 digits directly to your accounts under Settings.
-- **Dynamic Category Color System**: Transfer entries dynamically render their assigned category colors across Recent Transactions and History ledgers.
-
-### 6. 📈 Modern Analytics & Visualizations
-- **Donut Chart**: Rounded-cap arcs with 18-degree wide gaps, 12-tone subtle pastel palette, center total readout, and status badge (`+2.5% ↑`).
+- **Donut Chart**: Rounded-cap arcs, 18-degree wide gaps, 12-tone subtle pastel palette, center total readout, and status badge (`+2.5% ↑`).
 - **Unified Spending Trends Card**: 3-tab switcher supporting Line Trend, Monthly Bar Chart, and Calendar Heatmap.
 
 ### 7. 🎯 Spending Limits & Budget Pace
-- **Monthly Budget Progress Card**: Live spending limit tracking with spent vs limit text readout and progress bar.
-- **Safe Daily Pace**: Real-time calculation of daily allowable spend based on remaining monthly budget.
+- **Monthly Budget Progress Card**: Live spending limit tracking with spent vs limit readout and progress bar.
+- **Safe Daily Pace**: Real-time daily allowable spend calculation guarded with division-by-zero bounds.
 
 ### 8. 📄 Executive Reports & Data Export
-- **PDF Balance Sheet**: Multi-page A4 executive financial statement featuring canvas-drawn 30-day whole-month line & bar charts, summary KPI cards, category breakdown tables, and chronological transaction ledgers.
+- **PDF Balance Sheet**: Multi-page A4 executive financial statement featuring canvas-drawn 30-day whole-month line & bar charts, summary KPI cards, category breakdown tables, and multi-page chronological transaction ledgers.
 - **Excel Workbook (.xlsx)**: Styled multi-sheet workbooks generated using Apache POI.
 
-### 9. 🛡️ Auto-Backup & Scoped Storage Restoration
-- **Background Auto-Backup**: Automatically saves encrypted/checksummed JSON backups to `Documents/Hisab/hisab_auto_backup.json` after every transaction mutation.
+### 9. 🛡️ 100% Complete Auto-Backup & Restore Engine (v5 Schema)
+- **Automatic Background Backup**: Encrypted/checksummed JSON backups saved to `Documents/Hisab/hisab_auto_backup.json` after every transaction mutation.
+- **100% Schema Coverage**: Preserves accounts, categories, transactions, budgets, recurring rules, bank mappings (`bankCode`, `accountLast4`), pending transactions queue, and `createdAt` timestamps for 100% duplicate protection on restore.
 
 ---
 
@@ -89,7 +99,7 @@ Designed with a sleek, adaptive fintech UI supporting both **Light Mode** and **
 
 - **Language**: Kotlin 2.0+
 - **UI Framework**: Jetpack Compose (Declarative UI with Material 3)
-- **Database**: Room Database 2.7+ (SQLite ORM with versioned migrations)
+- **Database**: Room Database v5 (SQLite ORM with versioned migrations `MIGRATION_3_4`, `MIGRATION_4_5`)
 - **State Management**: Kotlin Coroutines, StateFlow, ViewModel, Clean Architecture
 - **Export Engines**: Apache POI (`poi-ooxml`), Android `PdfDocument`, Gson
 - **Navigation**: Jetpack Navigation Compose
@@ -100,7 +110,7 @@ Designed with a sleek, adaptive fintech UI supporting both **Light Mode** and **
 ## 🚀 Getting Started
 
 ### Direct APK Download
-Click the **Download APK** button above or download [`releases/Hisab_v-2.3.0.apk`](https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v-2.3.0.apk) directly to your Android device.
+Click the **Download APK** button above or download [`releases/Hisab_v-3.0.0.apk`](https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v-3.0.0.apk) directly to your Android device.
 
 ### Build & Run from Source
 1. Clone the repository:
