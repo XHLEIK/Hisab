@@ -32,7 +32,7 @@ import com.example.hisab.data.db.entity.PendingTransactionEntity
         AccountEntity::class,
         PendingTransactionEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -136,6 +136,27 @@ abstract class HisabDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try { db.execSQL("ALTER TABLE accounts ADD COLUMN bankCode TEXT DEFAULT NULL;") } catch (_: Exception) {}
+                try { db.execSQL("ALTER TABLE accounts ADD COLUMN accountLast4 TEXT DEFAULT NULL;") } catch (_: Exception) {}
+
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS pending_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        amount REAL NOT NULL,
+                        type TEXT NOT NULL,
+                        bankName TEXT NOT NULL,
+                        accountLast4 TEXT,
+                        merchantOrPayee TEXT,
+                        rawSmsBody TEXT NOT NULL,
+                        senderHeader TEXT,
+                        timestamp INTEGER NOT NULL
+                    );
+                """.trimIndent())
+            }
+        }
+
         @Volatile
         private var INSTANCE: HisabDatabase? = null
 
@@ -147,7 +168,7 @@ abstract class HisabDatabase : RoomDatabase() {
                     "hisab_database"
                 )
                     .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                    .addMigrations(MIGRATION_3_4)
+                    .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
                     .fallbackToDestructiveMigrationOnDowngrade(true)
                     .addCallback(SeedDatabaseCallback())
                     .build()
