@@ -1,19 +1,33 @@
 <p align="center">
   <img src="docs/logo.png" width="128" height="128" alt="Hisab Logo" />
   <h1 align="center">Hisab (हिसाब) v2.2.2</h1>
-  <p align="center"><b>Smart Offline-First Personal Finance Tracker</b></p>
+  <p align="center"><b>Smart Offline-First Personal Finance Tracker for Android</b></p>
   <p align="center">
-    <a href="https://github.com/XHLEIK/Hisab/releases/latest">
-      <img src="https://img.shields.io/badge/Download_APK-v2.2.2-00E5A0?style=for-the-badge&logo=android&logoColor=black" alt="Download APK" />
+    <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v-2.2.2.apk">
+      <img src="https://img.shields.io/badge/📥_Download_APK-v2.2.2-00E5A0?style=for-the-badge&logo=android&logoColor=black" alt="Download APK" />
     </a>
-    <a href="https://github.com/XHLEIK/Hisab/releases">
-      <img src="https://img.shields.io/badge/GitHub-Releases-blue?style=for-the-badge&logo=github" alt="Releases" />
+    <a href="https://github.com/XHLEIK/Hisab/releases/tag/v2.2.2">
+      <img src="https://img.shields.io/badge/GitHub-v2.2.2_Release-blue?style=for-the-badge&logo=github" alt="GitHub Release" />
     </a>
     <a href="LICENSE">
       <img src="https://img.shields.io/badge/License-Apache_2.0-orange?style=for-the-badge" alt="License" />
     </a>
   </p>
 </p>
+
+---
+
+## 📲 Click to Download APK (v2.2.2)
+
+<p align="center">
+  <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v-2.2.2.apk">
+    <img src="https://img.shields.io/badge/⚡_DIRECT_DOWNLOAD-Hisab__v--2.2.2.apk-00E5A0?style=for-the-badge&logo=android&logoColor=black" alt="Direct APK Download" />
+  </a>
+</p>
+
+- **APK File**: `Hisab_v-2.2.2.apk`
+- **File Location**: [`releases/Hisab_v-2.2.2.apk`](https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v-2.2.2.apk)
+- **Latest Tag**: [`v2.2.2`](https://github.com/XHLEIK/Hisab/releases/tag/v2.2.2)
 
 ---
 
@@ -88,8 +102,8 @@ Designed with a sleek, adaptive fintech UI supporting both **Light Mode** and **
 
 ## 🚀 Getting Started
 
-### Download Pre-built APK
-Click the **Download APK** button at the top of this README or visit the [GitHub Releases](https://github.com/XHLEIK/Hisab/releases) page to download the latest `app-release.apk` directly to your Android device.
+### Direct APK Download
+Click the **Download APK** button above or download [`releases/Hisab_v-2.2.2.apk`](https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v-2.2.2.apk) directly to your Android device.
 
 ### Build & Run from Source
 1. Clone the repository:
@@ -128,6 +142,8 @@ Hisab/
 │   └── build.gradle.kts
 ├── docs/
 │   └── logo.png
+├── releases/
+│   └── Hisab_v-2.2.2.apk
 ├── build.gradle.kts
 └── README.md
 ```
