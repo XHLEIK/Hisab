@@ -79,7 +79,7 @@ class SettingsViewModel(
         }
     }
 
-    fun addAccount(name: String, type: String) {
+    fun addAccount(name: String, type: String, bankCode: String? = null, accountLast4: String? = null) {
         val colorHex = when (type.uppercase()) {
             "PRIMARY" -> "#10B981"
             "SECONDARY" -> "#3B82F6"
@@ -89,7 +89,14 @@ class SettingsViewModel(
         }
         viewModelScope.launch(Dispatchers.IO) {
             accountRepository?.insertAccount(
-                AccountEntity(name = name, type = type, isPrimary = false, colorHex = colorHex)
+                AccountEntity(
+                    name = name,
+                    type = type,
+                    isPrimary = false,
+                    colorHex = colorHex,
+                    bankCode = bankCode,
+                    accountLast4 = accountLast4
+                )
             )
         }
     }

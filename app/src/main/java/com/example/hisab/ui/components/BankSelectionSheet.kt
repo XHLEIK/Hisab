@@ -33,7 +33,7 @@ data class BankOption(
     val code: String
 )
 
-val POPULAR_INDIAN_BANKS = listOf(
+val ALL_INDIAN_BANKS = listOf(
     BankOption("State Bank of India (SBI)", "SBI"),
     BankOption("Bank of Baroda (BOB)", "BOB"),
     BankOption("HDFC Bank", "HDFC"),
@@ -44,7 +44,42 @@ val POPULAR_INDIAN_BANKS = listOf(
     BankOption("Kotak Mahindra Bank", "KOTAK"),
     BankOption("Union Bank of India", "UNION"),
     BankOption("Bank of India (BOI)", "BOI"),
-    BankOption("Paytm Payments Bank", "PYTM")
+    BankOption("Central Bank of India (CBI)", "CBI"),
+    BankOption("Indian Bank", "IDIB"),
+    BankOption("Indian Overseas Bank (IOB)", "IOB"),
+    BankOption("Punjab & Sind Bank", "PSB"),
+    BankOption("UCO Bank", "UCO"),
+    BankOption("Bank of Maharashtra", "BOM"),
+    BankOption("IDBI Bank", "IDBI"),
+    BankOption("IndusInd Bank", "INDUS"),
+    BankOption("Federal Bank", "FED"),
+    BankOption("YES Bank", "YES"),
+    BankOption("RBL Bank", "RBL"),
+    BankOption("IDFC FIRST Bank", "IDFC"),
+    BankOption("Bandhan Bank", "BANDHAN"),
+    BankOption("South Indian Bank", "SIB"),
+    BankOption("Karur Vysya Bank", "KVB"),
+    BankOption("Jammu & Kashmir Bank", "JKB"),
+    BankOption("City Union Bank", "CUB"),
+    BankOption("Tamilnad Mercantile Bank", "TMB"),
+    BankOption("AU Small Finance Bank", "AU"),
+    BankOption("Equitas Small Finance Bank", "EQUITAS"),
+    BankOption("Ujjivan Small Finance Bank", "UJJIVAN"),
+    BankOption("Capital Small Finance Bank", "CAPITAL"),
+    BankOption("Fincare Small Finance Bank", "FINCARE"),
+    BankOption("Jana Small Finance Bank", "JANA"),
+    BankOption("Suryoday Small Finance Bank", "SURYODAY"),
+    BankOption("Utkarsh Small Finance Bank", "UTKARSH"),
+    BankOption("ESAF Small Finance Bank", "ESAF"),
+    BankOption("Paytm Payments Bank", "PYTM"),
+    BankOption("Airtel Payments Bank", "AIRTEL"),
+    BankOption("India Post Payments Bank", "IPPB"),
+    BankOption("Jio Payments Bank", "JIO"),
+    BankOption("NSDL Payments Bank", "NSDL"),
+    BankOption("Fi Money (Federal Bank)", "FI"),
+    BankOption("Jupiter Money (Federal Bank)", "JUPITER"),
+    BankOption("Slice", "SLICE"),
+    BankOption("Niyo Global / NiyoX", "NIYO")
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,6 +93,17 @@ fun BankSelectionSheet(
     val colors = HisabTheme.colors
     var selectedBank by remember { mutableStateOf(account.bankCode ?: "BOB") }
     var accountLast4 by remember { mutableStateOf(account.accountLast4 ?: "") }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredBanks = remember(searchQuery) {
+        if (searchQuery.isBlank()) {
+            ALL_INDIAN_BANKS
+        } else {
+            ALL_INDIAN_BANKS.filter {
+                it.name.contains(searchQuery, ignoreCase = true) || it.code.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -142,8 +188,23 @@ fun BankSelectionSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text("Search Bank (Name or Code)") },
+                placeholder = { Text("e.g. SBI, BOB, HDFC, Federal, Axis...") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = colors.cardBorder
+                )
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             Text(
-                text = "Select Bank Provider",
+                text = "Select Bank Provider (${filteredBanks.size} available)",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = colors.textPrimary
@@ -152,9 +213,9 @@ fun BankSelectionSheet(
             Spacer(modifier = Modifier.height(8.dp))
 
             LazyColumn(
-                modifier = Modifier.height(220.dp)
+                modifier = Modifier.height(200.dp)
             ) {
-                items(POPULAR_INDIAN_BANKS) { bank ->
+                items(filteredBanks) { bank ->
                     val isSelected = selectedBank == bank.code
                     Row(
                         modifier = Modifier

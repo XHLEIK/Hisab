@@ -329,10 +329,10 @@ class DashboardViewModel(
         }
     }
 
-    fun addAccount(name: String, type: String = "SECONDARY") {
+    fun addAccount(name: String, type: String = "SECONDARY", bankCode: String? = null, accountLast4: String? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             accountRepository?.insertAccount(
-                AccountEntity(name = name, type = type, isPrimary = false)
+                AccountEntity(name = name, type = type, isPrimary = false, bankCode = bankCode, accountLast4 = accountLast4)
             )
         }
     }

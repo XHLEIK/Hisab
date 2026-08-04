@@ -394,8 +394,8 @@ fun DashboardScreen(
     if (showAddAccountDialog) {
         com.example.hisab.ui.components.AddAccountDialog(
             onDismiss = { showAddAccountDialog = false },
-            onAccountAdded = { name, type ->
-                viewModel.addAccount(name, type)
+            onAccountAdded = { name, type, bankCode, last4 ->
+                viewModel.addAccount(name, type, bankCode, last4)
             }
         )
     }

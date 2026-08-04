@@ -312,8 +312,8 @@ fun AnalyticsScreen(
     if (showAddAccountDialog) {
         AddAccountDialog(
             onDismiss = { showAddAccountDialog = false },
-            onAccountAdded = { name, typeStr ->
-                viewModel.addAccount(name, typeStr)
+            onAccountAdded = { name, typeStr, bankCode, last4 ->
+                viewModel.addAccount(name, typeStr, bankCode, last4)
             }
         )
     }

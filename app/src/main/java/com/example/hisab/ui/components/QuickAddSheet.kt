@@ -425,7 +425,7 @@ fun QuickAddSheet(
     if (showAddAccountDialog) {
         AddAccountDialog(
             onDismiss = { showAddAccountDialog = false },
-            onAccountAdded = { name, typeStr ->
+            onAccountAdded = { name, typeStr, bankCode, last4 ->
                 onAddAccount?.invoke(name, typeStr)
                 if (type == TransactionType.TRANSFER && selectedAccount == name) {
                     selectedToAccount = name
