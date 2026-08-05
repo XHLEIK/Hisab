@@ -12,6 +12,7 @@ data class PendingTransactionEntity(
     val bankName: String,
     val accountLast4: String? = null,
     val merchantOrPayee: String? = null,
+    val endingBalance: Double? = null,
     val rawSmsBody: String,
     val senderHeader: String? = null,
     val timestamp: Long = System.currentTimeMillis()

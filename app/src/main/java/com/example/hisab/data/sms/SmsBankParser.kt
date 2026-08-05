@@ -9,6 +9,7 @@ data class ParsedBankSms(
     val senderHeader: String,
     val accountLast4: String? = null,
     val merchantOrPayee: String? = null,
+    val endingBalance: Double? = null,
     val rawBody: String
 )
 
@@ -112,16 +113,18 @@ object SmsBankParser {
         Pattern.compile("(?:vpa|upi|ref)\\s+([a-zA-Z0-9\\.@_-]{3,30})", Pattern.CASE_INSENSITIVE)
     )
 
+    private val BALANCE_PATTERNS = listOf(
+        Pattern.compile("(?:bal|balance|avail bal|available balance|a/c bal)\\s*(?:is|:)?\\s*(?:rs\\.?|inr|₹)?\\s*([\\d,]+\\.?\\d*)", Pattern.CASE_INSENSITIVE)
+    )
+
     fun parse(senderHeader: String, body: String): ParsedBankSms? {
         val cleanHeader = senderHeader.trim().uppercase()
         val cleanBody = body.trim()
 
         // ── Stage 1: DLT Suffix Verification ─────────────
-        // Header format: XX-AAAAAA-T or XX-AAAAAA-S
         if (cleanHeader.contains("-")) {
             val parts = cleanHeader.split("-")
             val categorySuffix = parts.lastOrNull()?.uppercase()
-            // Reject -P (Promotional) and -G (Government)
             if (categorySuffix == "P" || categorySuffix == "G") {
                 return null
             }
@@ -136,14 +139,15 @@ object SmsBankParser {
             return null
         }
 
-        // ── Stage 3: Transaction Intent Detection ────────
+        // ── Stage 3: Loose Transaction Intent Detection ────────
         val isDebit = lowerBody.contains("debited") || lowerBody.contains("dr.") || lowerBody.contains("dr ") ||
-                lowerBody.contains("spent") || lowerBody.contains("withdrawn") || lowerBody.contains("paid to") ||
-                lowerBody.contains("transferred from") || lowerBody.contains("sent to")
+                lowerBody.contains("spent") || lowerBody.contains("withdrawn") || lowerBody.contains("paid") ||
+                lowerBody.contains("transferred") || lowerBody.contains("sent") || lowerBody.contains("vpa") ||
+                lowerBody.contains("upi") || lowerBody.contains("purchase")
 
-        val isCredit = lowerBody.contains("credited") || lowerBody.contains("cr.") || lowerBody.contains("cr ") ||
-                lowerBody.contains("received") || lowerBody.contains("deposited") || lowerBody.contains("added to") ||
-                lowerBody.contains("refund")
+        val isCredit = !isDebit && (lowerBody.contains("credited") || lowerBody.contains("cr.") || lowerBody.contains("cr ") ||
+                lowerBody.contains("received") || lowerBody.contains("deposited") || lowerBody.contains("added") ||
+                lowerBody.contains("refund"))
 
         if (!isDebit && !isCredit) {
             return null
@@ -155,9 +159,10 @@ object SmsBankParser {
         val amount = extractAmount(cleanBody) ?: return null
         if (amount <= 0.0) return null
 
-        // ── Stage 5: Optional Account & Merchant Extraction ─
+        // ── Stage 5: Optional Account, Merchant & Ending Balance Extraction ─
         val accountLast4 = extractAccountLast4(cleanBody)
         val merchantOrPayee = extractMerchant(cleanBody)
+        val endingBalance = extractEndingBalance(cleanBody)
 
         return ParsedBankSms(
             amount = amount,
@@ -166,6 +171,7 @@ object SmsBankParser {
             senderHeader = cleanHeader,
             accountLast4 = accountLast4,
             merchantOrPayee = merchantOrPayee,
+            endingBalance = endingBalance,
             rawBody = cleanBody
         )
     }
@@ -177,7 +183,6 @@ object SmsBankParser {
                 return name
             }
         }
-        // Fallback search inside body for explicit bank names
         val upperBody = body.uppercase()
         for ((code, name) in BANK_SENDER_MAP) {
             if (upperBody.contains(name.uppercase()) || upperBody.contains(code)) {
@@ -206,10 +211,10 @@ object SmsBankParser {
             return true
         }
 
-        // Pure balance inquiry without debit/credit
         if (lowerBody.contains("avail bal") || lowerBody.contains("available balance")) {
             val hasTxKeyword = lowerBody.contains("debited") || lowerBody.contains("credited") ||
-                    lowerBody.contains("dr") || lowerBody.contains("cr") || lowerBody.contains("spent")
+                    lowerBody.contains("dr") || lowerBody.contains("cr") || lowerBody.contains("spent") ||
+                    lowerBody.contains("paid") || lowerBody.contains("received")
             if (!hasTxKeyword) return true
         }
 
@@ -250,6 +255,20 @@ object SmsBankParser {
                 val name = matcher.group(1)?.trim()
                 if (!name.isNullOrEmpty() && name.length >= 2) {
                     return name
+                }
+            }
+        }
+        return null
+    }
+
+    private fun extractEndingBalance(body: String): Double? {
+        for (pattern in BALANCE_PATTERNS) {
+            val matcher = pattern.matcher(body)
+            if (matcher.find()) {
+                val rawStr = matcher.group(1)?.replace(",", "") ?: continue
+                val parsed = rawStr.toDoubleOrNull()
+                if (parsed != null && parsed >= 0.0) {
+                    return parsed
                 }
             }
         }

@@ -100,8 +100,9 @@ object SmsNotificationHelper {
             .setContentIntent(openAppPendingIntent)
             .setDeleteIntent(deletePendingIntent)
             .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
 
         if (pending.type == "CREDIT") {
             title = "💰 Income Received: $formattedAmount"

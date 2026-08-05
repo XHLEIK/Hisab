@@ -146,6 +146,7 @@ class SmsReceiver : BroadcastReceiver() {
                     bankName = parsed.bankName,
                     accountLast4 = parsed.accountLast4,
                     merchantOrPayee = parsed.merchantOrPayee,
+                    endingBalance = parsed.endingBalance,
                     rawSmsBody = parsed.rawBody,
                     senderHeader = sender,
                     timestamp = System.currentTimeMillis()
@@ -154,8 +155,15 @@ class SmsReceiver : BroadcastReceiver() {
                 val pendingId = pendingDao.insert(pendingEntity)
                 val savedEntity = pendingEntity.copy(id = pendingId)
 
-                // Post 3-Action Interactive Notification
-                SmsNotificationHelper.postBankTransactionNotification(context, savedEntity)
+                // Post 3-Action Interactive Heads-Up Notification (Guarded by POST_NOTIFICATIONS permission)
+                if (android.os.Build.VERSION.SDK_INT < 33 ||
+                    androidx.core.content.ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.POST_NOTIFICATIONS
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                ) {
+                    SmsNotificationHelper.postBankTransactionNotification(context, savedEntity)
+                }
 
             } catch (e: Exception) {
                 e.printStackTrace()
