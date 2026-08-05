@@ -32,7 +32,7 @@ import com.example.hisab.data.db.entity.PendingTransactionEntity
         AccountEntity::class,
         PendingTransactionEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -98,11 +98,9 @@ abstract class HisabDatabase : RoomDatabase() {
     companion object {
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // 1. Add bankCode and accountLast4 columns to accounts table
                 db.execSQL("ALTER TABLE accounts ADD COLUMN bankCode TEXT DEFAULT NULL;")
                 db.execSQL("ALTER TABLE accounts ADD COLUMN accountLast4 TEXT DEFAULT NULL;")
 
-                // 2. Create pending_transactions table
                 db.execSQL("""
                     CREATE TABLE IF NOT EXISTS pending_transactions (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -117,17 +115,14 @@ abstract class HisabDatabase : RoomDatabase() {
                     );
                 """.trimIndent())
 
-                // 3. Move existing 'Investment' category from INCOME to TRANSFER
                 db.execSQL("UPDATE categories SET type = 'TRANSFER', colorHex = '#4CAF50' WHERE name = 'Investment' AND type = 'INCOME';")
 
-                // 4. Update existing transactions associated with 'Investment' category to type TRANSFER
                 db.execSQL("""
                     UPDATE transactions 
                     SET type = 'TRANSFER' 
                     WHERE categoryId IN (SELECT id FROM categories WHERE name = 'Investment' AND type = 'TRANSFER');
                 """.trimIndent())
 
-                // 5. Insert new default Transfer categories if they don't exist
                 db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('Savings', 'TRANSFER', 'Savings', '#9C27B0', 1, 0);")
                 db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('Stocks', 'TRANSFER', 'ShowChart', '#2196F3', 1, 2);")
                 db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('Fixed Deposit', 'TRANSFER', 'Lock', '#FF9800', 1, 3);")
@@ -157,6 +152,14 @@ abstract class HisabDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    db.execSQL("ALTER TABLE pending_transactions ADD COLUMN endingBalance REAL DEFAULT NULL;")
+                } catch (_: Exception) {}
+            }
+        }
+
         @Volatile
         private var INSTANCE: HisabDatabase? = null
 
@@ -168,8 +171,8 @@ abstract class HisabDatabase : RoomDatabase() {
                     "hisab_database"
                 )
                     .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                    .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
-                    .fallbackToDestructiveMigrationOnDowngrade(true)
+                    .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                    .fallbackToDestructiveMigration(true)
                     .addCallback(SeedDatabaseCallback())
                     .build()
                 INSTANCE = instance
@@ -181,19 +184,16 @@ abstract class HisabDatabase : RoomDatabase() {
     private class SeedDatabaseCallback : Callback() {
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
-            // Seed accounts
             db.execSQL("INSERT OR IGNORE INTO accounts (name, type, colorHex, isPrimary) VALUES ('Primary Bank', 'PRIMARY', '#10B981', 1);")
             db.execSQL("INSERT OR IGNORE INTO accounts (name, type, colorHex, isPrimary) VALUES ('Secondary Bank', 'SECONDARY', '#3B82F6', 0);")
             db.execSQL("INSERT OR IGNORE INTO accounts (name, type, colorHex, isPrimary) VALUES ('Savings', 'SAVINGS', '#F59E0B', 0);")
 
-            // Seed Income Categories
             db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('Salary', 'INCOME', 'AccountBalance', '#4CAF50', 1, 0);")
             db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('Outstation Allowance', 'INCOME', 'Flight', '#00BCD4', 1, 1);")
             db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('Freelance', 'INCOME', 'Laptop', '#00E676', 1, 2);")
             db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('Gift', 'INCOME', 'CardGiftcard', '#E91E63', 1, 3);")
             db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('Other Income', 'INCOME', 'AddCircle', '#607D8B', 1, 4);")
 
-            // Seed Expense Categories
             db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('Groceries & Utilities', 'EXPENSE', 'ShoppingCart', '#4CAF50', 1, 0);")
             db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('Food & Dining', 'EXPENSE', 'Restaurant', '#FF9800', 1, 1);")
             db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('Shopping', 'EXPENSE', 'ShoppingBag', '#E91E63', 1, 2);")
@@ -209,7 +209,6 @@ abstract class HisabDatabase : RoomDatabase() {
             db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('EMI', 'EXPENSE', 'AccountBalance', '#D32F2F', 1, 12);")
             db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('Other Expense', 'EXPENSE', 'MoreHoriz', '#607D8B', 1, 13);")
 
-            // Seed Transfer Categories
             db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('Savings', 'TRANSFER', 'Savings', '#9C27B0', 1, 0);")
             db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('Investment', 'TRANSFER', 'TrendingUp', '#4CAF50', 1, 1);")
             db.execSQL("INSERT OR IGNORE INTO categories (name, type, iconName, colorHex, isDefault, sortOrder) VALUES ('Stocks', 'TRANSFER', 'ShowChart', '#2196F3', 1, 2);")
