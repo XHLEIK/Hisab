@@ -164,6 +164,8 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                var showRestrictedSettingsDialog by remember { mutableStateOf(false) }
+
                 if (showPermissionDialog) {
                     StoragePermissionDialog(
                         onGrantRequested = {
@@ -171,7 +173,6 @@ class MainActivity : ComponentActivity() {
                         },
                         onDismiss = {
                             showPermissionDialog = false
-                            // Initialize default database without restore
                             CoroutineScope(Dispatchers.IO).launch {
                                 database.ensureDefaults()
                                 accountRepository.syncAccountNames()
@@ -183,6 +184,13 @@ class MainActivity : ComponentActivity() {
                 if (showRestoreLoading) {
                     AutoRestoreLoadingDialog(
                         statusMessage = "Scanning Documents/Hisab for auto-backup file..."
+                    )
+                }
+
+                if (showRestrictedSettingsDialog) {
+                    com.example.hisab.ui.components.RestrictedSettingsDialog(
+                        onDismiss = { showRestrictedSettingsDialog = false },
+                        onOpenAppInfo = { showRestrictedSettingsDialog = false }
                     )
                 }
 

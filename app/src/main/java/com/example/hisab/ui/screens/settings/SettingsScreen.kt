@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Shield
@@ -143,6 +144,7 @@ fun SettingsScreen(
     var showOpenSourceDialog by remember { mutableStateOf(false) }
     var showPrivacyNoticeDialog by remember { mutableStateOf(false) }
     var showUserAgreementDialog by remember { mutableStateOf(false) }
+    var showRestrictedSettingsDialog by remember { mutableStateOf(false) }
 
     val backupPrefs = remember { com.example.hisab.data.backup.BackupPreferences(context) }
     val isAutoBackupEnabled by backupPrefs.isAutoBackupEnabled.collectAsState(initial = true)
@@ -401,6 +403,19 @@ fun SettingsScreen(
                                 }
                             }
                         )
+
+                        androidx.compose.material3.HorizontalDivider(
+                            color = colors.cardBorder.copy(alpha = 0.5f),
+                            thickness = 0.5.dp
+                        )
+
+                        // 4. Restricted Settings & SMS Logging Row
+                        SettingsItem(
+                            icon = Icons.Filled.Security,
+                            title = "App Info & Restricted Settings",
+                            subtitle = "Allow restricted settings on Android 13+ for 1-tap bank SMS logging",
+                            onClick = { showRestrictedSettingsDialog = true }
+                        )
                     }
                 }
             }
@@ -437,7 +452,7 @@ fun SettingsScreen(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "Hisab v3.1",
+                                    text = "Hisab v3.1.1",
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = colors.textPrimary
@@ -450,7 +465,7 @@ fun SettingsScreen(
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Text(
-                                        text = "Build 230",
+                                        text = "Build 311",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary
@@ -753,6 +768,13 @@ fun SettingsScreen(
                 val filename = "hisab_report_${timestamp}.${format.extension}"
                 exportLauncher.launch(filename)
             }
+        )
+    }
+
+    if (showRestrictedSettingsDialog) {
+        com.example.hisab.ui.components.RestrictedSettingsDialog(
+            onDismiss = { showRestrictedSettingsDialog = false },
+            onOpenAppInfo = { showRestrictedSettingsDialog = false }
         )
     }
 
