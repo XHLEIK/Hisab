@@ -1,13 +1,13 @@
 <p align="center">
   <img src="docs/logo.png" width="128" height="128" alt="Hisab Logo" />
-  <h1 align="center">Hisab (हिसाब) v3.1.1</h1>
-  <p align="center"><b>Smart Offline-First Personal Finance Tracker for Android (v3.1.1 Restricted Settings & Bank Link Restoration Release)</b></p>
+  <h1 align="center">Hisab (हिसाब) v3.1.2</h1>
+  <p align="center"><b>Smart Offline-First Personal Finance Tracker for Android (v3.1.2 Bank AI & 2-Stage Notifications Release)</b></p>
   <p align="center">
-    <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v3.1.1.apk">
-      <img src="https://img.shields.io/badge/📥_Download_APK-v3.1.1-00E5A0?style=for-the-badge&logo=android&logoColor=black" alt="Download APK" />
+    <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v3.1.2.apk">
+      <img src="https://img.shields.io/badge/📥_Download_APK-v3.1.2-00E5A0?style=for-the-badge&logo=android&logoColor=black" alt="Download APK" />
     </a>
-    <a href="https://github.com/XHLEIK/Hisab/releases/tag/v3.1.1">
-      <img src="https://img.shields.io/badge/GitHub-v3.1.1_Release-blue?style=for-the-badge&logo=github" alt="GitHub Release" />
+    <a href="https://github.com/XHLEIK/Hisab/releases/tag/v3.1.2">
+      <img src="https://img.shields.io/badge/GitHub-v3.1.2_Release-blue?style=for-the-badge&logo=github" alt="GitHub Release" />
     </a>
     <a href="LICENSE">
       <img src="https://img.shields.io/badge/License-Apache_2.0-orange?style=for-the-badge" alt="License" />
@@ -17,17 +17,17 @@
 
 ---
 
-## 📲 Click to Download APK (v3.1.1 Release)
+## 📲 Click to Download APK (v3.1.2 Release)
 
 <p align="center">
-  <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v3.1.1.apk">
-    <img src="https://img.shields.io/badge/⚡_DIRECT_DOWNLOAD-Hisab__v3.1.1.apk-00E5A0?style=for-the-badge&logo=android&logoColor=black" alt="Direct APK Download" />
+  <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v3.1.2.apk">
+    <img src="https://img.shields.io/badge/⚡_DIRECT_DOWNLOAD-Hisab__v3.1.2.apk-00E5A0?style=for-the-badge&logo=android&logoColor=black" alt="Direct APK Download" />
   </a>
 </p>
 
-- **APK File**: `Hisab_v3.1.1.apk` (and `Hisab_v3.1.apk`, `Hisab_v3.0.apk`)
-- **File Location**: [`releases/Hisab_v3.1.1.apk`](https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v3.1.1.apk)
-- **Latest Tag**: [`v3.1.1`](https://github.com/XHLEIK/Hisab/releases/tag/v3.1.1)
+- **APK File**: `Hisab_v3.1.2.apk` (and `Hisab_v3.1.1.apk`, `Hisab_v3.1.apk`, `Hisab_v3.0.apk`)
+- **File Location**: [`releases/Hisab_v3.1.2.apk`](https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v3.1.2.apk)
+- **Latest Tag**: [`v3.1.2`](https://github.com/XHLEIK/Hisab/releases/tag/v3.1.2)
 
 ---
 
@@ -39,20 +39,28 @@ Designed with a sleek, adaptive fintech UI supporting both **Light Mode** and **
 
 ---
 
-## ✨ Key Features (v3.1.1 Update)
+## ✨ Key Features & Patch Notes (v3.1.2 Update)
 
-### 1. 🏦 Bank Link Preservation in Backup & Restore
-- **100% Bank Mapping Sync**: `bankCode` and `accountLast4` fields for all accounts are serialized to JSON backups and fully restored upon import or auto-sync, preserving linked bank accounts across device transfers.
+### 1. 🧠 Multi-Pass Credit/Debit Direction Engine
+- **Strict Word-Boundary Regex (`\b`)**: Evaluates action verbs (`credited`, `received`, `deposited`, `debited`, `spent`, `withdrawn`, `paid`, `refund`, etc.) using strict word boundaries to prevent accidental matches on unrelated words (*"Dear"*, *"Drive"*, *"Card"*).
+- **Proximity-Based Scoring**: Weighs keywords based on character proximity to the monetary amount with inverse-distance decay.
+- **Credit-First Precedence & Tie-Breaking**: Guarantees refunds and small credits (e.g. ₹30) are accurately recognized as credits rather than debits.
 
-### 2. ⚙️ Restricted Settings Setup & Onboarding Dialog
-- **Android 13+ Compliance**: Guided step-by-step modal for turning on *"Allow Restricted Settings"* under Android App Info to enable 1-tap real-time bank SMS transaction logging.
-- **1-Tap App Info Launcher**: Includes a direct button to launch `Settings.ACTION_APPLICATION_DETAILS_SETTINGS` with zero hassle.
+### 2. 🛡️ Linked-Account Whitelisting Gate & DLT Blacklist
+- **DLT Service Header Blacklist**: Automatically discards promotional and non-bank service SMS (`JIOFIBER`, `AIRTELFI`, `SWIGGY`, `ZOMATO`, `AMAZON`, `FLIPKART`, `IRCTC`, etc.) at Stage 0.
+- **Account Whitelist Verification**: Incoming bank alerts are matched against the user's active linked accounts (`bankCode` / `accountLast4`); unlinked messages are ignored silently.
+- **Payment Bank Support**: Dedicated support for payment banks (`JIOPB`, `ARTLPB`, `PYTMPB`, `IPPB`, `NSDL`).
 
-### 3. 🏆 Category-Aggregated Expense Leaderboard
-- **Sum of All Category Expenses**: The Expense Leaderboard groups expenses by category ID and ranks them in **biggest to smallest order**.
+### 3. 🔔 2-Stage Stateful Notification Pipeline with Dynamic Emoji
+- **Stage 1 (Intent Selection)**: Clean prompt offering `[ 💸 Expense ]` / `[ 💰 Income ]`, `[ ⇄ Transfer ]`, and `[ ❌ Dismiss ]`.
+- **Stage 2 (Category Picker)**: In-place category selection with custom per-category emojis (`☕ Coffee`, `🍽️ Dining Out`, `🚗 Transport`, `🧺 Laundry`, `👕 Apparel`, `🏥 Hospital`, `🐷 Savings`, `💼 Work`).
 
-### 4. ⚡ Real-Time Instant SMS Heads-Up Notifications
-- **High-Priority Channel**: Configured `bank_transactions` channel with `NotificationManager.IMPORTANCE_HIGH` and `setDefaults(NotificationCompat.DEFAULT_ALL)`.
+### 4. 📊 Relative Min-Max Heatmap Normalization
+- **Percentile Intensity Scaling**: Heatmap dynamically calculates $\frac{\text{amount} - \text{minAmount}}{\text{maxAmount} - \text{minAmount}}$ across non-zero spending days, ensuring rich color contrast across all daily spending levels.
+
+### 5. 🔄 Account-Aware Pre-Notification Reconciliation
+- **$\pm 1.0$ Rounding Tolerance**: Automatically reconciles bank SMS with pre-existing manual entries within $\pm ₹1.0$ tolerance.
+- **Account Alignment Guard**: Verifies that the manual entry belongs to the same bank account as the SMS sender, preventing false suppressions across multiple accounts.
 
 ---
 

@@ -452,7 +452,7 @@ fun SettingsScreen(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "Hisab v3.1.1",
+                                    text = "Hisab v3.1.2",
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = colors.textPrimary
@@ -465,7 +465,7 @@ fun SettingsScreen(
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Text(
-                                        text = "Build 311",
+                                        text = "Build 312",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary

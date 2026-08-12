@@ -21,6 +21,52 @@ class NotificationActionReceiver : BroadcastReceiver() {
         val pendingId = intent.getLongExtra(SmsNotificationHelper.EXTRA_PENDING_ID, -1L)
         val notificationId = intent.getIntExtra(SmsNotificationHelper.EXTRA_NOTIFICATION_ID, -1)
 
+        // ══════════════════════════════════════════════════════════════
+        //  Stage 1 → Stage 2 Transition Actions (NEW)
+        // ══════════════════════════════════════════════════════════════
+
+        if (action == SmsNotificationHelper.ACTION_SELECT_EXPENSE_CATEGORY) {
+            val pendingResult = goAsync()
+            val amount = intent.getDoubleExtra(SmsNotificationHelper.EXTRA_AMOUNT, 0.0)
+            val bankName = intent.getStringExtra(SmsNotificationHelper.EXTRA_BANK_NAME) ?: "Bank"
+
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    SmsNotificationHelper.postCategoryPickerNotification(
+                        context, pendingId, notificationId, "EXPENSE", amount, bankName, 0
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    pendingResult.finish()
+                }
+            }
+            return
+        }
+
+        if (action == SmsNotificationHelper.ACTION_SELECT_INCOME_CATEGORY) {
+            val pendingResult = goAsync()
+            val amount = intent.getDoubleExtra(SmsNotificationHelper.EXTRA_AMOUNT, 0.0)
+            val bankName = intent.getStringExtra(SmsNotificationHelper.EXTRA_BANK_NAME) ?: "Bank"
+
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    SmsNotificationHelper.postCategoryPickerNotification(
+                        context, pendingId, notificationId, "INCOME", amount, bankName, 0
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    pendingResult.finish()
+                }
+            }
+            return
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        //  Pagination Action (Updated to route to Stage 2 Category Picker)
+        // ══════════════════════════════════════════════════════════════
+
         if (action == SmsNotificationHelper.ACTION_PAGINATE_NOTIFICATION) {
             val pendingResult = goAsync()
             val pageIndex = intent.getIntExtra(SmsNotificationHelper.EXTRA_PAGE_INDEX, 0)
@@ -30,15 +76,25 @@ class NotificationActionReceiver : BroadcastReceiver() {
 
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    val db = HisabDatabase.getDatabase(context)
-                    if (mode == "TRANSFER_CREDIT") {
-                        SmsNotificationHelper.swapToCreditTransferAccountsNotification(
-                            context, notificationId, pendingId, amount, bankName, pageIndex
-                        )
-                    } else {
-                        val pending = db.pendingTransactionDao().getById(pendingId)
-                        if (pending != null) {
-                            SmsNotificationHelper.postBankTransactionNotification(context, pending, pageIndex)
+                    when (mode) {
+                        "TRANSFER_CREDIT" -> {
+                            SmsNotificationHelper.swapToCreditTransferAccountsNotification(
+                                context, notificationId, pendingId, amount, bankName, pageIndex
+                            )
+                        }
+                        "EXPENSE", "INCOME" -> {
+                            // Route to Stage 2 Category Picker with pagination
+                            SmsNotificationHelper.postCategoryPickerNotification(
+                                context, pendingId, notificationId, mode, amount, bankName, pageIndex
+                            )
+                        }
+                        else -> {
+                            // Legacy fallback — shouldn't reach here
+                            val db = HisabDatabase.getDatabase(context)
+                            val pending = db.pendingTransactionDao().getById(pendingId)
+                            if (pending != null) {
+                                SmsNotificationHelper.postBankTransactionNotification(context, pending)
+                            }
                         }
                     }
                 } catch (e: Exception) {
@@ -49,6 +105,10 @@ class NotificationActionReceiver : BroadcastReceiver() {
             }
             return
         }
+
+        // ══════════════════════════════════════════════════════════════
+        //  Swap Credit → Transfer Account Picker
+        // ══════════════════════════════════════════════════════════════
 
         if (action == SmsNotificationHelper.ACTION_SWAP_CREDIT_TRANSFER) {
             val pendingResult = goAsync()
@@ -69,10 +129,45 @@ class NotificationActionReceiver : BroadcastReceiver() {
             return
         }
 
-        if (action == SmsNotificationHelper.ACTION_DISMISS_NOTIFICATION) {
-            // Swiped away -> Record remains safely in pending_transactions table
+        // ══════════════════════════════════════════════════════════════
+        //  Debit Transfer Account Picker (Swap to target accounts)
+        // ══════════════════════════════════════════════════════════════
+
+        if (action == SmsNotificationHelper.ACTION_SWAP_TRANSFER_ACCOUNTS) {
+            val pendingResult = goAsync()
+            val amount = intent.getDoubleExtra(SmsNotificationHelper.EXTRA_AMOUNT, 0.0)
+            val bankName = intent.getStringExtra(SmsNotificationHelper.EXTRA_BANK_NAME) ?: "Bank"
+
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    // For debit transfers, the source bank is known (the one debited)
+                    // Show other accounts as destination options
+                    SmsNotificationHelper.swapToCreditTransferAccountsNotification(
+                        context, notificationId, pendingId, amount, bankName, 0
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    pendingResult.finish()
+                }
+            }
             return
         }
+
+        // ══════════════════════════════════════════════════════════════
+        //  Dismiss Action
+        // ══════════════════════════════════════════════════════════════
+
+        if (action == SmsNotificationHelper.ACTION_DISMISS_NOTIFICATION) {
+            // Swiped away → Record remains safely in pending_transactions table
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.cancel(notificationId)
+            return
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        //  Undo Auto-Merge Action
+        // ══════════════════════════════════════════════════════════════
 
         if (action == SmsNotificationHelper.ACTION_UNDO_AUTO_MERGE) {
             val pendingResult = goAsync()
@@ -106,6 +201,10 @@ class NotificationActionReceiver : BroadcastReceiver() {
             }
             return
         }
+
+        // ══════════════════════════════════════════════════════════════
+        //  Log Inward Transfer Action
+        // ══════════════════════════════════════════════════════════════
 
         if (action == SmsNotificationHelper.ACTION_LOG_INWARD_TRANSFER) {
             val pendingResult = goAsync()
@@ -166,6 +265,10 @@ class NotificationActionReceiver : BroadcastReceiver() {
             }
             return
         }
+
+        // ══════════════════════════════════════════════════════════════
+        //  Log Transaction Action (Final — logs to Room DB)
+        // ══════════════════════════════════════════════════════════════
 
         if (action == SmsNotificationHelper.ACTION_LOG_TRANSACTION) {
             val pendingResult = goAsync()

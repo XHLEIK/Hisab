@@ -22,7 +22,7 @@ object SmsCatchUpSync {
     /**
      * Scans device SMS inbox for bank transactions from the last 24 hours.
      * Safely guarded with READ_SMS permission check to prevent SecurityException crashes.
-     * Enforces a strict 3-tier exclusion filter to guarantee zero duplicate entries.
+     * Enforces a strict 3-tier exclusion filter + linked-account verification to guarantee zero duplicate entries.
      */
     suspend fun runSync(context: Context) = withContext(Dispatchers.IO) {
         try {
@@ -38,6 +38,9 @@ object SmsCatchUpSync {
             val accountDao = db.accountDao()
             val prefs = context.getSharedPreferences("sms_processed_hashes", Context.MODE_PRIVATE)
 
+            // ── Pre-load linked accounts for whitelist verification ────
+            val linkedAccounts = accountDao.getAllSync()
+
             val twentyFourHoursAgo = System.currentTimeMillis() - 86_400_000L
             val uri = Uri.parse("content://sms/inbox")
             val projection = arrayOf("_id", "address", "body", "date")
@@ -50,7 +53,6 @@ object SmsCatchUpSync {
                 LocalDate.now().minusDays(3),
                 LocalDate.now()
             )
-            val accounts = accountDao.getAllSync()
 
             context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
                 val addressIdx = cursor.getColumnIndex("address")
@@ -65,6 +67,22 @@ object SmsCatchUpSync {
                     if (address.isEmpty() || body.isEmpty()) continue
 
                     val parsed = SmsBankParser.parse(address, body) ?: continue
+
+                    // ── Linked-Account Verification Gate ─────────────────────
+                    // Only process SMS from banks that match a user-linked account.
+                    val hasLinkedMatch = linkedAccounts.any { account ->
+                        val bankMatch = account.bankCode != null &&
+                                (account.bankCode.equals(parsed.bankName, ignoreCase = true) ||
+                                 parsed.bankName.uppercase().contains(account.bankCode!!.uppercase()) ||
+                                 account.bankCode!!.uppercase().contains(parsed.bankName.take(4).uppercase()))
+                        val last4Match = account.accountLast4 != null && parsed.accountLast4 != null &&
+                                account.accountLast4 == parsed.accountLast4
+                        bankMatch || last4Match
+                    }
+
+                    if (!hasLinkedMatch) {
+                        continue // No linked account matches → skip this SMS
+                    }
 
                     // ── Tier 1: Hash Check ──────────────────────────────────────
                     val msgHash1 = computeHash("$address-${parsed.amount}-${parsed.type}-$timestamp")
@@ -92,7 +110,7 @@ object SmsCatchUpSync {
                         continue
                     }
 
-                    // Manual Entry Auto-Reconciliation (Past 24 hours)
+                    // ── Manual Entry Auto-Reconciliation (Account-Aware) ──────
                     val txType = if (parsed.type == "CREDIT") TransactionType.INCOME else TransactionType.EXPENSE
                     val matchingManual = transactionDao.findMatchingManualTransaction(
                         parsed.amount,
@@ -101,13 +119,22 @@ object SmsCatchUpSync {
                     )
 
                     if (matchingManual != null) {
-                        prefs.edit().putBoolean(msgHash1, true).putBoolean(msgHash2, true).apply()
-                        continue
+                        // Verify account alignment before suppressing
+                        val matchedBankAccount = linkedAccounts.firstOrNull {
+                            it.bankCode != null && (
+                                it.bankCode.equals(parsed.bankName, ignoreCase = true) ||
+                                parsed.bankName.uppercase().contains(it.bankCode!!.uppercase())
+                            )
+                        }
+                        if (matchedBankAccount == null || matchingManual.account == matchedBankAccount.name) {
+                            prefs.edit().putBoolean(msgHash1, true).putBoolean(msgHash2, true).apply()
+                            continue
+                        }
                     }
 
                     // ── Tier 3: Balance Verification ─────────────────────────────
                     if (parsed.endingBalance != null) {
-                        val matchedAccount = accounts.firstOrNull { it.bankCode.equals(parsed.bankName, ignoreCase = true) }
+                        val matchedAccount = linkedAccounts.firstOrNull { it.bankCode.equals(parsed.bankName, ignoreCase = true) }
                         if (matchedAccount != null) {
                             val accountName = matchedAccount.name
                             val accountTxs = recentTransactions.filter { it.account == accountName || it.toAccount == accountName }

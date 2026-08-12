@@ -43,6 +43,7 @@ fun SpendingHeatmap(
     val firstDayOfWeek = yearMonth.atDay(1).dayOfWeek.value // 1=Mon, 7=Sun
     val dailyMap = remember(data) { data.associate { it.date.dayOfMonth to it.totalAmount } }
     val maxAmount = remember(data) { data.maxOfOrNull { it.totalAmount } ?: 1.0 }
+    val minAmount = remember(data) { data.filter { it.totalAmount > 0 }.minOfOrNull { it.totalAmount } ?: 0.0 }
 
     val totalCells = firstDayOfWeek - 1 + daysInMonth
     val weeks = (totalCells + 6) / 7
@@ -105,7 +106,9 @@ fun SpendingHeatmap(
 
                         if (day in 1..daysInMonth) {
                             val amount = dailyMap[day] ?: 0.0
-                            val intensity = if (maxAmount > 0) (amount / maxAmount).toFloat() else 0f
+                            val intensity = if (amount <= 0) 0f
+                                else if (maxAmount > minAmount) ((amount - minAmount) / (maxAmount - minAmount)).toFloat()
+                                else 1f
 
                             val cellColor = when {
                                 amount <= 0 -> colors.heatmapZero

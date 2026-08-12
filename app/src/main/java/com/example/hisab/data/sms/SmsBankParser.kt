@@ -15,6 +15,10 @@ data class ParsedBankSms(
 
 object SmsBankParser {
 
+    // ── Bank Sender DLT Header Map ────────────────────────────────────────
+    // Cleaned: Removed ambiguous short codes (JIO, AIRTEL, PAYTM, PYTM, ARTL)
+    // that collide with telecom/service provider headers.
+    // Kept specific payment bank headers (JIOPB, ARTLPB, PYTMPB) only.
     private val BANK_SENDER_MAP = mapOf(
         "BOB" to "Bank of Baroda",
         "BOBSMS" to "Bank of Baroda",
@@ -85,12 +89,12 @@ object SmsBankParser {
         "SURYODAY" to "Suryoday Small Finance Bank",
         "UTKARSH" to "Utkarsh Small Finance Bank",
         "ESAF" to "ESAF Small Finance Bank",
-        "PYTM" to "Paytm Payments Bank",
-        "PAYTM" to "Paytm Payments Bank",
-        "AIRTEL" to "Airtel Payments Bank",
-        "ARTL" to "Airtel Payments Bank",
+        // Payment Banks — specific DLT headers ONLY (not short telecom codes)
+        "PYTMPB" to "Paytm Payments Bank",
+        "PAYTMB" to "Paytm Payments Bank",
+        "ARTLPB" to "Airtel Payments Bank",
         "IPPB" to "India Post Payments Bank",
-        "JIO" to "Jio Payments Bank",
+        "JIOPB" to "Jio Payments Bank",
         "NSDL" to "NSDL Payments Bank",
         "FI" to "Fi Money (Federal Bank)",
         "JUPITER" to "Jupiter Money (Federal Bank)",
@@ -98,30 +102,73 @@ object SmsBankParser {
         "NIYO" to "Niyo Global / NiyoX"
     )
 
+    // ── Non-Bank Service Header Blacklist ──────────────────────────────────
+    // Hard-reject any SMS whose sender header contains these substrings
+    // BEFORE running bank identification or amount parsing.
+    private val NON_BANK_BLACKLIST = setOf(
+        "JIOFIBER", "JIOMOB", "JIONET", "JIODGT", "JIOPOS", "JIOMRT",
+        "AIRTELFI", "AIRTELDTH", "AIRTELTV",
+        "VITELE", "VIDATA",
+        "BILLDESK", "BILLPAY",
+        "SWIGGY", "ZOMATO", "AMAZON", "AMZN",
+        "FLIPKART", "FLIPK", "MYNTRA",
+        "IRCTC", "IRCTCWEB",
+        "OLACAB", "UBERIN",
+        "PAYTMMALL", "PAYTMFST"
+    )
+
+    // ── Amount Extraction Patterns ────────────────────────────────────────
     private val AMOUNT_PATTERNS = listOf(
         Pattern.compile("(?:rs\\.?|inr|₹)\\s*([\\d,]+\\.?\\d*)", Pattern.CASE_INSENSITIVE),
         Pattern.compile("(?:debited|credited|spent|received|withdrawn|deposited)\\s+(?:by|for|with|of)?\\s*(?:rs\\.?|inr|₹)?\\s*([\\d,]+\\.?\\d*)", Pattern.CASE_INSENSITIVE)
     )
 
+    // ── Account Last-4 Digits Patterns ────────────────────────────────────
     private val ACCOUNT_LAST4_PATTERNS = listOf(
-        Pattern.compile("(?:a/c|account|acct|acc)\\s*(?:no\\.?)?\\s*(?:[x\\*]{2,12})?(\\d{4})", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("ending\\s*(?:with|in)?\\s*(\\d{4})", Pattern.CASE_INSENSITIVE)
+        Pattern.compile("(?:a/c|account|acct|acc)\\s*(?:no\\.?)?\\s*[:.]?\\s*(?:[x\\*\\.-]*)\\s*(\\d{4})", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("ending\\s*(?:with|in)?\\s*[:.]?\\s*(\\d{4})", Pattern.CASE_INSENSITIVE)
     )
 
+    // ── Merchant / Payee Extraction Patterns ──────────────────────────────
     private val MERCHANT_PATTERNS = listOf(
         Pattern.compile("(?:to|at|info:)\\s+([a-zA-Z0-9\\s&\\.'-]{2,25})(?:\\s+on|\\s+ref|\\s+via|\\s+a/c|\\.|,|\\$) ", Pattern.CASE_INSENSITIVE),
         Pattern.compile("(?:vpa|upi|ref)\\s+([a-zA-Z0-9\\.@_-]{3,30})", Pattern.CASE_INSENSITIVE)
     )
 
+    // ── Ending Balance Extraction Patterns ────────────────────────────────
     private val BALANCE_PATTERNS = listOf(
         Pattern.compile("(?:bal|balance|avail bal|available balance|a/c bal)\\s*(?:is|:)?\\s*(?:rs\\.?|inr|₹)?\\s*([\\d,]+\\.?\\d*)", Pattern.CASE_INSENSITIVE)
     )
 
+    // ── 3-Pass Direction Engine: Strict Word-Boundary Regex ───────────────
+    private val CREDIT_VERB_PATTERN = Pattern.compile(
+        "\\b(credited|received|deposited|added|refunded|refund|cashback|reversal|cr\\.?)\\b",
+        Pattern.CASE_INSENSITIVE
+    )
+    private val DEBIT_VERB_PATTERN = Pattern.compile(
+        "\\b(debited|spent|withdrawn|paid|sent|transferred|dr\\.?)\\b",
+        Pattern.CASE_INSENSITIVE
+    )
+    // Supplementary debit context (tie-breaker only, never sole signal)
+    private val DEBIT_CONTEXT_PATTERN = Pattern.compile(
+        "\\b(vpa|upi|purchase)\\b",
+        Pattern.CASE_INSENSITIVE
+    )
+
+    // ── Main Parse Entry Point ────────────────────────────────────────────
     fun parse(senderHeader: String, body: String): ParsedBankSms? {
         val cleanHeader = senderHeader.trim().uppercase()
         val cleanBody = body.trim()
 
-        // ── Stage 1: DLT Suffix Verification ─────────────
+        // ── Stage 0: Non-Bank Blacklist Hard-Reject ───────────────────
+        val headerForBlacklist = cleanHeader.replace("-", "")
+        for (blacklisted in NON_BANK_BLACKLIST) {
+            if (headerForBlacklist.contains(blacklisted)) {
+                return null
+            }
+        }
+
+        // ── Stage 1: DLT Suffix Verification ─────────────────────────
         if (cleanHeader.contains("-")) {
             val parts = cleanHeader.split("-")
             val categorySuffix = parts.lastOrNull()?.uppercase()
@@ -130,39 +177,26 @@ object SmsBankParser {
             }
         }
 
-        // ── Stage 1b: Bank Code Identification ───────────
+        // ── Stage 1b: Bank Code Identification ───────────────────────
         val bankName = identifyBankName(cleanHeader, cleanBody) ?: return null
 
-        // ── Stage 2: OTP & Non-Transaction Noise Exclusion ─
+        // ── Stage 2: OTP & Non-Transaction Noise Exclusion ───────────
         val lowerBody = cleanBody.lowercase()
         if (isOtpOrNoise(lowerBody)) {
             return null
         }
 
-        // ── Stage 3: Loose Transaction Intent Detection ────────
-        val isDebit = lowerBody.contains("debited") || lowerBody.contains("dr.") || lowerBody.contains("dr ") ||
-                lowerBody.contains("spent") || lowerBody.contains("withdrawn") || lowerBody.contains("paid") ||
-                lowerBody.contains("transferred") || lowerBody.contains("sent") || lowerBody.contains("vpa") ||
-                lowerBody.contains("upi") || lowerBody.contains("purchase")
-
-        val isCredit = !isDebit && (lowerBody.contains("credited") || lowerBody.contains("cr.") || lowerBody.contains("cr ") ||
-                lowerBody.contains("received") || lowerBody.contains("deposited") || lowerBody.contains("added") ||
-                lowerBody.contains("refund"))
-
-        if (!isDebit && !isCredit) {
-            return null
-        }
-
-        val type = if (isDebit) "DEBIT" else "CREDIT"
-
-        // ── Stage 4: Amount Extraction ────────────────────
+        // ── Stage 3: Amount Extraction (needed for proximity scoring) ─
         val amount = extractAmount(cleanBody) ?: return null
         if (amount <= 0.0) return null
 
-        // ── Stage 5: Optional Account, Merchant & Ending Balance Extraction ─
+        // ── Stage 4: 3-Pass Direction Intent Engine ──────────────────
+        val endingBalance = extractEndingBalance(cleanBody)
+        val type = determineTransactionDirection(cleanBody, amount, endingBalance) ?: return null
+
+        // ── Stage 5: Optional Account, Merchant Extraction ───────────
         val accountLast4 = extractAccountLast4(cleanBody)
         val merchantOrPayee = extractMerchant(cleanBody)
-        val endingBalance = extractEndingBalance(cleanBody)
 
         return ParsedBankSms(
             amount = amount,
@@ -174,6 +208,89 @@ object SmsBankParser {
             endingBalance = endingBalance,
             rawBody = cleanBody
         )
+    }
+
+    /**
+     * 3-Pass Multi-Factor Direction Engine
+     *
+     * Pass 1: Strict word-boundary regex matching for credit/debit verbs
+     * Pass 2: Proximity-based scoring with inverse-distance decay relative to the amount
+     * Pass 3: Credit-first precedence with ending-balance tie-breaker
+     */
+    private fun determineTransactionDirection(
+        body: String,
+        amount: Double,
+        endingBalance: Double?
+    ): String? {
+        // Find amount position in the body for proximity calculation
+        val amountPosition = findAmountPosition(body, amount)
+
+        var creditScore = 0.0
+        var debitScore = 0.0
+
+        // Score credit verbs with distance-based weighting
+        val creditMatcher = CREDIT_VERB_PATTERN.matcher(body)
+        while (creditMatcher.find()) {
+            val verbPos = creditMatcher.start()
+            val distance = if (amountPosition >= 0) kotlin.math.abs(verbPos - amountPosition) else 100
+            val weight = when {
+                distance <= 30 -> 4.0 // Immediately adjacent to amount
+                distance <= 60 -> 2.5
+                distance <= 100 -> 1.5
+                else -> 0.8
+            }
+            creditScore += weight
+        }
+
+        // Score debit verbs with distance-based weighting
+        val debitMatcher = DEBIT_VERB_PATTERN.matcher(body)
+        while (debitMatcher.find()) {
+            val verbPos = debitMatcher.start()
+            val distance = if (amountPosition >= 0) kotlin.math.abs(verbPos - amountPosition) else 100
+            val weight = when {
+                distance <= 30 -> 4.0 // Immediately adjacent to amount
+                distance <= 60 -> 2.5
+                distance <= 100 -> 1.5
+                else -> 0.8
+            }
+            debitScore += weight
+        }
+
+        // Score supplementary debit context (0.5 weight — tie-breaker only)
+        val contextMatcher = DEBIT_CONTEXT_PATTERN.matcher(body)
+        while (contextMatcher.find()) {
+            debitScore += 0.5
+        }
+
+        // ── Pass 3: Direction Resolution ──
+        return when {
+            // Both scores zero → not a transaction
+            creditScore == 0.0 && debitScore == 0.0 -> null
+
+            // Credit-First Precedence: if creditScore > 0 and >= debitScore -> CREDIT
+            creditScore > 0 && creditScore >= debitScore -> "CREDIT"
+
+            // Clear debit win
+            debitScore > creditScore -> "DEBIT"
+
+            // Fallback (if any remaining ambiguous state)
+            endingBalance != null && endingBalance > amount -> "CREDIT"
+            else -> "DEBIT"
+        }
+    }
+
+    /**
+     * Finds the character position of the monetary amount in the SMS body
+     * for proximity-based verb scoring.
+     */
+    private fun findAmountPosition(body: String, amount: Double): Int {
+        for (pattern in AMOUNT_PATTERNS) {
+            val matcher = pattern.matcher(body)
+            if (matcher.find()) {
+                return matcher.start()
+            }
+        }
+        return -1
     }
 
     private fun identifyBankName(header: String, body: String): String? {
@@ -212,9 +329,8 @@ object SmsBankParser {
         }
 
         if (lowerBody.contains("avail bal") || lowerBody.contains("available balance")) {
-            val hasTxKeyword = lowerBody.contains("debited") || lowerBody.contains("credited") ||
-                    lowerBody.contains("dr") || lowerBody.contains("cr") || lowerBody.contains("spent") ||
-                    lowerBody.contains("paid") || lowerBody.contains("received")
+            val hasTxKeyword = CREDIT_VERB_PATTERN.matcher(lowerBody).find() ||
+                    DEBIT_VERB_PATTERN.matcher(lowerBody).find()
             if (!hasTxKeyword) return true
         }
 

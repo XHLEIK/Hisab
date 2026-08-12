@@ -26,6 +26,9 @@ object SmsNotificationHelper {
     const val ACTION_PAGINATE_NOTIFICATION = "com.example.hisab.ACTION_PAGINATE_NOTIFICATION"
     const val ACTION_DISMISS_NOTIFICATION = "com.example.hisab.ACTION_DISMISS_NOTIFICATION"
     const val ACTION_UNDO_AUTO_MERGE = "com.example.hisab.ACTION_UNDO_AUTO_MERGE"
+    // ── NEW: 2-Stage Pipeline Actions ────────────────────────────────
+    const val ACTION_SELECT_EXPENSE_CATEGORY = "com.example.hisab.ACTION_SELECT_EXPENSE_CATEGORY"
+    const val ACTION_SELECT_INCOME_CATEGORY = "com.example.hisab.ACTION_SELECT_INCOME_CATEGORY"
 
     const val EXTRA_PENDING_ID = "extra_pending_id"
     const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
@@ -54,24 +57,26 @@ object SmsNotificationHelper {
         }
     }
 
+    // ══════════════════════════════════════════════════════════════════════
+    //  STAGE 1: Intent Selection Notification (Expense / Income / Transfer)
+    // ══════════════════════════════════════════════════════════════════════
+
     /**
-     * Posts Bank Transaction Notification with 3-Action Dynamic Pagination (2 Categories + [ 🔄 More... ])
+     * Posts Stage 1 Bank Transaction Notification with 3 Intent Buttons:
+     *
+     * DEBIT:  [ 💸 Expense ] [ ⇄ Transfer ] [ ❌ Dismiss ]
+     * CREDIT: [ 💰 Income ] [ ⇄ Transfer In ] [ ❌ Dismiss ]
      */
     suspend fun postBankTransactionNotification(
         context: Context,
-        pending: PendingTransactionEntity,
-        pageIndex: Int = 0
+        pending: PendingTransactionEntity
     ) {
         createNotificationChannel(context)
 
-        val db = HisabDatabase.getDatabase(context)
-        val categoryDao = db.categoryDao()
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val notificationId = (pending.id * 1000L).toInt() and 0x7FFFFFFF
 
         val formattedAmount = CurrencyFormatter.format(pending.amount)
-        val title: String
-        val body: String
 
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -83,44 +88,51 @@ object SmsNotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val deleteIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+        // Dismiss action (shared by both DEBIT and CREDIT)
+        val dismissIntent = Intent(context, NotificationActionReceiver::class.java).apply {
             action = ACTION_DISMISS_NOTIFICATION
             putExtra(EXTRA_PENDING_ID, pending.id)
             putExtra(EXTRA_NOTIFICATION_ID, notificationId)
         }
-        val deletePendingIntent = PendingIntent.getBroadcast(
+        val dismissPendingIntent = PendingIntent.getBroadcast(
             context,
             notificationId + 100,
-            deleteIntent,
+            dismissIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(openAppPendingIntent)
-            .setDeleteIntent(deletePendingIntent)
+            .setDeleteIntent(dismissPendingIntent)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
 
         if (pending.type == "CREDIT") {
-            title = "💰 Income Received: $formattedAmount"
-            body = "Credited to ${pending.bankName}${if (!pending.accountLast4.isNullOrEmpty()) " (A/C **${pending.accountLast4})" else ""}. Select income or transfer:"
+            // ── CREDIT Stage 1: [ 💰 Income ] [ ⇄ Transfer In ] [ ❌ Dismiss ] ──
+            val title = "💰 Income Received: $formattedAmount"
+            val body = "Credited to ${pending.bankName}${if (!pending.accountLast4.isNullOrEmpty()) " (A/C **${pending.accountLast4})" else ""}. Select type:"
             builder.setContentTitle(title).setContentText(body)
 
-            val incomeCategories = categoryDao.getAllSync().filter { it.type == TransactionType.INCOME }
-            val totalCategories = if (incomeCategories.isNotEmpty()) incomeCategories.size else 3
-
-            val idx1 = (pageIndex * 2) % totalCategories
-            val cat1 = if (incomeCategories.isNotEmpty()) incomeCategories[idx1].name else "Salary"
-
-            // Button 1: Income Category 1
-            builder.addAction(
-                createLogAction(context, notificationId, pending.id, cat1, "INCOME", null, pending.amount, pending.bankName, "💼 $cat1")
+            // Button 1: [ 💰 Income ] → Stage 2 Income Category Picker
+            val incomeIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+                action = ACTION_SELECT_INCOME_CATEGORY
+                putExtra(EXTRA_PENDING_ID, pending.id)
+                putExtra(EXTRA_NOTIFICATION_ID, notificationId)
+                putExtra(EXTRA_AMOUNT, pending.amount)
+                putExtra(EXTRA_BANK_NAME, pending.bankName)
+            }
+            val incomePendingIntent = PendingIntent.getBroadcast(
+                context,
+                notificationId + 1,
+                incomeIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
+            builder.addAction(0, "💰 Income", incomePendingIntent)
 
-            // Button 2: [ ⇄ Transfer In ] -> Swaps to Source Account Picker
+            // Button 2: [ ⇄ Transfer In ] → Source Account Picker
             val swapCreditIntent = Intent(context, NotificationActionReceiver::class.java).apply {
                 action = ACTION_SWAP_CREDIT_TRANSFER
                 putExtra(EXTRA_PENDING_ID, pending.id)
@@ -136,65 +148,151 @@ object SmsNotificationHelper {
             )
             builder.addAction(0, "⇄ Transfer In", swapCreditPendingIntent)
 
-            // Button 3: [ 🔄 More Income... ] -> Paginate
-            val paginateIntent = Intent(context, NotificationActionReceiver::class.java).apply {
-                action = ACTION_PAGINATE_NOTIFICATION
-                putExtra(EXTRA_PENDING_ID, pending.id)
-                putExtra(EXTRA_NOTIFICATION_ID, notificationId)
-                putExtra(EXTRA_PAGE_INDEX, pageIndex + 1)
-                putExtra(EXTRA_PAGINATION_MODE, "INCOME")
-            }
-            val paginatePendingIntent = PendingIntent.getBroadcast(
-                context,
-                notificationId + 3,
-                paginateIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            builder.addAction(0, "🔄 More Income...", paginatePendingIntent)
+            // Button 3: [ ❌ Dismiss ]
+            builder.addAction(0, "❌ Dismiss", dismissPendingIntent)
 
         } else {
-            title = "💸 Payment Detected: $formattedAmount"
+            // ── DEBIT Stage 1: [ 💸 Expense ] [ ⇄ Transfer ] [ ❌ Dismiss ] ──
             val merchantStr = if (!pending.merchantOrPayee.isNullOrEmpty()) " for ${pending.merchantOrPayee}" else ""
-            body = "Debited from ${pending.bankName}${if (!pending.accountLast4.isNullOrEmpty()) " (A/C **${pending.accountLast4})" else ""}$merchantStr"
+            val title = "💸 Payment Detected: $formattedAmount"
+            val body = "Debited from ${pending.bankName}${if (!pending.accountLast4.isNullOrEmpty()) " (A/C **${pending.accountLast4})" else ""}$merchantStr. Select type:"
             builder.setContentTitle(title).setContentText(body)
 
-            val expenseCategories = categoryDao.getAllSync().filter { it.type == TransactionType.EXPENSE }
-            val totalCategories = if (expenseCategories.isNotEmpty()) expenseCategories.size else 4
-
-            val idx1 = (pageIndex * 2) % totalCategories
-            val idx2 = (pageIndex * 2 + 1) % totalCategories
-
-            val cat1 = if (expenseCategories.isNotEmpty()) expenseCategories[idx1].name else "Groceries & Utilities"
-            val cat2 = if (expenseCategories.isNotEmpty()) expenseCategories[idx2].name else "Shopping"
-
-            // Button 1: Category 1
-            builder.addAction(
-                createLogAction(context, notificationId, pending.id, cat1, "EXPENSE", null, pending.amount, pending.bankName, "🛒 $cat1")
-            )
-            // Button 2: Category 2
-            builder.addAction(
-                createLogAction(context, notificationId, pending.id, cat2, "EXPENSE", null, pending.amount, pending.bankName, "🛍️ $cat2")
-            )
-
-            // Button 3: [ 🔄 More... ] -> Paginate categories in pairs
-            val paginateIntent = Intent(context, NotificationActionReceiver::class.java).apply {
-                action = ACTION_PAGINATE_NOTIFICATION
+            // Button 1: [ 💸 Expense ] → Stage 2 Expense Category Picker
+            val expenseIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+                action = ACTION_SELECT_EXPENSE_CATEGORY
                 putExtra(EXTRA_PENDING_ID, pending.id)
                 putExtra(EXTRA_NOTIFICATION_ID, notificationId)
-                putExtra(EXTRA_PAGE_INDEX, pageIndex + 1)
-                putExtra(EXTRA_PAGINATION_MODE, "EXPENSE")
+                putExtra(EXTRA_AMOUNT, pending.amount)
+                putExtra(EXTRA_BANK_NAME, pending.bankName)
             }
-            val paginatePendingIntent = PendingIntent.getBroadcast(
+            val expensePendingIntent = PendingIntent.getBroadcast(
                 context,
-                notificationId + 3,
-                paginateIntent,
+                notificationId + 1,
+                expenseIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            builder.addAction(0, "🔄 More...", paginatePendingIntent)
+            builder.addAction(0, "💸 Expense", expensePendingIntent)
+
+            // Button 2: [ ⇄ Transfer ] → Transfer Account Picker
+            val transferIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+                action = ACTION_SWAP_TRANSFER_ACCOUNTS
+                putExtra(EXTRA_PENDING_ID, pending.id)
+                putExtra(EXTRA_NOTIFICATION_ID, notificationId)
+                putExtra(EXTRA_AMOUNT, pending.amount)
+                putExtra(EXTRA_BANK_NAME, pending.bankName)
+            }
+            val transferPendingIntent = PendingIntent.getBroadcast(
+                context,
+                notificationId + 2,
+                transferIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            builder.addAction(0, "⇄ Transfer", transferPendingIntent)
+
+            // Button 3: [ ❌ Dismiss ]
+            builder.addAction(0, "❌ Dismiss", dismissPendingIntent)
         }
 
         notificationManager.notify(notificationId, builder.build())
     }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  STAGE 2: Category Picker Notification (Paginated 2 Categories + More)
+    // ══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Posts Stage 2 Category Picker Notification with dynamic per-category emoji:
+     * [ ☕ Coffee ] [ 🍽️ Dining Out ] [ 🔄 More... ]
+     */
+    suspend fun postCategoryPickerNotification(
+        context: Context,
+        pendingId: Long,
+        notificationId: Int,
+        transactionType: String, // "EXPENSE" or "INCOME"
+        amount: Double,
+        bankName: String,
+        pageIndex: Int = 0
+    ) {
+        createNotificationChannel(context)
+
+        val db = HisabDatabase.getDatabase(context)
+        val categoryDao = db.categoryDao()
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val formattedAmount = CurrencyFormatter.format(amount)
+        val txType = if (transactionType == "INCOME") TransactionType.INCOME else TransactionType.EXPENSE
+        val categories = categoryDao.getAllSync().filter { it.type == txType }
+        val totalCategories = if (categories.isNotEmpty()) categories.size else 2
+
+        val idx1 = (pageIndex * 2) % totalCategories
+        val idx2 = (pageIndex * 2 + 1) % totalCategories
+
+        val cat1 = if (categories.isNotEmpty()) categories[idx1] else null
+        val cat2 = if (categories.isNotEmpty() && idx1 != idx2) categories[idx2] else null
+
+        val cat1Name = cat1?.name ?: if (transactionType == "INCOME") "Salary" else "Groceries & Utilities"
+        val cat2Name = cat2?.name ?: if (transactionType == "INCOME") "Freelance" else "Shopping"
+
+        val cat1Emoji = getCategoryEmoji(cat1?.iconName)
+        val cat2Emoji = getCategoryEmoji(cat2?.iconName)
+
+        val openAppIntent = Intent(context, MainActivity::class.java)
+        val openAppPendingIntent = PendingIntent.getActivity(
+            context,
+            notificationId,
+            openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val typeLabel = if (transactionType == "INCOME") "Income" else "Expense"
+        val typeEmoji = if (transactionType == "INCOME") "💰" else "💸"
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("$typeEmoji Select $typeLabel Category: $formattedAmount")
+            .setContentText("Pick a category for this transaction:")
+            .setContentIntent(openAppPendingIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+
+        // Button 1: Category 1 with dynamic emoji
+        builder.addAction(
+            createLogAction(context, notificationId, pendingId, cat1Name, transactionType, null, amount, bankName, "$cat1Emoji $cat1Name")
+        )
+
+        // Button 2: Category 2 with dynamic emoji (only if different from cat1)
+        if (cat2Name != cat1Name) {
+            builder.addAction(
+                createLogAction(context, notificationId, pendingId, cat2Name, transactionType, null, amount, bankName, "$cat2Emoji $cat2Name")
+            )
+        }
+
+        // Button 3: [ 🔄 More... ] → Paginate to next categories
+        val paginateIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+            action = ACTION_PAGINATE_NOTIFICATION
+            putExtra(EXTRA_PENDING_ID, pendingId)
+            putExtra(EXTRA_NOTIFICATION_ID, notificationId)
+            putExtra(EXTRA_PAGE_INDEX, pageIndex + 1)
+            putExtra(EXTRA_PAGINATION_MODE, transactionType) // "EXPENSE" or "INCOME"
+            putExtra(EXTRA_AMOUNT, amount)
+            putExtra(EXTRA_BANK_NAME, bankName)
+        }
+        val paginatePendingIntent = PendingIntent.getBroadcast(
+            context,
+            notificationId + 3,
+            paginateIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        builder.addAction(0, "🔄 More...", paginatePendingIntent)
+
+        notificationManager.notify(notificationId, builder.build())
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  Credit Inward Transfer Source Account Picker (Unchanged Architecture)
+    // ══════════════════════════════════════════════════════════════════════
 
     /**
      * Credit Inward Transfer Source Account Picker Notification (Paginated 2 Accounts + [ 🔄 More... ])
@@ -242,11 +340,13 @@ object SmsNotificationHelper {
             createInwardTransferAction(context, notificationId, pendingId, acc1Name, creditedBankName, amount, "🏦 $acc1Name")
         )
         // Action 2: Source Account 2
-        builder.addAction(
-            createInwardTransferAction(context, notificationId, pendingId, acc2Name, creditedBankName, amount, "🐷 $acc2Name")
-        )
+        if (acc1Name != acc2Name) {
+            builder.addAction(
+                createInwardTransferAction(context, notificationId, pendingId, acc2Name, creditedBankName, amount, "🐷 $acc2Name")
+            )
+        }
 
-        // Action 3: [ 🔄 More Accounts... ] -> Paginate source accounts
+        // Action 3: [ 🔄 More Accounts... ] → Paginate source accounts
         val paginateIntent = Intent(context, NotificationActionReceiver::class.java).apply {
             action = ACTION_PAGINATE_NOTIFICATION
             putExtra(EXTRA_PENDING_ID, pendingId)
@@ -266,6 +366,10 @@ object SmsNotificationHelper {
 
         notificationManager.notify(notificationId, builder.build())
     }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  Auto-Merge & Success Notifications
+    // ══════════════════════════════════════════════════════════════════════
 
     /**
      * Auto-Merge Toast Notification with 3-Second Timeout & [ Undo ] Action
@@ -316,6 +420,103 @@ object SmsNotificationHelper {
 
         notificationManager.notify(notificationId, builder.build())
     }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  Dynamic Category Emoji Mapper
+    // ══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Maps category iconName to a Unicode emoji for notification buttons.
+     * Each category gets its own unique, visually descriptive emoji.
+     */
+    fun getCategoryEmoji(iconName: String?): String {
+        return when (iconName) {
+            // Food & Beverage
+            "ShoppingCart", "LocalGroceryStore", "GroceriesStore" -> "🛒"
+            "Restaurant" -> "🍽️"
+            "Fastfood", "Snacks" -> "🍔"
+            "Coffee", "Cafe", "Tea" -> "☕"
+
+            // Shopping & Fashion
+            "ShoppingBag" -> "🛍️"
+            "LocalMall", "Mall" -> "🏬"
+            "Storefront", "Store" -> "🏪"
+            "Checkroom", "TShirt", "Apparel", "Clothing" -> "👕"
+
+            // Transport & Travel
+            "DirectionsCar" -> "🚗"
+            "DirectionsBus", "Bus" -> "🚌"
+            "TwoWheeler", "Bike" -> "🏍️"
+            "LocalGasStation", "Fuel", "Petrol" -> "⛽"
+            "Flight" -> "✈️"
+            "Hotel", "Stay" -> "🏨"
+
+            // Home & Utilities
+            "Home" -> "🏠"
+            "Receipt", "ReceiptLong" -> "🧾"
+            "ElectricalServices", "Electricity" -> "⚡"
+            "WaterDrop", "Water" -> "💧"
+            "Wifi", "Internet" -> "📶"
+            "Lightbulb" -> "💡"
+            "LocalLaundryService", "WashingMachine", "Laundry" -> "🧺"
+
+            // Health & Fitness
+            "LocalHospital" -> "🏥"
+            "MedicalServices", "Pharmacy", "Medicine" -> "💊"
+            "FitnessCenter" -> "💪"
+            "DirectionsRun" -> "🏃"
+
+            // Entertainment & Leisure
+            "Movie" -> "🎬"
+            "SportsEsports", "Gaming" -> "🎮"
+            "Headphones", "Music" -> "🎧"
+            "Tv", "Television" -> "📺"
+
+            // Education & Work
+            "School" -> "🎓"
+            "Book", "Books" -> "📚"
+            "Work" -> "💼"
+            "Laptop" -> "💻"
+
+            // Tech & Communication
+            "Smartphone", "Subscriptions" -> "📱"
+            "CameraAlt", "Photography" -> "📷"
+
+            // Finance & Investment
+            "AccountBalance" -> "🏦"
+            "Savings" -> "🐷"
+            "Stocks", "ShowChart" -> "📈"
+            "TrendingUp" -> "📊"
+            "PieChart" -> "🥧"
+            "CreditCard" -> "💳"
+            "Payments" -> "💵"
+            "AccountBalanceWallet" -> "👛"
+            "AutoGraph" -> "✨"
+            "Lock" -> "🔒"
+
+            // Social & Personal
+            "People" -> "👥"
+            "ChildCare", "Baby", "Kids" -> "👶"
+            "Pets", "Animals" -> "🐾"
+            "VolunteerActivism", "Charity", "Donation" -> "❤️"
+            "CardGiftcard" -> "🎁"
+            "ContentCut", "Salon", "Grooming" -> "✂️"
+
+            // Repairs & DIY
+            "Build", "Repairs", "Hardware" -> "🔧"
+
+            // Transfer & Misc
+            "SwapHoriz" -> "🔄"
+            "AddCircle" -> "➕"
+            "MoreHoriz" -> "📌"
+
+            else -> "📋"
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  Private Action Builders
+    // ══════════════════════════════════════════════════════════════════════
 
     private fun createLogAction(
         context: Context,
