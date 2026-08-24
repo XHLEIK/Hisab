@@ -14,15 +14,49 @@ android {
         applicationId = "com.example.hisab"
         minSdk = 28
         targetSdk = 36
-        versionCode = 312
-        versionName = "3.1.2"
+        versionCode = 320
+        versionName = "3.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Room schema JSONs are exported so the v7->v8 migration can be validated
+        // mechanically (against Room's own generated schema) by a plain JVM unit test.
+        ksp {
+            arg("room.schemaLocation", "$projectDir/schemas")
+        }
+    }
+
+    sourceSets {
+        getByName("test") {
+            // Exposes the exported schema JSONs to unit tests as a classpath resource.
+            resources.srcDir("$projectDir/schemas")
+        }
+    }
+
+    signingConfigs {
+        create("release") {
+            // Standard self-signed keystore for Play Protect trust compatibility
+            val keyStoreFile = rootProject.file("release.keystore")
+            if (keyStoreFile.exists()) {
+                storeFile = keyStoreFile
+                storePassword = "hisabapppassword"
+                keyAlias = "hisab"
+                keyPassword = "hisabapppassword"
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
+                enableV4Signing = true
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            val keyStoreFile = rootProject.file("release.keystore")
+            if (keyStoreFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -103,6 +137,7 @@ dependencies {
 
     // Testing
     testImplementation(libs.junit)
+    testImplementation(libs.sqlite.jdbc)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

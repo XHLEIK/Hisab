@@ -30,8 +30,39 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun getById(id: Long): TransactionEntity?
 
-    @Query("SELECT * FROM transactions WHERE ABS(amount - :amount) < 1.0 AND type = :type AND date >= :minDate ORDER BY createdAt DESC LIMIT 1")
-    suspend fun findMatchingManualTransaction(amount: Double, type: String, minDate: LocalDate): TransactionEntity?
+    /**
+     * Finds a recent **user-entered** transaction that an incoming SMS is probably duplicating.
+     *
+     * `AND source = 'MANUAL'` is load-bearing. Without it this query also matched rows the SMS
+     * pipeline itself had auto-logged, so every second same-amount SMS was suppressed as a
+     * "manual duplicate" — the engine poisoned its own dedup. Legacy rows (`source IS NULL`)
+     * predate the SMS pipeline's provenance tagging and were all hand-entered, so they count as
+     * manual too.
+     */
+    @Query(
+        """
+        SELECT * FROM transactions
+        WHERE ABS(amount - :amount) < 1.0
+          AND type = :type
+          AND date >= :minDate
+          AND (source = 'MANUAL' OR source IS NULL)
+          AND (:account IS NULL OR account = :account)
+        ORDER BY createdAt DESC LIMIT 1
+        """
+    )
+    suspend fun findMatchingManualTransaction(
+        amount: Double,
+        type: String,
+        minDate: LocalDate,
+        account: String? = null
+    ): TransactionEntity?
+
+    /**
+     * Closes the cross-table dedup hole: a message already materialised into history must not be
+     * re-claimable as a fresh pending row.
+     */
+    @Query("SELECT * FROM transactions WHERE sourceMessageHash = :hash LIMIT 1")
+    suspend fun getBySourceHash(hash: String): TransactionEntity?
 
     // ── Monthly Queries ──────────────────────────────────
 

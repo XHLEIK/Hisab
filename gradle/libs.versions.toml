@@ -18,6 +18,7 @@ googleFonts = "1.7.5"
 poi = "5.2.5"
 gson = "2.11.0"
 haze = "1.5.3"
+sqliteJdbc = "3.41.2.2"
 
 [libraries]
 poi-ooxml = { group = "org.apache.poi", name = "poi-ooxml", version.ref = "poi" }
@@ -67,6 +68,9 @@ haze = { group = "dev.chrisbanes.haze", name = "haze", version.ref = "haze" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+# Pure-JVM SQLite driver: lets the v7->v8 Room migration be executed and validated
+# in a plain unit test (no emulator/device required). See MigrationV7ToV8Test.
+sqlite-jdbc = { group = "org.xerial", name = "sqlite-jdbc", version.ref = "sqliteJdbc" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 

@@ -21,16 +21,25 @@ import java.security.MessageDigest
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+/**
+ * Reads an optional string field, mapping both "absent" and JSON null to Kotlin null.
+ *
+ * `JSONObject.optString` returns `""` in both cases, which would turn a missing provenance field
+ * into an empty-string identity — a value that a UNIQUE index treats as real. Restores must stay
+ * tolerant of older backup versions without inventing data.
+ */
+private fun JSONObject.optNullableString(key: String): String? =
+    if (has(key) && !isNull(key)) getString(key).takeIf { it.isNotBlank() } else null
+
 class AutoBackupManager(
     private val context: Context,
     private val database: HisabDatabase
 ) {
-
     private val backupPrefs = BackupPreferences(context)
 
     companion object {
         private const val TAG = "AutoBackupManager"
-        private const val BACKUP_VERSION = 5
+        private const val BACKUP_VERSION = 6
         private const val MAIN_BACKUP_NAME = "hisab_auto_backup.json"
     }
 
@@ -363,6 +372,7 @@ class AutoBackupManager(
             // Restore Transactions
             val existingTxns = database.transactionDao().getAllTransactionsSync()
             val existingFingerprints = existingTxns.map { computeFingerprint(it) }.toSet()
+            val existingTxnHashes = existingTxns.mapNotNull { it.sourceMessageHash }.toMutableSet()
 
             val newTransactions = mutableListOf<TransactionEntity>()
 
@@ -378,6 +388,11 @@ class AutoBackupManager(
                 val account = obj.optString("account", "Primary Bank")
                 val toAccount = if (obj.has("toAccount") && !obj.isNull("toAccount")) obj.getString("toAccount") else null
                 val createdAt = obj.optLong("createdAt", System.currentTimeMillis())
+                // v6 fields; absent in v5-and-earlier backups, which is why every read is tolerant.
+                val txHash = obj.optNullableString("sourceMessageHash")
+                val txSource = obj.optNullableString("source")
+                val txConfidence = obj.optNullableString("confidence")
+                val txReference = obj.optNullableString("referenceNumber")
 
                 val categoryKey = "${categoryName}_${type}"
                 val categoryId = categoryMap[categoryKey] ?: run {
@@ -393,11 +408,22 @@ class AutoBackupManager(
                     notes = notes,
                     account = account,
                     toAccount = toAccount,
-                    createdAt = createdAt
+                    createdAt = createdAt,
+                    // A hash already present in history belongs to a row we are keeping; carrying a
+                    // duplicate here would make Room's REPLACE strategy delete that live row. Drop
+                    // the identity instead — the row still restores, it just stops claiming a
+                    // message that is already claimed.
+                    sourceMessageHash = txHash?.takeIf { it !in existingTxnHashes },
+                    source = txSource,
+                    confidence = txConfidence,
+                    referenceNumber = txReference
                 )
 
                 val fp = computeFingerprint(tempTx)
                 if (!existingFingerprints.contains(fp)) {
+                    // Reserve the hash so a second row inside this same backup file cannot claim
+                    // the same identity and silently REPLACE the first one on insert.
+                    tempTx.sourceMessageHash?.let { existingTxnHashes.add(it) }
                     newTransactions.add(tempTx)
                 }
             }
@@ -410,6 +436,7 @@ class AutoBackupManager(
             if (pendingArr != null && pendingArr.length() > 0) {
                 val existingPending = database.pendingTransactionDao().getAllPendingSync()
                 val existingPendingFingerprints = existingPending.map { "${it.amount}_${it.rawSmsBody}" }.toSet()
+                val existingPendingHashes = existingPending.mapNotNull { it.sourceMessageHash }.toMutableSet()
 
                 val newPending = mutableListOf<PendingTransactionEntity>()
                 for (i in 0 until pendingArr.length()) {
@@ -422,9 +449,21 @@ class AutoBackupManager(
                     val pRawSmsBody = pObj.getString("rawSmsBody")
                     val pSenderHeader = if (pObj.has("senderHeader") && !pObj.isNull("senderHeader")) pObj.getString("senderHeader") else null
                     val pTimestamp = pObj.optLong("timestamp", System.currentTimeMillis())
+                    // v6 fields; tolerant reads keep v5-and-earlier backups restorable.
+                    val pEndingBalance = if (pObj.has("endingBalance") && !pObj.isNull("endingBalance")) pObj.getDouble("endingBalance") else null
+                    val pHash = pObj.optNullableString("sourceMessageHash")
+                    val pSource = pObj.optNullableString("source")
+                    val pConfidence = pObj.optNullableString("confidence")
+                    val pReference = pObj.optNullableString("referenceNumber")
+                    val pPostedAt = if (pObj.has("notificationPostedAt") && !pObj.isNull("notificationPostedAt")) pObj.getLong("notificationPostedAt") else null
+                    val pAttempts = pObj.optInt("notificationAttempts", 0)
 
                     val pf = "${pAmount}_${pRawSmsBody}"
                     if (!existingPendingFingerprints.contains(pf)) {
+                        // Same reasoning as the transaction path: never let a restored row claim an
+                        // identity that is already live, and never let two rows in one file collide.
+                        val safeHash = pHash?.takeIf { it !in existingPendingHashes }
+                        safeHash?.let { existingPendingHashes.add(it) }
                         newPending.add(
                             PendingTransactionEntity(
                                 amount = pAmount,
@@ -432,9 +471,16 @@ class AutoBackupManager(
                                 bankName = pBankName,
                                 accountLast4 = pAccountLast4,
                                 merchantOrPayee = pMerchant,
+                                endingBalance = pEndingBalance,
                                 rawSmsBody = pRawSmsBody,
                                 senderHeader = pSenderHeader,
-                                timestamp = pTimestamp
+                                timestamp = pTimestamp,
+                                sourceMessageHash = safeHash,
+                                source = pSource,
+                                confidence = pConfidence,
+                                referenceNumber = pReference,
+                                notificationPostedAt = pPostedAt,
+                                notificationAttempts = pAttempts
                             )
                         )
                     }
@@ -510,6 +556,11 @@ class AutoBackupManager(
             obj.put("account", tx.account)
             obj.put("toAccount", tx.toAccount ?: JSONObject.NULL)
             obj.put("createdAt", tx.createdAt)
+            // v6: provenance / identity (schema v8). Null-safe — legacy rows carry NULL.
+            obj.put("sourceMessageHash", tx.sourceMessageHash ?: JSONObject.NULL)
+            obj.put("source", tx.source ?: JSONObject.NULL)
+            obj.put("confidence", tx.confidence ?: JSONObject.NULL)
+            obj.put("referenceNumber", tx.referenceNumber ?: JSONObject.NULL)
             transactionsArr.put(obj)
         }
         root.put("transactions", transactionsArr)
@@ -527,6 +578,15 @@ class AutoBackupManager(
             obj.put("rawSmsBody", p.rawSmsBody)
             obj.put("senderHeader", p.senderHeader ?: JSONObject.NULL)
             obj.put("timestamp", p.timestamp)
+            // v6: endingBalance was previously dropped on backup; plus provenance / identity /
+            // notification bookkeeping (schema v8).
+            obj.put("endingBalance", p.endingBalance ?: JSONObject.NULL)
+            obj.put("sourceMessageHash", p.sourceMessageHash ?: JSONObject.NULL)
+            obj.put("source", p.source ?: JSONObject.NULL)
+            obj.put("confidence", p.confidence ?: JSONObject.NULL)
+            obj.put("referenceNumber", p.referenceNumber ?: JSONObject.NULL)
+            obj.put("notificationPostedAt", p.notificationPostedAt ?: JSONObject.NULL)
+            obj.put("notificationAttempts", p.notificationAttempts)
             pendingArr.put(obj)
         }
         root.put("pendingTransactions", pendingArr)
