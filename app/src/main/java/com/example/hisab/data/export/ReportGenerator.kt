@@ -42,20 +42,29 @@ class ReportGenerator(private val context: Context) {
         uri: Uri,
         format: ExportFormat,
         transactions: List<TransactionEntity>,
-        categories: List<CategoryEntity>
+        categories: List<CategoryEntity>,
+        targetMonth: java.time.YearMonth? = null
     ): Result<Int> = withContext(Dispatchers.IO) {
         try {
             val outputStream = context.contentResolver.openOutputStream(uri)
                 ?: return@withContext Result.failure(Exception("Could not open output stream"))
 
+            val filteredTx = if (targetMonth != null) {
+                transactions.filter {
+                    it.date.year == targetMonth.year && it.date.month == targetMonth.month
+                }
+            } else {
+                transactions
+            }
+
             // Requirement 2: Sort in ASCENDING order (oldest first, newest last)
-            val sortedTx = transactions.sortedWith(
+            val sortedTx = filteredTx.sortedWith(
                 compareBy<TransactionEntity> { it.date }.thenBy { it.createdAt }
             )
 
             outputStream.use { stream ->
                 when (format) {
-                    ExportFormat.PDF -> generatePdfReport(stream, sortedTx, categories)
+                    ExportFormat.PDF -> generatePdfReport(stream, sortedTx, categories, targetMonth)
                     ExportFormat.XLSX -> generateXlsxReport(stream, sortedTx, categories)
                     ExportFormat.CSV -> generateCsvReport(stream, sortedTx, categories)
                     ExportFormat.JSON -> generateJsonReport(stream, sortedTx, categories)
@@ -72,7 +81,8 @@ class ReportGenerator(private val context: Context) {
     private fun generatePdfReport(
         stream: OutputStream,
         transactions: List<TransactionEntity>, // Ascending sorted
-        categories: List<CategoryEntity>
+        categories: List<CategoryEntity>,
+        targetMonth: java.time.YearMonth? = null
     ) {
         val pdfDoc = PdfDocument()
         val categoryMap = categories.associateBy { it.id }
@@ -109,8 +119,17 @@ class ReportGenerator(private val context: Context) {
             val canvas = page.canvas
 
             // App Header
-            canvas.drawText("Hisab Financial Statement & Ledger", 35f, 42f, titlePaint)
-            val reportPeriodText = if (transactions.isNotEmpty()) {
+            val titleText = if (targetMonth != null) {
+                val monthTitle = targetMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy"))
+                "Hisab Financial Statement ($monthTitle)"
+            } else {
+                "Hisab Financial Statement & Ledger"
+            }
+            canvas.drawText(titleText, 35f, 42f, titlePaint)
+            val reportPeriodText = if (targetMonth != null) {
+                val monthStr = targetMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy"))
+                "Period: $monthStr  •  Total Transactions: ${transactions.size}"
+            } else if (transactions.isNotEmpty()) {
                 "Period: ${transactions.first().date.format(dateFormatter)} to ${transactions.last().date.format(dateFormatter)}  •  Total Txns: ${transactions.size}"
             } else {
                 "Generated on: ${LocalDate.now().format(dateFormatter)}  •  Total Txns: 0"

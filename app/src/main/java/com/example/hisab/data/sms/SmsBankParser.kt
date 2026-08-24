@@ -131,13 +131,14 @@ object SmsBankParser {
 
     // ── Merchant / Payee Extraction Patterns ──────────────────────────────
     private val MERCHANT_PATTERNS = listOf(
-        Pattern.compile("(?:to|at|info:)\\s+([a-zA-Z0-9\\s&\\.'-]{2,25})(?:\\s+on|\\s+ref|\\s+via|\\s+a/c|\\.|,|\\$) ", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("(?:vpa|upi|ref)\\s+([a-zA-Z0-9\\.@_-]{3,30})", Pattern.CASE_INSENSITIVE)
+        Pattern.compile("(?:cr\\.?\\s+to|to|at|info:)\\s+([a-zA-Z0-9\\s&\\.'-]{2,25})(?:\\s+on|\\s+ref|\\s+via|\\s+a/c|\\.|,|\\$) ", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("(?:vpa|upi|ref)\\s+([a-zA-Z0-9\\.@_-]{3,30})", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("(?:cr\\.?\\s+to)\\s+([a-zA-Z0-9\\.@_-]{3,35})", Pattern.CASE_INSENSITIVE)
     )
 
     // ── Ending Balance Extraction Patterns ────────────────────────────────
     private val BALANCE_PATTERNS = listOf(
-        Pattern.compile("(?:bal|balance|avail bal|available balance|a/c bal)\\s*(?:is|:)?\\s*(?:rs\\.?|inr|₹)?\\s*([\\d,]+\\.?\\d*)", Pattern.CASE_INSENSITIVE)
+        Pattern.compile("(?:bal|balance|avail bal|available balance|a/c bal|avlbal)\\s*(?:is|:)?\\s*(?:rs\\.?|inr|₹)?\\s*([\\d,]+\\.?\\d*)", Pattern.CASE_INSENSITIVE)
     )
 
     // ── 3-Pass Direction Engine: Strict Word-Boundary Regex ───────────────
@@ -294,19 +295,7 @@ object SmsBankParser {
     }
 
     private fun identifyBankName(header: String, body: String): String? {
-        val cleanHeader = header.replace("-", "").uppercase()
-        for ((code, name) in BANK_SENDER_MAP) {
-            if (cleanHeader.contains(code)) {
-                return name
-            }
-        }
-        val upperBody = body.uppercase()
-        for ((code, name) in BANK_SENDER_MAP) {
-            if (upperBody.contains(name.uppercase()) || upperBody.contains(code)) {
-                return name
-            }
-        }
-        return null
+        return BankAliasRegistry.identifyBankName(header, body)
     }
 
     private fun isOtpOrNoise(lowerBody: String): Boolean {
@@ -328,7 +317,7 @@ object SmsBankParser {
             return true
         }
 
-        if (lowerBody.contains("avail bal") || lowerBody.contains("available balance")) {
+        if (lowerBody.contains("avail bal") || lowerBody.contains("available balance") || lowerBody.contains("avlbal")) {
             val hasTxKeyword = CREDIT_VERB_PATTERN.matcher(lowerBody).find() ||
                     DEBIT_VERB_PATTERN.matcher(lowerBody).find()
             if (!hasTxKeyword) return true

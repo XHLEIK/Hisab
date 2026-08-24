@@ -12,24 +12,26 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class BackupRepository(
-    private val transactionRepository: TransactionRepository,
+    val transactionRepository: TransactionRepository,
     private val categoryRepository: CategoryRepository,
-    private val autoBackupManager: AutoBackupManager? = null
+    private var autoBackupManager: AutoBackupManager? = null
 ) {
 
     /**
-     * Exports financial report or backup in the specified format (PDF, XLSX, CSV, JSON).
+     * Exports financial report or backup in the specified format (PDF, XLSX, CSV, JSON),
+     * optionally filtered by targetMonth (YearMonth).
      */
     suspend fun exportReport(
         context: Context,
         uri: Uri,
-        format: ExportFormat
+        format: ExportFormat,
+        targetMonth: java.time.YearMonth? = null
     ): Result<Int> = withContext(Dispatchers.IO) {
         try {
             val transactions = transactionRepository.getAllTransactionsSync()
             val categories = categoryRepository.getAllCategoriesSync()
             val reportGenerator = ReportGenerator(context)
-            reportGenerator.generateReport(uri, format, transactions, categories)
+            reportGenerator.generateReport(uri, format, transactions, categories, targetMonth)
         } catch (e: Exception) {
             Result.failure(e)
         }

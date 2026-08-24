@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.hisab.data.db.entity.CategoryEntity
 import com.example.hisab.ui.theme.HisabTheme
 
@@ -87,11 +88,10 @@ private fun CategoryChip(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = com.example.hisab.util.CategoryIconMapper.getIcon(category.iconName),
-                contentDescription = category.name,
-                tint = parsedColor,
-                modifier = Modifier.size(24.dp)
+            val emoji = com.example.hisab.data.sms.SmsNotificationHelper.getCategoryEmoji(category.iconName)
+            Text(
+                text = emoji,
+                fontSize = 22.sp
             )
         }
 

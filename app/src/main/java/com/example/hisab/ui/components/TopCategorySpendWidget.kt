@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.hisab.data.db.entity.CategoryEntity
 import com.example.hisab.ui.theme.HisabTheme
 import com.example.hisab.util.CategoryIconMapper
@@ -87,11 +88,10 @@ fun TopCategorySpendWidget(
                                     .background(catColor.copy(alpha = 0.15f)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = CategoryIconMapper.getIcon(cat.iconName),
-                                    contentDescription = null,
-                                    tint = catColor,
-                                    modifier = Modifier.size(14.dp)
+                                val emoji = com.example.hisab.data.sms.SmsNotificationHelper.getCategoryEmoji(cat.iconName)
+                                Text(
+                                    text = emoji,
+                                    fontSize = 13.sp
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))

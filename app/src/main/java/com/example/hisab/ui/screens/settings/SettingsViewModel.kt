@@ -21,8 +21,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+
+data class ExportMonthOption(
+    val yearMonth: YearMonth,
+    val label: String,
+    val count: Int
+)
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "hisab_settings")
 
@@ -41,6 +50,25 @@ class SettingsViewModel(
         )
 
     val accounts: StateFlow<List<AccountEntity>> = (accountRepository?.getAllAccounts() ?: MutableStateFlow(emptyList()))
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val availableExportMonths: StateFlow<List<ExportMonthOption>> = backupRepository.transactionRepository
+        .getAllTransactionsFlow()
+        .map { txList ->
+            txList.groupBy { YearMonth.from(it.date) }
+                .map { (ym, list) ->
+                    ExportMonthOption(
+                        yearMonth = ym,
+                        label = ym.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
+                        count = list.size
+                    )
+                }
+                .sortedByDescending { it.yearMonth }
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -125,11 +153,12 @@ class SettingsViewModel(
         }
     }
 
-    fun exportReport(context: Context, uri: Uri, format: ExportFormat) {
+    fun exportReport(context: Context, uri: Uri, format: ExportFormat, targetMonth: YearMonth? = null) {
         viewModelScope.launch {
-            backupRepository.exportReport(context, uri, format).fold(
+            backupRepository.exportReport(context, uri, format, targetMonth).fold(
                 onSuccess = { count ->
-                    _exportResult.value = "Exported $count records as ${format.displayName} successfully"
+                    val scopeText = if (targetMonth != null) "for ${targetMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy"))}" else "all records"
+                    _exportResult.value = "Exported $count records ($scopeText) as ${format.displayName} successfully"
                 },
                 onFailure = { error ->
                     _exportResult.value = "Export failed: ${error.message}"

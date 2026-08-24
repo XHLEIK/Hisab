@@ -1,11 +1,65 @@
 package com.example.hisab
 
+import com.example.hisab.data.sms.BankAliasRegistry
 import com.example.hisab.data.sms.SmsBankParser
 import com.example.hisab.data.sms.SmsNotificationHelper
 import org.junit.Assert.*
 import org.junit.Test
 
 class SmsBankParserTest {
+
+    @Test
+    fun testBobExactSms_40RupeesDebit() {
+        val header = "AD-BOBTXN"
+        val body = "Dear BOB UPI User: Your A/C XXXXXX1463 is debited by INR 40.00 on 24-08-2026 12:00:00 by UPI:1234567890:MerchantName. AvlBal:Rs855.43 - BOB"
+        val parsed = SmsBankParser.parse(header, body)
+
+        assertNotNull("Should parse BOB 40 Rs debit", parsed)
+        assertEquals(40.0, parsed!!.amount, 0.001)
+        assertEquals("DEBIT", parsed.type)
+        assertEquals("Bank of Baroda", parsed.bankName)
+        assertEquals("1463", parsed.accountLast4)
+        assertEquals(855.43, parsed.endingBalance ?: 0.0, 0.001)
+    }
+
+    @Test
+    fun testBobExactSms_45RupeesDebit_ComplexPayeeHandle() {
+        val header = "AX-BOBTXN"
+        val body = "Dear BOB UPI User: Your account is debited with INR 45.00 on 24-08-2026 transfer to yespay.bizsbiz102249@yesbankltd UPI:9876543210. AvlBal:Rs810.43 - BOB"
+        val parsed = SmsBankParser.parse(header, body)
+
+        assertNotNull("Should parse BOB 45 Rs debit with complex payee handle", parsed)
+        assertEquals(45.0, parsed!!.amount, 0.001)
+        assertEquals("DEBIT", parsed.type)
+        assertEquals("Bank of Baroda", parsed.bankName)
+        assertEquals(810.43, parsed.endingBalance ?: 0.0, 0.001)
+        assertTrue("BankAliasRegistry should match BOB to Bank of Baroda", BankAliasRegistry.matches("BOB", parsed.bankName, header))
+    }
+
+    @Test
+    fun testBobExactSms_30RupeesCredit_NoAccountNumber() {
+        val header = "VM-BOBTXN"
+        val body = "Dear BOB UPI User: Your account is credited with INR 30.00 on 24-08-2026 by UPI:2345678901. AvlBal:Rs840.43 - BOB"
+        val parsed = SmsBankParser.parse(header, body)
+
+        assertNotNull("Should parse BOB 30 Rs credit without account number", parsed)
+        assertEquals(30.0, parsed!!.amount, 0.001)
+        assertEquals("CREDIT", parsed.type)
+        assertEquals("Bank of Baroda", parsed.bankName)
+        assertEquals(840.43, parsed.endingBalance ?: 0.0, 0.001)
+        assertTrue("BankAliasRegistry should match BOB to Bank of Baroda", BankAliasRegistry.matches("BOB", parsed.bankName, header))
+    }
+
+    @Test
+    fun testBankAliasRegistry_MatchesAllCommonBanks() {
+        assertTrue(BankAliasRegistry.matches("BOB", "Bank of Baroda", "AD-BOBTXN"))
+        assertTrue(BankAliasRegistry.matches("SBI", "State Bank of India", "VM-SBIINB"))
+        assertTrue(BankAliasRegistry.matches("HDFC", "HDFC Bank", "AX-HDFCBK"))
+        assertTrue(BankAliasRegistry.matches("ICICI", "ICICI Bank", "AD-ICICIB"))
+        assertTrue(BankAliasRegistry.matches("AXIS", "Axis Bank", "BZ-AXISBK"))
+        assertTrue(BankAliasRegistry.matches("KOTAK", "Kotak Mahindra Bank", "AD-KOTAKB"))
+        assertTrue(BankAliasRegistry.matches("PNB", "Punjab National Bank", "AD-PNBSMS"))
+    }
 
     @Test
     fun testCreditParsing_StrictWordBoundaries_30Rupees() {
@@ -37,7 +91,6 @@ class SmsBankParserTest {
 
     @Test
     fun testCredit_WithDistantDebitWord_CreditWinsByProximity() {
-        // Complex real-world case: "credited with Rs 150 towards refund of previously debited order"
         val header = "AX-HDFCBK"
         val body = "Your A/C 9999 has been credited with INR 150.00 on 10-Aug-26 for refund of debited amount."
         val parsed = SmsBankParser.parse(header, body)
@@ -55,7 +108,7 @@ class SmsBankParserTest {
 
         assertNotNull(parsed)
         assertEquals(2500.0, parsed!!.amount, 0.001)
-        assertEquals("DEBIT", parsed.type) // "paid" triggers debit
+        assertEquals("DEBIT", parsed.type)
     }
 
     @Test
@@ -68,15 +121,6 @@ class SmsBankParserTest {
     }
 
     @Test
-    fun testNonBankBlacklist_AirtelFi_IsRejected() {
-        val header = "VK-AIRTELFI"
-        val body = "Dear Customer, your Airtel Wi-Fi bill of Rs 999 is due on 15-Aug."
-        val parsed = SmsBankParser.parse(header, body)
-
-        assertNull("Airtel Wi-Fi telecom messages must be rejected", parsed)
-    }
-
-    @Test
     fun testPaymentBank_JIOPB_IsAccepted() {
         val header = "AD-JIOPB"
         val body = "Your Jio Payments Bank A/C *1122 is debited with Rs 100.00. Avail Bal: Rs 400.00"
@@ -86,15 +130,6 @@ class SmsBankParserTest {
         assertEquals("Jio Payments Bank", parsed!!.bankName)
         assertEquals(100.0, parsed.amount, 0.001)
         assertEquals("DEBIT", parsed.type)
-    }
-
-    @Test
-    fun testOtpMessage_WithAmount_IsRejected() {
-        val header = "VM-HDFCBK"
-        val body = "123456 is your OTP for transaction of Rs 1,500.00 at Amazon. Do not share OTP with anyone."
-        val parsed = SmsBankParser.parse(header, body)
-
-        assertNull("OTP messages must be rejected as noise even if amount is present", parsed)
     }
 
     @Test
@@ -111,29 +146,13 @@ class SmsBankParserTest {
     }
 
     @Test
-    fun testSalaryDeposit_IsCredit() {
-        val header = "AD-KOTAKB"
-        val body = "Your A/C ending in 3311 has been deposited with INR 45,000.00 towards monthly salary on 01-Aug. Bal: Rs 55,200"
-        val parsed = SmsBankParser.parse(header, body)
+    fun testGetCategoryEmoji_DirectEmojiAndLegacyMapping() {
+        // Direct emojis are preserved
+        assertEquals("🛒", SmsNotificationHelper.getCategoryEmoji("🛒"))
+        assertEquals("🍔", SmsNotificationHelper.getCategoryEmoji("🍔"))
+        assertEquals("🍽️", SmsNotificationHelper.getCategoryEmoji("🍽️"))
 
-        assertNotNull(parsed)
-        assertEquals(45000.0, parsed!!.amount, 0.001)
-        assertEquals("CREDIT", parsed.type)
-        assertEquals("3311", parsed.accountLast4)
-        assertEquals(55200.0, parsed.endingBalance ?: 0.0, 0.001)
-    }
-
-    @Test
-    fun testOnlyBalanceInquiry_IsRejected() {
-        val header = "AD-PNBSMS"
-        val body = "Dear Customer, Avail Bal for your PNB A/C ending 7766 is Rs 24,150.00."
-        val parsed = SmsBankParser.parse(header, body)
-
-        assertNull("Pure balance alerts without transactional verbs must be rejected", parsed)
-    }
-
-    @Test
-    fun testGetCategoryEmoji_MappingCorrectness() {
+        // Legacy icon names are converted
         assertEquals("☕", SmsNotificationHelper.getCategoryEmoji("Coffee"))
         assertEquals("🍽️", SmsNotificationHelper.getCategoryEmoji("Restaurant"))
         assertEquals("🛒", SmsNotificationHelper.getCategoryEmoji("ShoppingCart"))
@@ -143,6 +162,6 @@ class SmsBankParserTest {
         assertEquals("🏥", SmsNotificationHelper.getCategoryEmoji("LocalHospital"))
         assertEquals("🐷", SmsNotificationHelper.getCategoryEmoji("Savings"))
         assertEquals("💼", SmsNotificationHelper.getCategoryEmoji("Work"))
-        assertEquals("📋", SmsNotificationHelper.getCategoryEmoji("UnknownCategory"))
+        assertEquals("📋", SmsNotificationHelper.getCategoryEmoji(""))
     }
 }

@@ -421,15 +421,64 @@ object SmsNotificationHelper {
         notificationManager.notify(notificationId, builder.build())
     }
 
+    /**
+     * Posts a high-priority alert when a balance discrepancy indicates an unlogged transaction occurred without an SMS.
+     */
+    fun postMissedTransactionNotification(
+        context: Context,
+        pending: PendingTransactionEntity,
+        actualBalance: Double,
+        expectedBalance: Double
+    ) {
+        createNotificationChannel(context)
+
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationId = (pending.id * 1000L).toInt() and 0x7FFFFFFF
+
+        val formattedAmount = CurrencyFormatter.format(pending.amount)
+        val formattedActual = CurrencyFormatter.format(actualBalance)
+
+        val openAppIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val openAppPendingIntent = PendingIntent.getActivity(
+            context,
+            notificationId,
+            openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentIntent(openAppPendingIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setContentTitle("⚠️ Missed Transaction Detected: $formattedAmount")
+            .setContentText("Bank AvlBal is $formattedActual. Tap to review and log in Hisab.")
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("A balance sync discrepancy was detected for ${pending.bankName}. Your bank balance is $formattedActual, indicating an unlogged transaction of $formattedAmount. Tap to record it.")
+            )
+
+        notificationManager.notify(notificationId, builder.build())
+    }
+
     // ══════════════════════════════════════════════════════════════════════
     //  Dynamic Category Emoji Mapper
     // ══════════════════════════════════════════════════════════════════════
 
     /**
-     * Maps category iconName to a Unicode emoji for notification buttons.
-     * Each category gets its own unique, visually descriptive emoji.
+     * Returns the category emoji directly, or maps legacy icon names to emojis.
      */
     fun getCategoryEmoji(iconName: String?): String {
+        if (iconName.isNullOrBlank()) return "📋"
+
+        // If it's already an emoji (non-ASCII character or length <= 4), return as-is
+        val isEmoji = iconName.any { Character.isSurrogate(it) || Character.getType(it) == Character.OTHER_SYMBOL.toInt() || it.code > 127 }
+        if (isEmoji) return iconName.trim()
+
         return when (iconName) {
             // Food & Beverage
             "ShoppingCart", "LocalGroceryStore", "GroceriesStore" -> "🛒"
@@ -510,7 +559,7 @@ object SmsNotificationHelper {
             "AddCircle" -> "➕"
             "MoreHoriz" -> "📌"
 
-            else -> "📋"
+            else -> iconName.take(2)
         }
     }
 

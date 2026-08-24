@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.hisab.data.db.entity.CategoryEntity
 import com.example.hisab.data.db.entity.TransactionEntity
 import com.example.hisab.data.model.TransactionType
@@ -150,11 +151,10 @@ fun ExpenseLeaderboard(
                                 .background(parsedCatColor.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            androidx.compose.material3.Icon(
-                                imageVector = CategoryIconMapper.getIcon(iconName),
-                                contentDescription = categoryName,
-                                tint = parsedCatColor,
-                                modifier = Modifier.size(18.dp)
+                            val emoji = com.example.hisab.data.sms.SmsNotificationHelper.getCategoryEmoji(iconName)
+                            androidx.compose.material3.Text(
+                                text = emoji,
+                                fontSize = 18.sp
                             )
                         }
 

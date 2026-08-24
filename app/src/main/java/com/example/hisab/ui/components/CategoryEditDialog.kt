@@ -36,16 +36,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.hisab.data.db.entity.CategoryEntity
 import com.example.hisab.data.model.TransactionType
+import com.example.hisab.data.sms.SmsNotificationHelper
 import com.example.hisab.ui.theme.HisabTheme
-
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import com.example.hisab.util.CategoryIconMapper
 
 @Composable
 fun CategoryEditDialog(
@@ -58,35 +53,20 @@ fun CategoryEditDialog(
 
     var name by remember { mutableStateOf(category?.name ?: "") }
     var type by remember { mutableStateOf(category?.type ?: initialType) }
-    var selectedIcon by remember { mutableStateOf(category?.iconName ?: "ShoppingCart") }
-    var selectedColorHex by remember { mutableStateOf(category?.colorHex ?: "#4CAF50") }
-    var iconSearchQuery by remember { mutableStateOf("") }
-    val iconOptions = CategoryIconMapper.availableIcons
-
-    val filteredIconOptions = remember(iconSearchQuery) {
-        if (iconSearchQuery.isBlank()) {
-            iconOptions
-        } else {
-            val q = iconSearchQuery.trim().lowercase()
-            iconOptions.filter { (key, _) ->
-                key.lowercase().contains(q) || when (q) {
-                    "shirt", "tshirt", "cloth", "dress", "apparel", "t-shirt" -> key.contains("Checkroom", ignoreCase = true)
-                    "wash", "washing", "machine", "laundry", "clean" -> key.contains("LocalLaundryService", ignoreCase = true)
-                    "coffee", "tea", "cafe", "drink" -> key.contains("Coffee", ignoreCase = true)
-                    "food", "snack", "burger", "pizza", "dining" -> key.contains("Fastfood", ignoreCase = true) || key.contains("Restaurant", ignoreCase = true)
-                    "pet", "dog", "cat", "animal" -> key.contains("Pets", ignoreCase = true)
-                    "gas", "fuel", "petrol" -> key.contains("LocalGasStation", ignoreCase = true)
-                    "bus", "travel", "transport" -> key.contains("Bus", ignoreCase = true) || key.contains("Flight", ignoreCase = true)
-                    "wifi", "net", "internet" -> key.contains("Wifi", ignoreCase = true)
-                    "game", "gaming" -> key.contains("Esports", ignoreCase = true)
-                    "salon", "hair", "barber", "grooming" -> key.contains("ContentCut", ignoreCase = true)
-                    "repair", "tool", "fix", "hardware" -> key.contains("Build", ignoreCase = true)
-                    "hospital", "doctor", "health", "medicine", "pharmacy" -> key.contains("Hospital", ignoreCase = true) || key.contains("Medical", ignoreCase = true)
-                    else -> key.lowercase().contains(q)
-                }
-            }
-        }
+    var selectedEmoji by remember {
+        mutableStateOf(
+            if (category != null) SmsNotificationHelper.getCategoryEmoji(category.iconName) else "🛒"
+        )
     }
+    var selectedColorHex by remember { mutableStateOf(category?.colorHex ?: "#4CAF50") }
+
+    val presetEmojis = listOf(
+        "🛒", "🍽️", "🛍️", "🚗", "🧾", "👥", "💪", "🏥", "🎬", "🎓",
+        "✈️", "📱", "🏦", "📌", "🐷", "📊", "📈", "🔒", "🥧", "🔄",
+        "🍔", "☕", "🎁", "💻", "💵", "💳", "👛", "✨", "👶", "🐾",
+        "🔧", "🏠", "💡", "⚡", "💧", "📶", "👕", "🧺", "🏍️", "⛽",
+        "🚌", "🏨", "📷", "✂️", "📚", "💼", "➕", "🎯", "🍕", "🎮"
+    )
 
     val colorOptions = listOf(
         "#4CAF50", "#FF5252", "#2196F3", "#9C27B0", "#FF9800",
@@ -213,93 +193,101 @@ fun CategoryEditDialog(
                     }
                 }
 
-                // Icon Search & Selector
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Category Icon",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = colors.textSecondary
-                    )
-                    if (iconSearchQuery.isNotEmpty()) {
-                        Text(
-                            text = "${filteredIconOptions.size} icons",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-
-                OutlinedTextField(
-                    value = iconSearchQuery,
-                    onValueChange = { iconSearchQuery = it },
-                    placeholder = { Text("Search icon (e.g. shirt, wash, coffee, gas)...", style = MaterialTheme.typography.bodySmall) },
-                    singleLine = true,
-                    leadingIcon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.Search, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                    trailingIcon = {
-                        if (iconSearchQuery.isNotEmpty()) {
-                            androidx.compose.material3.IconButton(onClick = { iconSearchQuery = "" }) {
-                                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Outlined.Close, contentDescription = null, modifier = Modifier.size(16.dp))
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = colors.cardBorder
-                    )
+                // Emoji Icon Selector
+                Text(
+                    text = "Category Emoji",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colors.textSecondary
                 )
 
-                if (filteredIconOptions.isEmpty()) {
-                    Text(
-                        text = "No icons found for '$iconSearchQuery'",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colors.textSecondary,
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-                } else {
-                    Row(
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Selected Emoji Display Badge
+                    val parsedColor = try {
+                        Color(android.graphics.Color.parseColor(selectedColorHex))
+                    } catch (e: Exception) {
+                        MaterialTheme.colorScheme.primary
+                    }
+
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            .size(54.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(parsedColor.copy(alpha = 0.18f))
+                            .border(1.5.dp, parsedColor, RoundedCornerShape(14.dp)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        filteredIconOptions.forEach { (iconKey, vector) ->
-                            val isSelected = iconKey == selectedIcon
-                            Box(
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                                        else MaterialTheme.colorScheme.surfaceVariant
-                                    )
-                                    .border(
-                                        1.dp,
-                                        if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                        CircleShape
-                                    )
-                                    .clickable { selectedIcon = iconKey },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = vector,
-                                    contentDescription = iconKey,
-                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else colors.textSecondary,
-                                    modifier = Modifier.size(22.dp)
-                                )
+                        Text(
+                            text = selectedEmoji,
+                            fontSize = 28.sp
+                        )
+                    }
+
+                    // Input field allowing user to type or paste ANY Android emoji from keyboard
+                    OutlinedTextField(
+                        value = selectedEmoji,
+                        onValueChange = {
+                            if (it.isNotBlank()) {
+                                selectedEmoji = it.trim()
                             }
+                        },
+                        label = { Text("Choose Emoji") },
+                        placeholder = { Text("Type any emoji...") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = colors.cardBorder
+                        )
+                    )
+                }
+
+                // Quick Preset Emojis Row
+                Text(
+                    text = "Popular Emojis",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.textSecondary
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    presetEmojis.forEach { emoji ->
+                        val isSelected = (emoji == selectedEmoji)
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                    else MaterialTheme.colorScheme.surfaceVariant
+                                )
+                                .border(
+                                    1.dp,
+                                    if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                    CircleShape
+                                )
+                                .clickable { selectedEmoji = emoji },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = emoji,
+                                fontSize = 20.sp
+                            )
                         }
                     }
                 }
 
                 // Color Selector
                 Text(
-                    text = "Color",
+                    text = "Theme Color",
                     style = MaterialTheme.typography.labelMedium,
                     color = colors.textSecondary
                 )
@@ -336,12 +324,12 @@ fun CategoryEditDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (name.isNotBlank()) {
-                        onSave(name.trim(), type, selectedIcon, selectedColorHex)
+                    if (name.isNotBlank() && selectedEmoji.isNotBlank()) {
+                        onSave(name.trim(), type, selectedEmoji.trim(), selectedColorHex)
                         onDismiss()
                     }
                 },
-                enabled = name.isNotBlank(),
+                enabled = name.isNotBlank() && selectedEmoji.isNotBlank(),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary

@@ -69,19 +69,20 @@ object SmsCatchUpSync {
                     val parsed = SmsBankParser.parse(address, body) ?: continue
 
                     // ── Linked-Account Verification Gate ─────────────────────
-                    // Only process SMS from banks that match a user-linked account.
-                    val hasLinkedMatch = linkedAccounts.any { account ->
-                        val bankMatch = account.bankCode != null &&
-                                (account.bankCode.equals(parsed.bankName, ignoreCase = true) ||
-                                 parsed.bankName.uppercase().contains(account.bankCode!!.uppercase()) ||
-                                 account.bankCode!!.uppercase().contains(parsed.bankName.take(4).uppercase()))
+                    val matchedAccount = linkedAccounts.firstOrNull { account ->
+                        val bankMatch = BankAliasRegistry.matches(account.bankCode, parsed.bankName, address)
                         val last4Match = account.accountLast4 != null && parsed.accountLast4 != null &&
                                 account.accountLast4 == parsed.accountLast4
                         bankMatch || last4Match
-                    }
+                    } ?: if (linkedAccounts.size == 1) linkedAccounts.first() else null
 
-                    if (!hasLinkedMatch) {
-                        continue // No linked account matches → skip this SMS
+                    if (matchedAccount == null && linkedAccounts.isNotEmpty()) {
+                        val anyBankMatch = linkedAccounts.any {
+                            BankAliasRegistry.matches(it.bankCode, parsed.bankName, address)
+                        }
+                        if (!anyBankMatch) {
+                            continue
+                        }
                     }
 
                     // ── Tier 1: Hash Check ──────────────────────────────────────
@@ -119,14 +120,10 @@ object SmsCatchUpSync {
                     )
 
                     if (matchingManual != null) {
-                        // Verify account alignment before suppressing
-                        val matchedBankAccount = linkedAccounts.firstOrNull {
-                            it.bankCode != null && (
-                                it.bankCode.equals(parsed.bankName, ignoreCase = true) ||
-                                parsed.bankName.uppercase().contains(it.bankCode!!.uppercase())
-                            )
+                        val targetAcc = matchedAccount ?: linkedAccounts.firstOrNull {
+                            BankAliasRegistry.matches(it.bankCode, parsed.bankName, address)
                         }
-                        if (matchedBankAccount == null || matchingManual.account == matchedBankAccount.name) {
+                        if (targetAcc == null || matchingManual.account == targetAcc.name) {
                             prefs.edit().putBoolean(msgHash1, true).putBoolean(msgHash2, true).apply()
                             continue
                         }
@@ -134,9 +131,11 @@ object SmsCatchUpSync {
 
                     // ── Tier 3: Balance Verification ─────────────────────────────
                     if (parsed.endingBalance != null) {
-                        val matchedAccount = linkedAccounts.firstOrNull { it.bankCode.equals(parsed.bankName, ignoreCase = true) }
-                        if (matchedAccount != null) {
-                            val accountName = matchedAccount.name
+                        val targetAcc = matchedAccount ?: linkedAccounts.firstOrNull {
+                            BankAliasRegistry.matches(it.bankCode, parsed.bankName, address)
+                        }
+                        if (targetAcc != null) {
+                            val accountName = targetAcc.name
                             val accountTxs = recentTransactions.filter { it.account == accountName || it.toAccount == accountName }
                             val totalIncome = accountTxs.filter { it.type == TransactionType.INCOME || (it.type == TransactionType.TRANSFER && it.toAccount == accountName) }.sumOf { it.amount }
                             val totalExpense = accountTxs.filter { it.type == TransactionType.EXPENSE || (it.type == TransactionType.TRANSFER && it.account == accountName) }.sumOf { it.amount }

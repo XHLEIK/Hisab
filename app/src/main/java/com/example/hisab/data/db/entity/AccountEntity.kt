@@ -16,5 +16,7 @@ data class AccountEntity(
     val colorHex: String = "#2196F3",
     val isPrimary: Boolean = false,
     val bankCode: String? = null, // e.g., "BOB", "SBI", "HDFC", "ICICI", "AXIS"
-    val accountLast4: String? = null // e.g., "1234"
+    val accountLast4: String? = null, // e.g., "1234"
+    val lastKnownBalance: Double? = null,
+    val lastBalanceTimestamp: Long? = null
 )

@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.hisab.data.db.entity.TransactionEntity
 import com.example.hisab.data.model.TransactionType
 import com.example.hisab.ui.theme.HisabTheme
@@ -77,10 +78,10 @@ fun TransactionItem(
 
     val displayName = categoryName
 
-    val iconVector = remember(categoryIcon, isTransfer) {
-        if (categoryIcon.isNotBlank()) CategoryIconMapper.getIcon(categoryIcon)
-        else if (isTransfer) CategoryIconMapper.getIcon("SwapHoriz")
-        else CategoryIconMapper.getIcon("MoreHoriz")
+    val emoji = remember(categoryIcon, isTransfer) {
+        if (categoryIcon.isNotBlank()) com.example.hisab.data.sms.SmsNotificationHelper.getCategoryEmoji(categoryIcon)
+        else if (isTransfer) "🔄"
+        else "📌"
     }
 
     Row(
@@ -90,7 +91,7 @@ fun TransactionItem(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Category icon container
+        // Category emoji container
         Box(
             modifier = Modifier
                 .size(40.dp)
@@ -98,11 +99,9 @@ fun TransactionItem(
                 .background(parsedColor.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = iconVector,
-                contentDescription = displayName,
-                tint = parsedColor,
-                modifier = Modifier.size(20.dp)
+            Text(
+                text = emoji,
+                fontSize = 20.sp
             )
         }
 

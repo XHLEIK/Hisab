@@ -57,6 +57,7 @@ import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -149,12 +150,15 @@ fun SettingsScreen(
     val backupPrefs = remember { com.example.hisab.data.backup.BackupPreferences(context) }
     val isAutoBackupEnabled by backupPrefs.isAutoBackupEnabled.collectAsState(initial = true)
 
+    val availableExportMonths by viewModel.availableExportMonths.collectAsState()
+    var selectedExportMonth by remember { mutableStateOf<java.time.YearMonth?>(null) }
+
     // SAF file pickers
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument(selectedExportFormat?.mimeType ?: "application/pdf")
     ) { uri ->
         val format = selectedExportFormat ?: ExportFormat.PDF
-        uri?.let { viewModel.exportReport(context, it, format) }
+        uri?.let { viewModel.exportReport(context, it, format, selectedExportMonth) }
     }
 
     val importLauncher = rememberLauncherForActivityResult(
@@ -656,11 +660,10 @@ fun SettingsScreen(
                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = CategoryIconMapper.getIcon(category.iconName),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
+                        val emoji = com.example.hisab.data.sms.SmsNotificationHelper.getCategoryEmoji(category.iconName)
+                        Text(
+                            text = emoji,
+                            fontSize = 18.sp
                         )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
@@ -757,16 +760,23 @@ fun SettingsScreen(
         )
     }
 
-    // Export Format Dialog
+    // Export Format & Scope Dialog
     if (showExportFormatDialog) {
         ExportFormatDialog(
+            availableMonths = availableExportMonths,
             onDismiss = { showExportFormatDialog = false },
-            onFormatSelected = { format ->
+            onConfirm = { format, targetMonth ->
                 showExportFormatDialog = false
                 selectedExportFormat = format
-                val timestamp = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss").format(java.time.LocalDateTime.now())
-                val filename = "hisab_report_${timestamp}.${format.extension}"
-                exportLauncher.launch(filename)
+                selectedExportMonth = targetMonth
+                val defaultFilename = if (targetMonth != null) {
+                    val monthStr = targetMonth.format(java.time.format.DateTimeFormatter.ofPattern("MMM_yyyy"))
+                    "Hisab_Statement_${monthStr}.${format.extension}"
+                } else {
+                    val timestamp = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd").format(java.time.LocalDate.now())
+                    "Hisab_Statement_All_Records_${timestamp}.${format.extension}"
+                }
+                exportLauncher.launch(defaultFilename)
             }
         )
     }
@@ -1128,11 +1138,10 @@ private fun CategorySquareTile(
                     .background(parsedColor.copy(alpha = 0.10f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = CategoryIconMapper.getIcon(category.iconName),
-                    contentDescription = category.name,
-                    tint = parsedColor,
-                    modifier = Modifier.size(18.dp)
+                val emoji = com.example.hisab.data.sms.SmsNotificationHelper.getCategoryEmoji(category.iconName)
+                Text(
+                    text = emoji,
+                    fontSize = 18.sp
                 )
             }
 
@@ -1418,40 +1427,226 @@ private fun SettingsItem(
 
 @Composable
 private fun ExportFormatDialog(
+    availableMonths: List<ExportMonthOption>,
     onDismiss: () -> Unit,
-    onFormatSelected: (ExportFormat) -> Unit
+    onConfirm: (format: ExportFormat, targetMonth: java.time.YearMonth?) -> Unit
 ) {
+    var isAllRecords by remember { mutableStateOf(true) }
+    var selectedMonth by remember { mutableStateOf(availableMonths.firstOrNull()?.yearMonth) }
     var selectedFormat by remember { mutableStateOf(ExportFormat.PDF) }
     val colors = HisabTheme.colors
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Export Financial Report", fontWeight = FontWeight.Bold) },
+        title = {
+            Text(
+                text = "Export Financial Report",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = colors.textPrimary
+            )
+        },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Select report format to generate:", style = MaterialTheme.typography.bodySmall, color = colors.textSecondary)
-                ExportFormat.values().forEach { format ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Scope Selection Section
+                Text(
+                    text = "1. Report Scope",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .border(1.dp, colors.cardBorder, RoundedCornerShape(12.dp))
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Option A: All Records
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .clickable { selectedFormat = format }
-                            .padding(vertical = 4.dp),
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { isAllRecords = true }
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
-                            selected = (selectedFormat == format),
-                            onClick = { selectedFormat = format }
+                            selected = isAllRecords,
+                            onClick = { isAllRecords = true }
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(format.displayName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                        Column {
+                            Text(
+                                text = "All Records",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = colors.textPrimary
+                            )
+                            Text(
+                                text = "Complete all-time financial ledger",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = colors.textSecondary
+                            )
+                        }
+                    }
+
+                    // Option B: Specific Month
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                isAllRecords = false
+                                if (selectedMonth == null && availableMonths.isNotEmpty()) {
+                                    selectedMonth = availableMonths.first().yearMonth
+                                }
+                            }
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = !isAllRecords,
+                            onClick = {
+                                isAllRecords = false
+                                if (selectedMonth == null && availableMonths.isNotEmpty()) {
+                                    selectedMonth = availableMonths.first().yearMonth
+                                }
+                            }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "Specific Month Report",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = colors.textPrimary
+                            )
+                            Text(
+                                text = "Export transactions for a single month",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = colors.textSecondary
+                            )
+                        }
+                    }
+
+                    // Month Picker Sub-List (Only visible when Specific Month is selected)
+                    if (!isAllRecords) {
+                        if (availableMonths.isEmpty()) {
+                            Text(
+                                text = "No transaction records found to export.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.expense,
+                                modifier = Modifier.padding(8.dp)
+                            )
+                        } else {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 28.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                availableMonths.forEach { monthOption ->
+                                    val isSelected = (selectedMonth == monthOption.yearMonth)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(
+                                                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                                else Color.Transparent
+                                            )
+                                            .border(
+                                                1.dp,
+                                                if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                                RoundedCornerShape(8.dp)
+                                            )
+                                            .clickable { selectedMonth = monthOption.yearMonth }
+                                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = monthOption.label,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else colors.textPrimary
+                                        )
+                                        Text(
+                                            text = "${monthOption.count} txns",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = colors.textSecondary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Format Selection Section
+                Text(
+                    text = "2. File Format",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .border(1.dp, colors.cardBorder, RoundedCornerShape(12.dp))
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    ExportFormat.values().forEach { format ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { selectedFormat = format }
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (selectedFormat == format),
+                                onClick = { selectedFormat = format }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = format.displayName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (selectedFormat == format) FontWeight.Bold else FontWeight.Normal,
+                                color = colors.textPrimary
+                            )
+                        }
                     }
                 }
             }
         },
         confirmButton = {
-            Button(onClick = { onFormatSelected(selectedFormat) }, shape = RoundedCornerShape(12.dp)) {
-                Text("Export")
+            Button(
+                onClick = {
+                    val targetMonth = if (isAllRecords) null else selectedMonth
+                    onConfirm(selectedFormat, targetMonth)
+                },
+                enabled = isAllRecords || (selectedMonth != null && availableMonths.isNotEmpty()),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text("Export Report")
             }
         },
         dismissButton = {

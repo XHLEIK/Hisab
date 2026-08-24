@@ -56,24 +56,24 @@ class SmsReceiver : BroadcastReceiver() {
                 val categoryDao = db.categoryDao()
 
                 // ── Linked-Account Verification Gate ─────────────────────
-                // Only process SMS from banks that match a user-linked account.
-                // If no linked account matches bankName or accountLast4 → silently discard.
+                // Matches via BankAliasRegistry (e.g. "BOB" <-> "Bank of Baroda" / "BOBTXN"),
+                // accountLast4, or fallback to single linked account.
                 val linkedAccounts = accountDao.getAllSync()
-                val hasLinkedMatch = linkedAccounts.any { account ->
-                    // Match by bankCode (e.g., "Bank of Baroda" matches account.bankCode)
-                    val bankMatch = account.bankCode != null &&
-                            (account.bankCode.equals(parsed.bankName, ignoreCase = true) ||
-                             parsed.bankName.uppercase().contains(account.bankCode!!.uppercase()) ||
-                             account.bankCode!!.uppercase().contains(parsed.bankName.take(4).uppercase()))
-                    // Match by last 4 digits (if both SMS and account have them)
+                val matchedAccount = linkedAccounts.firstOrNull { account ->
+                    val bankMatch = BankAliasRegistry.matches(account.bankCode, parsed.bankName, sender)
                     val last4Match = account.accountLast4 != null && parsed.accountLast4 != null &&
                             account.accountLast4 == parsed.accountLast4
                     bankMatch || last4Match
-                }
+                } ?: if (linkedAccounts.size == 1) linkedAccounts.first() else null
 
-                if (!hasLinkedMatch) {
-                    // No linked account matches → discard this SMS silently
-                    return@launch
+                if (matchedAccount == null && linkedAccounts.isNotEmpty()) {
+                    // Check if any account has bank code matching
+                    val anyBankMatch = linkedAccounts.any {
+                        BankAliasRegistry.matches(it.bankCode, parsed.bankName, sender)
+                    }
+                    if (!anyBankMatch) {
+                        return@launch
+                    }
                 }
 
                 // De-duplication Hash Check (7-day window)
@@ -84,8 +84,58 @@ class SmsReceiver : BroadcastReceiver() {
                     return@launch
                 }
 
+                // ── Ending Balance Sync & Missed Transaction Detection ──
+                if (parsed.endingBalance != null && matchedAccount != null) {
+                    val prevBalance = matchedAccount.lastKnownBalance
+                    if (prevBalance != null && prevBalance > 0) {
+                        val expectedBalance = if (parsed.type == "DEBIT") {
+                            prevBalance - parsed.amount
+                        } else {
+                            prevBalance + parsed.amount
+                        }
+                        val discrepancy = kotlin.math.abs(expectedBalance - parsed.endingBalance)
+                        if (discrepancy >= 1.0) {
+                            // A previous transaction occurred without an SMS alert!
+                            val missedType = if (parsed.endingBalance < expectedBalance) "DEBIT" else "CREDIT"
+                            val missedPending = PendingTransactionEntity(
+                                amount = kotlin.math.round(discrepancy * 100.0) / 100.0,
+                                type = missedType,
+                                bankName = parsed.bankName,
+                                accountLast4 = parsed.accountLast4 ?: matchedAccount.accountLast4,
+                                merchantOrPayee = "Missed Transaction (Balance Sync)",
+                                endingBalance = parsed.endingBalance,
+                                rawSmsBody = "Auto-detected unlogged transaction via AvlBal discrepancy (Expected: ₹$expectedBalance, Actual: ₹${parsed.endingBalance})",
+                                senderHeader = sender,
+                                timestamp = System.currentTimeMillis() - 1000
+                            )
+                            val missedId = pendingDao.insert(missedPending)
+                            val savedMissed = missedPending.copy(id = missedId)
+
+                            if (android.os.Build.VERSION.SDK_INT < 33 ||
+                                androidx.core.content.ContextCompat.checkSelfPermission(
+                                    context,
+                                    android.Manifest.permission.POST_NOTIFICATIONS
+                                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                            ) {
+                                SmsNotificationHelper.postMissedTransactionNotification(
+                                    context,
+                                    savedMissed,
+                                    parsed.endingBalance,
+                                    expectedBalance
+                                )
+                            }
+                        }
+                    }
+
+                    // Update account's last known balance in DB
+                    val updatedAccount = matchedAccount.copy(
+                        lastKnownBalance = parsed.endingBalance,
+                        lastBalanceTimestamp = System.currentTimeMillis()
+                    )
+                    accountDao.update(updatedAccount)
+                }
+
                 // 1. Manual Entry Auto-Reconciliation Check (Past 24 Hours)
-                //    Enhanced with account verification to prevent cross-account suppression
                 val txType = if (parsed.type == "CREDIT") TransactionType.INCOME else TransactionType.EXPENSE
                 val matchingManual = transactionDao.findMatchingManualTransaction(
                     parsed.amount,
@@ -94,15 +144,10 @@ class SmsReceiver : BroadcastReceiver() {
                 )
 
                 if (matchingManual != null) {
-                    // Verify account alignment: only suppress if the manual entry's account
-                    // matches the SMS sender's bank, or if no bank account can be determined
-                    val matchedBankAccount = linkedAccounts.firstOrNull {
-                        it.bankCode != null && (
-                            it.bankCode.equals(parsed.bankName, ignoreCase = true) ||
-                            parsed.bankName.uppercase().contains(it.bankCode!!.uppercase())
-                        )
+                    val targetAcc = matchedAccount ?: linkedAccounts.firstOrNull {
+                        BankAliasRegistry.matches(it.bankCode, parsed.bankName, sender)
                     }
-                    if (matchedBankAccount == null || matchingManual.account == matchedBankAccount.name) {
+                    if (targetAcc == null || matchingManual.account == targetAcc.name) {
                         // Suppress alert — this manual entry corresponds to this SMS
                         prefs.edit().putBoolean(msgHash, true).apply()
                         return@launch
@@ -127,9 +172,9 @@ class SmsReceiver : BroadcastReceiver() {
                     val debitBankName = if (parsed.type == "DEBIT") parsed.bankName else matchingOppositePending.bankName
                     val creditBankName = if (parsed.type == "CREDIT") parsed.bankName else matchingOppositePending.bankName
 
-                    val sourceAccount = accounts.firstOrNull { it.bankCode.equals(debitBankName, ignoreCase = true) }
+                    val sourceAccount = accounts.firstOrNull { BankAliasRegistry.matches(it.bankCode, debitBankName) }
                         ?: accounts.firstOrNull { it.isPrimary } ?: accounts.firstOrNull()
-                    val targetAccount = accounts.firstOrNull { it.bankCode.equals(creditBankName, ignoreCase = true) }
+                    val targetAccount = accounts.firstOrNull { BankAliasRegistry.matches(it.bankCode, creditBankName) }
                         ?: accounts.firstOrNull { it.name.contains("Savings", ignoreCase = true) } ?: accounts.lastOrNull()
 
                     val sourceName = sourceAccount?.name ?: debitBankName
@@ -158,7 +203,7 @@ class SmsReceiver : BroadcastReceiver() {
                     val autoBackupManager = AutoBackupManager(context, db)
                     autoBackupManager.performBackup()
 
-                    // Post 3-second Auto-Merge Toast Notification with [ Undo ] button
+                    // Post Auto-Merge Notification with [ Undo ] button
                     SmsNotificationHelper.postAutoMergeSuccessNotification(
                         context,
                         newTxId,
@@ -187,7 +232,7 @@ class SmsReceiver : BroadcastReceiver() {
                 val pendingId = pendingDao.insert(pendingEntity)
                 val savedEntity = pendingEntity.copy(id = pendingId)
 
-                // Post 2-Stage Interactive Heads-Up Notification (Guarded by POST_NOTIFICATIONS permission)
+                // Post 2-Stage Interactive Heads-Up Notification
                 if (android.os.Build.VERSION.SDK_INT < 33 ||
                     androidx.core.content.ContextCompat.checkSelfPermission(
                         context,
