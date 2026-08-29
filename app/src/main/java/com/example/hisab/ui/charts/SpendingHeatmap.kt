@@ -43,7 +43,12 @@ fun SpendingHeatmap(
     val daysInMonth = yearMonth.lengthOfMonth()
     val firstDayOfWeek = yearMonth.atDay(1).dayOfWeek.value // 1=Mon, 7=Sun
     val dailyMap = remember(data) { data.associate { it.date.dayOfMonth to it.totalAmount } }
-    val maxAmount = remember(data) { data.maxOfOrNull { it.totalAmount } ?: 1.0 }
+
+    // Non-zero min/max for true relative normalization
+    val nonZeroAmounts = remember(data) { data.map { it.totalAmount }.filter { it > 0.0 } }
+    val minNonZero = remember(nonZeroAmounts) { nonZeroAmounts.minOrNull() ?: 0.0 }
+    val maxNonZero = remember(nonZeroAmounts) { nonZeroAmounts.maxOrNull() ?: 0.0 }
+    val uniqueNonZeroCount = remember(nonZeroAmounts) { nonZeroAmounts.map { it.toLong() }.distinct().size }
 
     fun lerpColor(a: Color, b: Color, t: Float): Color {
         return Color(
@@ -54,15 +59,20 @@ fun SpendingHeatmap(
         )
     }
 
-    // Continuous color gradient: light green (lowest expense) → yellow → orange → dark red (highest)
-    // Each day gets a unique shade based on its position relative to the max.
+    // 9-stop gradient: dark green → medium green → olive → amber → orange → red → dark red
+    // Darker lower-end greens ensure white date text stays readable and the
+    // progression from low to high expense is immediately obvious.
     fun expenseColor(intensity: Float): Color {
         val stops = listOf(
-            0.0f to Color(0xFFC8E6C9),
-            0.25f to Color(0xFFA5D6A7),
-            0.50f to Color(0xFFFFF176),
-            0.75f to Color(0xFFFFCC80),
-            1.0f to Color(0xFFEF5350)
+            0.0f to Color(0xFF1B5E20),   // dark forest green (lowest)
+            0.125f to Color(0xFF2E7D32),  // dark green
+            0.25f to Color(0xFF43A047),   // medium green
+            0.375f to Color(0xFF7CB342),  // yellow-green / lime
+            0.5f to Color(0xFFF9A825),    // dark amber
+            0.625f to Color(0xFFEF6C00),  // deep orange
+            0.75f to Color(0xFFE53935),   // red
+            0.875f to Color(0xFFC62828),  // dark red
+            1.0f to Color(0xFF7F0000)     // very dark red (highest)
         )
         val lower = stops.last { it.first <= intensity }
         val upper = stops.first { it.first >= intensity }
@@ -70,6 +80,15 @@ fun SpendingHeatmap(
         val range = upper.first - lower.first
         val t = if (range > 0f) (intensity - lower.first) / range else 0f
         return lerpColor(lower.second, upper.second, t)
+    }
+
+    // Compute intensity: min-max normalize non-zero values to [0, 1]
+    fun computeIntensity(amount: Double): Float {
+        if (amount <= 0) return 0f
+        if (uniqueNonZeroCount <= 1) return 1f  // single value → strongest color
+        val range = maxNonZero - minNonZero
+        if (range <= 0) return 0.75f  // all identical → strong mid-high
+        return ((amount - minNonZero) / range).toFloat().coerceIn(0f, 1f)
     }
 
     val totalCells = firstDayOfWeek - 1 + daysInMonth
@@ -133,9 +152,7 @@ fun SpendingHeatmap(
 
                         if (day in 1..daysInMonth) {
                             val amount = dailyMap[day] ?: 0.0
-                            // Relative grading: 0.0 = no expense, 1.0 = highest expense day
-                            val intensity = if (amount <= 0 || maxAmount <= 0) 0f
-                                else (amount / maxAmount).toFloat()
+                            val intensity = computeIntensity(amount)
 
                             val cellColor = when {
                                 amount <= 0 -> colors.heatmapZero
@@ -184,11 +201,10 @@ fun SpendingHeatmap(
 
             val legendColors = listOf(
                 colors.heatmapZero,
-                expenseColor(0.1f),
-                expenseColor(0.3f),
-                expenseColor(0.5f),
-                expenseColor(0.7f),
-                expenseColor(0.9f),
+                expenseColor(0.0f),
+                expenseColor(0.25f),
+                expenseColor(0.50f),
+                expenseColor(0.75f),
                 expenseColor(1.0f)
             )
             Canvas(modifier = Modifier.width(100.dp).height(14.dp)) {
