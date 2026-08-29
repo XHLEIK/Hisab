@@ -67,20 +67,19 @@ fun SpendingHeatmap(
         )
     }
 
-    // 9-stop gradient: dark green → medium green → olive → amber → orange → red → dark red
-    // Darker lower-end greens ensure white date text stays readable and the
-    // progression from low to high expense is immediately obvious.
+    // 9-stop monochromatic red gradient: muted wine → rose → crimson → burgundy
+    // Single-hue red intensity scale for a premium finance-oriented look.
     fun expenseColor(intensity: Float): Color {
         val stops = listOf(
-            0.0f to Color(0xFF1B5E20),   // dark forest green (lowest)
-            0.125f to Color(0xFF2E7D32),  // dark green
-            0.25f to Color(0xFF43A047),   // medium green
-            0.375f to Color(0xFF7CB342),  // yellow-green / lime
-            0.5f to Color(0xFFF9A825),    // dark amber
-            0.625f to Color(0xFFEF6C00),  // deep orange
-            0.75f to Color(0xFFE53935),   // red
-            0.875f to Color(0xFFC62828),  // dark red
-            1.0f to Color(0xFF7F0000)     // very dark red (highest)
+            0.0f to Color(0xFF3D1221),   // muted dark wine (lowest)
+            0.125f to Color(0xFF5C1A2B),  // dark rose
+            0.25f to Color(0xFF7A2840),   // rose-red
+            0.375f to Color(0xFF8C2D4A),  // medium-dark red
+            0.5f to Color(0xFFA03050),    // clear red
+            0.625f to Color(0xFFB52D45),  // strong red
+            0.75f to Color(0xFFC62828),   // classic red
+            0.875f to Color(0xFFA31525),  // dark crimson
+            1.0f to Color(0xFF7F0000)     // very dark burgundy (highest)
         )
         val lower = stops.last { it.first <= intensity }
         val upper = stops.first { it.first >= intensity }
