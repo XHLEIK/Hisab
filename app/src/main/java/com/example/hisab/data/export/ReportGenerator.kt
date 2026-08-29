@@ -43,7 +43,8 @@ class ReportGenerator(private val context: Context) {
         format: ExportFormat,
         transactions: List<TransactionEntity>,
         categories: List<CategoryEntity>,
-        targetMonth: java.time.YearMonth? = null
+        targetMonth: java.time.YearMonth? = null,
+        currentBalances: Map<String, Double> = emptyMap()
     ): Result<Int> = withContext(Dispatchers.IO) {
         try {
             val outputStream = context.contentResolver.openOutputStream(uri)
@@ -64,10 +65,10 @@ class ReportGenerator(private val context: Context) {
 
             outputStream.use { stream ->
                 when (format) {
-                    ExportFormat.PDF -> generatePdfReport(stream, sortedTx, categories, targetMonth)
+                    ExportFormat.PDF -> generatePdfReport(stream, sortedTx, categories, targetMonth, currentBalances)
                     ExportFormat.XLSX -> generateXlsxReport(stream, sortedTx, categories)
                     ExportFormat.CSV -> generateCsvReport(stream, sortedTx, categories)
-                    ExportFormat.JSON -> generateJsonReport(stream, sortedTx, categories)
+                    ExportFormat.JSON -> generateJsonReport(stream, sortedTx, targetMonth)
                 }
             }
             Result.success(sortedTx.size)
@@ -82,7 +83,8 @@ class ReportGenerator(private val context: Context) {
         stream: OutputStream,
         transactions: List<TransactionEntity>, // Ascending sorted
         categories: List<CategoryEntity>,
-        targetMonth: java.time.YearMonth? = null
+        targetMonth: java.time.YearMonth? = null,
+        currentBalances: Map<String, Double> = emptyMap()
     ) {
         val pdfDoc = PdfDocument()
         val categoryMap = categories.associateBy { it.id }
@@ -90,11 +92,14 @@ class ReportGenerator(private val context: Context) {
         val pageWidth = 595 // A4 standard width in points
         val pageHeight = 842 // A4 standard height in points
 
-        // Requirement 3 & 4: Separate Credit & Savings and calculate totals
-        val totalIncome = transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
-        val totalExpense = transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
-        val totalSavings = transactions.filter { it.type == TransactionType.TRANSFER }.sumOf { it.amount }
-        val netBalance = totalIncome - totalExpense
+        // ── ONE authoritative summary (see FinancialSummary / SplitAccounting) ──
+        // Period metrics come from the report-scope rows; current account balances are
+        // passed in by the caller (computed from the FULL ledger — a month-scoped row
+        // list cannot produce a current balance).
+        val summary = com.example.hisab.util.FinancialSummary.of(
+            transactions = transactions,
+            currentBalances = currentBalances
+        )
 
         // Paints
         val titlePaint = Paint().apply { color = Color.parseColor("#0F172A"); textSize = 20f; isFakeBoldText = true; isAntiAlias = true }
@@ -158,12 +163,27 @@ class ReportGenerator(private val context: Context) {
                     canvas.drawText(value, x + 8f, currentY + 35f, valP)
                 }
 
-                drawKpiCard(35f, "Total Income", CurrencyFormatter.format(totalIncome), "#10B981")
-                drawKpiCard(165f, "Total Expenses", CurrencyFormatter.format(totalExpense), "#EF4444")
-                drawKpiCard(295f, "Total Savings", CurrencyFormatter.format(totalSavings), "#8B5CF6")
-                drawKpiCard(425f, "Net Balance", CurrencyFormatter.format(netBalance), "#3B82F6")
+                // Row 1 — PERIOD METRICS for the report scope
+                drawKpiCard(35f, "Total Income", CurrencyFormatter.format(summary.totalIncome), "#10B981")
+                drawKpiCard(165f, "Gross Expenses", CurrencyFormatter.format(summary.grossExpense), "#EF4444")
+                drawKpiCard(295f, "Net Expenses", CurrencyFormatter.format(summary.netExpense), "#F97316")
+                drawKpiCard(425f, "Transfer Activity", CurrencyFormatter.format(summary.transferActivity), "#8B5CF6")
 
                 currentY += 64f
+
+                // Row 2 — CURRENT ACCOUNT STATE (ledger balances, not period flow).
+                // Transfer volume is deliberately absent: moving money between your own
+                // accounts is not a balance.
+                if (summary.accountBalances.isNotEmpty()) {
+                    currentY += 6f
+                    canvas.drawText("Account Balances (Current)", 35f, currentY, headerPaint)
+                    currentY += 12f
+                    summary.accountBalances.entries.take(3).forEachIndexed { i, (name, balance) ->
+                        drawKpiCard(35f + i * 130f, name.take(14), CurrencyFormatter.format(balance), "#3B82F6")
+                    }
+                    drawKpiCard(425f, "Combined Balance", CurrencyFormatter.format(summary.combinedBalance), "#3B82F6")
+                    currentY += 64f
+                }
             }
 
             // Requirement 3: Financial Ledger Table with separate Credit & Savings columns
@@ -180,7 +200,7 @@ class ReportGenerator(private val context: Context) {
             canvas.drawText("Account", 265f, currentY + 12f, thText)
             canvas.drawText("Debit (Expense)", 345f, currentY + 12f, thText)
             canvas.drawText("Credit (Income)", 425f, currentY + 12f, thText)
-            canvas.drawText("Savings", 500f, currentY + 12f, thText)
+            canvas.drawText("Transfer", 500f, currentY + 12f, thText)
 
             currentY += 18f
 
@@ -212,9 +232,10 @@ class ReportGenerator(private val context: Context) {
                 val creditPaint = Paint().apply { color = if (isIncome) incomeColor else Color.parseColor("#94A3B8"); textSize = 8.5f; isAntiAlias = true }
                 val savingsPaint = Paint().apply { color = if (isTransfer) savingsColor else Color.parseColor("#94A3B8"); textSize = 8.5f; isAntiAlias = true }
 
+                val typeLabel = if (tx.subtype == "SPLIT_REIMBURSEMENT") "Expense/Split" else tx.type.name
                 canvas.drawText(dateStr, 40f, currentY + 12f, bodyPaint)
                 canvas.drawText(catName.take(15), 105f, currentY + 12f, bodyPaint)
-                canvas.drawText(tx.type.name, 205f, currentY + 12f, bodyPaint)
+                canvas.drawText(typeLabel, 205f, currentY + 12f, bodyPaint)
                 canvas.drawText(tx.account.take(10), 265f, currentY + 12f, bodyPaint)
                 canvas.drawText(debitText, 345f, currentY + 12f, debitPaint)
                 canvas.drawText(creditText, 425f, currentY + 12f, creditPaint)
@@ -224,14 +245,14 @@ class ReportGenerator(private val context: Context) {
                 currentY += 16f
             }
 
-            // Ledger Totals Row
+            // Ledger Totals Row — period sums of the columns above (a ledger footer, not balances)
             if (isLastLedgerPage) {
                 canvas.drawRect(35f, currentY, (pageWidth - 35).toFloat(), currentY + 18f, thBg)
                 val totalTextPaint = Paint().apply { color = Color.parseColor("#0F172A"); textSize = 8.5f; isFakeBoldText = true; isAntiAlias = true }
-                canvas.drawText("TOTAL LEDGER", 40f, currentY + 13f, totalTextPaint)
-                canvas.drawText(CurrencyFormatter.format(totalExpense), 345f, currentY + 13f, totalTextPaint)
-                canvas.drawText(CurrencyFormatter.format(totalIncome), 425f, currentY + 13f, totalTextPaint)
-                canvas.drawText(CurrencyFormatter.format(totalSavings), 500f, currentY + 13f, totalTextPaint)
+                canvas.drawText("TOTALS (PERIOD)", 40f, currentY + 13f, totalTextPaint)
+                canvas.drawText(CurrencyFormatter.format(summary.grossExpense), 345f, currentY + 13f, totalTextPaint)
+                canvas.drawText(CurrencyFormatter.format(summary.totalIncome), 425f, currentY + 13f, totalTextPaint)
+                canvas.drawText(CurrencyFormatter.format(summary.transferActivity), 500f, currentY + 13f, totalTextPaint)
             }
 
             canvas.drawText("Page $pageNumber  •  Hisab Balance Sheet & Ledger Statement", (pageWidth / 2 - 90).toFloat(), 815f, subTitlePaint)
@@ -445,7 +466,7 @@ class ReportGenerator(private val context: Context) {
         }
 
         val txSheet = workbook.createSheet("Ledger & Transactions")
-        val headers = listOf("Date", "Type", "Category", "Account", "To Account", "Debit (Expense)", "Credit (Income)", "Savings", "Notes")
+        val headers = listOf("Date", "Type", "Subtype", "Category", "Account", "To Account", "Debit (Expense)", "Credit (Income)", "Transfer", "Notes")
 
         val hRow = txSheet.createRow(0)
         headers.forEachIndexed { i, h ->
@@ -458,21 +479,22 @@ class ReportGenerator(private val context: Context) {
             val row = txSheet.createRow(idx + 1)
             row.createCell(0).setCellValue(tx.date.toString()) // YYYY-MM-DD
             row.createCell(1).setCellValue(tx.type.name)
-            row.createCell(2).setCellValue(categoryMap[tx.categoryId]?.name ?: "Unknown")
-            row.createCell(3).setCellValue(tx.account)
-            row.createCell(4).setCellValue(tx.toAccount ?: "-")
+            row.createCell(2).setCellValue(tx.subtype ?: "NORMAL")
+            row.createCell(3).setCellValue(categoryMap[tx.categoryId]?.name ?: "Unknown")
+            row.createCell(4).setCellValue(tx.account)
+            row.createCell(5).setCellValue(tx.toAccount ?: "-")
 
             val isExpense = tx.type == TransactionType.EXPENSE
             val isTransfer = tx.type == TransactionType.TRANSFER
             val isIncome = tx.type == TransactionType.INCOME
 
-            row.createCell(5).setCellValue(if (isExpense) tx.amount else 0.0)
-            row.createCell(6).setCellValue(if (isIncome) tx.amount else 0.0)
-            row.createCell(7).setCellValue(if (isTransfer) tx.amount else 0.0)
-            row.createCell(8).setCellValue(tx.notes)
+            row.createCell(6).setCellValue(if (isExpense) tx.amount else 0.0)
+            row.createCell(7).setCellValue(if (isIncome) tx.amount else 0.0)
+            row.createCell(8).setCellValue(if (isTransfer) tx.amount else 0.0)
+            row.createCell(9).setCellValue(tx.notes)
         }
 
-        for (i in 0..8) txSheet.autoSizeColumn(i)
+        for (i in 0..9) txSheet.autoSizeColumn(i)
 
         workbook.write(stream)
         workbook.close()
@@ -487,23 +509,24 @@ class ReportGenerator(private val context: Context) {
     ) {
         val categoryMap = categories.associateBy { it.id }
         val sb = StringBuilder()
-        sb.appendLine("Date,Type,Category,Account,ToAccount,Debit (Expense),Credit (Income),Savings,Notes")
+        sb.appendLine("Date,Type,Subtype,Category,Account,ToAccount,Debit (Expense),Credit (Income),Transfer,Notes")
 
         for (tx in transactions) {
             val catName = categoryMap[tx.categoryId]?.name ?: "Unknown"
             val debit = if (tx.type == TransactionType.EXPENSE) tx.amount else 0.0
             val credit = if (tx.type == TransactionType.INCOME) tx.amount else 0.0
-            val savings = if (tx.type == TransactionType.TRANSFER) tx.amount else 0.0
+            val transfer = if (tx.type == TransactionType.TRANSFER) tx.amount else 0.0
 
             val line = listOf(
                 tx.date.toString(), // YYYY-MM-DD
                 tx.type.name,
+                tx.subtype ?: "NORMAL",
                 "\"${catName}\"",
                 "\"${tx.account}\"",
                 "\"${tx.toAccount ?: ""}\"",
                 debit.toString(),
                 credit.toString(),
-                savings.toString(),
+                transfer.toString(),
                 "\"${tx.notes}\""
             ).joinToString(",")
             sb.appendLine(line)
@@ -513,13 +536,23 @@ class ReportGenerator(private val context: Context) {
 
     // ── JSON BACKUP GENERATOR ──────────────────────────────────────────────────
 
+    /**
+     * Serializes the rows [generateReport] already scoped, never the whole database.
+     *
+     * Re-reading the ledger here was the bug: "Specific Month" + JSON wrote every transaction ever
+     * recorded while the success toast reported only the month's count. Passing [transactions] on is
+     * also structural — this function no longer has a way to ignore the month filter.
+     */
     private suspend fun generateJsonReport(
         stream: OutputStream,
         transactions: List<TransactionEntity>,
-        categories: List<CategoryEntity>
+        targetMonth: java.time.YearMonth?
     ) {
         val backupManager = AutoBackupManager(context, HisabDatabase.getDatabase(context))
-        val jsonStr = backupManager.exportBackupString()
+        val jsonStr = backupManager.exportBackupString(
+            transactions = transactions,
+            includePending = targetMonth == null
+        )
         stream.write(jsonStr.toByteArray(Charsets.UTF_8))
     }
 }

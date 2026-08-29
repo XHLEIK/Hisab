@@ -4,9 +4,12 @@ import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import androidx.room.withTransaction
 import com.example.hisab.data.backup.AutoBackupManager
 import com.example.hisab.data.db.HisabDatabase
 import com.example.hisab.data.db.entity.TransactionEntity
+import com.example.hisab.data.model.TransactionConfidence
+import com.example.hisab.data.model.TransactionSource
 import com.example.hisab.data.model.TransactionType
 import com.example.hisab.util.CurrencyFormatter
 import kotlinx.coroutines.CoroutineScope
@@ -63,6 +66,25 @@ class NotificationActionReceiver : BroadcastReceiver() {
             return
         }
 
+        if (action == SmsNotificationHelper.ACTION_SELECT_SPLIT_CATEGORY) {
+            val pendingResult = goAsync()
+            val amount = intent.getDoubleExtra(SmsNotificationHelper.EXTRA_AMOUNT, 0.0)
+            val bankName = intent.getStringExtra(SmsNotificationHelper.EXTRA_BANK_NAME) ?: "Bank"
+
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    SmsNotificationHelper.postSplitCategoryPickerNotification(
+                        context, pendingId, notificationId, amount, bankName, 0
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    pendingResult.finish()
+                }
+            }
+            return
+        }
+
         // ══════════════════════════════════════════════════════════════
         //  Pagination Action (Updated to route to Stage 2 Category Picker)
         // ══════════════════════════════════════════════════════════════
@@ -83,9 +105,13 @@ class NotificationActionReceiver : BroadcastReceiver() {
                             )
                         }
                         "EXPENSE", "INCOME" -> {
-                            // Route to Stage 2 Category Picker with pagination
                             SmsNotificationHelper.postCategoryPickerNotification(
                                 context, pendingId, notificationId, mode, amount, bankName, pageIndex
+                            )
+                        }
+                        "SPLIT" -> {
+                            SmsNotificationHelper.postSplitCategoryPickerNotification(
+                                context, pendingId, notificationId, amount, bankName, pageIndex
                             )
                         }
                         else -> {
@@ -220,33 +246,62 @@ class NotificationActionReceiver : BroadcastReceiver() {
                     val accountDao = db.accountDao()
                     val categoryDao = db.categoryDao()
 
-                    // Atomic Double-Tap Guard
-                    val pending = pendingDao.getById(pendingId) ?: return@launch
-                    pendingDao.delete(pending)
-
                     val accounts = accountDao.getAllSync()
-                    val targetAccount = accounts.firstOrNull { it.bankCode.equals(targetBankName, ignoreCase = true) }
+                    val targetAccount = accounts.firstOrNull { BankAliasRegistry.matches(it.bankCode, targetBankName, null) }
                         ?: accounts.firstOrNull { it.isPrimary } ?: accounts.firstOrNull()
                     val targetAccountName = targetAccount?.name ?: targetBankName
+
+                    if (sourceAccount.equals(targetAccountName, ignoreCase = true)) {
+                        SmsNotificationHelper.postSuccessNotification(context, notificationId, "Cannot transfer to same account")
+                        return@launch
+                    }
 
                     val transferCategories = categoryDao.getAllSync().filter { it.type == TransactionType.TRANSFER }
                     val categoryId = transferCategories.firstOrNull()?.id ?: 1L
 
-                    val transferTx = TransactionEntity(
-                        amount = amount,
-                        type = TransactionType.TRANSFER,
-                        categoryId = categoryId,
-                        date = LocalDate.now(),
-                        account = sourceAccount,
-                        toAccount = targetAccountName,
-                        notes = "Inward transfer from SMS alert ($sourceAccount -> $targetAccountName)"
+                    // INV-3: consuming the pending row and materialising the transaction is one
+                    // all-or-nothing step. Non-atomically, a crash between the delete and the insert
+                    // destroyed the pending row and left no transaction — the user's tap silently
+                    // erased their own transaction.
+                    val logged = db.withTransaction {
+                        val pending = pendingDao.getById(pendingId) ?: return@withTransaction false
+                        pendingDao.delete(pending)
+
+                        transactionDao.insert(
+                            TransactionEntity(
+                                amount = amount,
+                                type = TransactionType.TRANSFER,
+                                categoryId = categoryId,
+                                date = LocalDate.now(),
+                                account = sourceAccount,
+                                toAccount = targetAccountName,
+                                notes = "Inward transfer from SMS alert ($sourceAccount -> $targetAccountName)",
+                                // Carry the identity forward so the message stays claimed after the
+                                // pending row is gone (cross-table dedup, INV-2).
+                                sourceMessageHash = pending.sourceMessageHash
+                                    ?.takeIf { transactionDao.getBySourceHash(it) == null },
+                                source = TransactionSource.NOTIFICATION_ACTION.name,
+                                confidence = TransactionConfidence.MANUAL.name,
+                                referenceNumber = pending.referenceNumber
+                            )
+                        )
+                        true
+                    }
+                    if (!logged) return@launch
+
+                    // Short-lived marker so the matching CREDIT SMS does not also ask to be logged.
+                    // Scoped by account and hour bucket: the old key was `recon_${amount}_CREDIT`,
+                    // unscoped and never expiring, so one ₹500 transfer suppressed the next ₹500
+                    // credit on any account, forever. A marker that misses (an SMS arriving in the
+                    // following hour bucket) costs one redundant notification — the fail-open side.
+                    PrefsSmsHashCache(context).mark(
+                        SmsHash.reconciliationKey(
+                            amount = amount,
+                            type = "CREDIT",
+                            accountLast4 = targetAccount?.accountLast4,
+                            timestamp = System.currentTimeMillis()
+                        )
                     )
-
-                    transactionDao.insert(transferTx)
-
-                    // Store short-lived reconciliation hash to drop any redundant CREDIT alert
-                    val prefs = context.getSharedPreferences("sms_processed_hashes", Context.MODE_PRIVATE)
-                    prefs.edit().putBoolean("recon_${amount}_CREDIT", true).apply()
 
                     val autoBackupManager = AutoBackupManager(context, db)
                     autoBackupManager.performBackup()
@@ -256,6 +311,111 @@ class NotificationActionReceiver : BroadcastReceiver() {
                         context,
                         notificationId,
                         "Logged Transfer $formattedAmount ($sourceAccount → $targetAccountName)"
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    pendingResult.finish()
+                }
+            }
+            return
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        //  Log Split Reimbursement (NEW — category-level negative expense)
+        // ══════════════════════════════════════════════════════════════
+
+        if (action == SmsNotificationHelper.ACTION_LOG_SPLIT) {
+            val pendingResult = goAsync()
+            val categoryId = intent.getLongExtra(SmsNotificationHelper.EXTRA_CATEGORY_ID, -1L)
+            val categoryName = intent.getStringExtra(SmsNotificationHelper.EXTRA_CATEGORY_NAME) ?: "Expense"
+            val amount = intent.getDoubleExtra(SmsNotificationHelper.EXTRA_AMOUNT, 0.0)
+
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val db = HisabDatabase.getDatabase(context)
+                    val pendingDao = db.pendingTransactionDao()
+                    val transactionDao = db.transactionDao()
+                    val categoryDao = db.categoryDao()
+                    val accountDao = db.accountDao()
+
+                    val pending = pendingDao.getById(pendingId) ?: return@launch
+                    val splitCategory = if (categoryId != -1L) categoryDao.getById(categoryId)
+                        else categoryDao.getAllSync().firstOrNull { it.name.equals(categoryName, ignoreCase = true) && it.type == TransactionType.EXPENSE }
+                    if (splitCategory == null || splitCategory.type != TransactionType.EXPENSE) {
+                        SmsNotificationHelper.postSuccessNotification(context, notificationId, "Invalid category for split")
+                        return@launch
+                    }
+
+                    val gross = transactionDao.getGrossExpenseForCategory(splitCategory.id)
+                    val reimbursed = transactionDao.getSplitReimbursementForCategory(splitCategory.id)
+                    val remaining = gross - reimbursed
+
+                    if (remaining <= 0.0) {
+                        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                        notificationManager.cancel(notificationId)
+                        SmsNotificationHelper.postSuccessNotification(
+                            context,
+                            notificationId,
+                            "No unreimbursed ${splitCategory.name} expense remains"
+                        )
+                        return@launch
+                    }
+                    if (amount > remaining) {
+                        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                        notificationManager.cancel(notificationId)
+                        // Keep pending classifiable — re-post Stage-1 so user can choose another eligible category
+                        SmsNotificationHelper.postBankTransactionNotification(context, pending)
+                        SmsNotificationHelper.postSuccessNotification(
+                            context,
+                            notificationId + 1,
+                            "₹${CurrencyFormatter.format(amount)} cannot be fully applied to ${splitCategory.name}. Only ${CurrencyFormatter.format(remaining)} remains unreimbursed."
+                        )
+                        return@launch
+                    }
+
+                    val accounts = accountDao.getAllSync()
+                    val bankName = intent.getStringExtra(SmsNotificationHelper.EXTRA_BANK_NAME)
+                    val matchedAccount = accounts.firstOrNull { BankAliasRegistry.matches(it.bankCode, pending.bankName, pending.senderHeader) }
+                        ?: accounts.firstOrNull { it.isPrimary } ?: accounts.firstOrNull()
+                    val accountName = matchedAccount?.name ?: pending.bankName
+
+                    val logged = db.withTransaction {
+                        val stillPending = pendingDao.getById(pendingId) ?: return@withTransaction false
+                        if (transactionDao.getBySourceHash(stillPending.sourceMessageHash ?: "") != null) {
+                            pendingDao.deleteById(pendingId)
+                            return@withTransaction false
+                        }
+                        pendingDao.delete(stillPending)
+                        transactionDao.insert(
+                            TransactionEntity(
+                                amount = amount,
+                                type = TransactionType.EXPENSE,
+                                subtype = com.example.hisab.data.model.TransactionSubtype.SPLIT_REIMBURSEMENT.name,
+                                categoryId = splitCategory.id,
+                                date = LocalDate.now(),
+                                account = accountName,
+                                toAccount = null,
+                                notes = "Split reimbursement for ${splitCategory.name}",
+                                sourceMessageHash = stillPending.sourceMessageHash?.takeIf { transactionDao.getBySourceHash(it) == null },
+                                source = stillPending.source ?: TransactionSource.NOTIFICATION_ACTION.name,
+                                confidence = TransactionConfidence.CONFIRMED.name,
+                                referenceNumber = stillPending.referenceNumber
+                            )
+                        )
+                        true
+                    }
+                    if (!logged) return@launch
+
+                    val autoBackupManager = AutoBackupManager(context, db)
+                    autoBackupManager.performBackup()
+
+                    val formattedAmount = CurrencyFormatter.format(amount)
+                    val newNet = (gross - reimbursed) - amount
+                    SmsNotificationHelper.postSuccessNotification(
+                        context,
+                        notificationId,
+                        "Split $formattedAmount → ${splitCategory.name} — net now ${CurrencyFormatter.format(newNet)}"
                     )
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -291,10 +451,6 @@ class NotificationActionReceiver : BroadcastReceiver() {
                     val categoryDao = db.categoryDao()
                     val accountDao = db.accountDao()
 
-                    // Atomic Double-Tap Guard: Check pending record existence
-                    val pending = pendingDao.getById(pendingId) ?: return@launch
-                    pendingDao.delete(pending)
-
                     // Match Category
                     val categories = categoryDao.getAllSync()
                     val matchedCategory = categories.firstOrNull {
@@ -303,25 +459,47 @@ class NotificationActionReceiver : BroadcastReceiver() {
 
                     val categoryId = matchedCategory?.id ?: 1L
 
-                    // Match Primary/Source Account
+                    // Match Primary/Source Account — hardened to use canonical alias matching
                     val accounts = accountDao.getAllSync()
                     val bankName = intent.getStringExtra(SmsNotificationHelper.EXTRA_BANK_NAME)
-                    val matchedAccount = accounts.firstOrNull { it.bankCode.equals(bankName, ignoreCase = true) }
+                    val matchedAccount = accounts.firstOrNull { BankAliasRegistry.matches(it.bankCode, bankName ?: "", null) }
                         ?: accounts.firstOrNull { it.isPrimary } ?: accounts.firstOrNull()
                     val sourceAccountName = matchedAccount?.name ?: "Primary Bank"
 
-                    // Create Transaction
-                    val newTx = TransactionEntity(
-                        amount = amount,
-                        type = txType,
-                        categoryId = categoryId,
-                        date = LocalDate.now(),
-                        account = sourceAccountName,
-                        toAccount = if (txType == TransactionType.TRANSFER) (toAccount ?: "Savings") else null,
-                        notes = "Auto-logged from SMS"
-                    )
+                    if (txType == TransactionType.TRANSFER && toAccount != null && sourceAccountName.equals(toAccount, ignoreCase = true)) {
+                        SmsNotificationHelper.postSuccessNotification(context, notificationId, "Cannot transfer to same account")
+                        return@launch
+                    }
 
-                    transactionDao.insert(newTx)
+                    // INV-3: the double-tap guard and the insert are one atomic step. Previously a
+                    // crash between them left the user with neither a pending row nor a transaction.
+                    val logged = db.withTransaction {
+                        val pending = pendingDao.getById(pendingId) ?: return@withTransaction false
+                        pendingDao.delete(pending)
+
+                        transactionDao.insert(
+                            TransactionEntity(
+                                amount = amount,
+                                type = txType,
+                                categoryId = categoryId,
+                                date = LocalDate.now(),
+                                account = sourceAccountName,
+                                toAccount = if (txType == TransactionType.TRANSFER) (toAccount ?: "Savings") else null,
+                                notes = "Auto-logged from SMS",
+                                // Keeps the message identity claimed once the pending row is gone.
+                                // The `takeIf` is a restore-safety guard: transactionDao.insert() is
+                                // REPLACE, so writing a hash another row already holds would delete
+                                // that row. Dropping the hash costs dedup, not data.
+                                sourceMessageHash = pending.sourceMessageHash
+                                    ?.takeIf { transactionDao.getBySourceHash(it) == null },
+                                source = TransactionSource.NOTIFICATION_ACTION.name,
+                                confidence = TransactionConfidence.MANUAL.name,
+                                referenceNumber = pending.referenceNumber
+                            )
+                        )
+                        true
+                    }
+                    if (!logged) return@launch
 
                     // Trigger AutoBackup
                     val autoBackupManager = AutoBackupManager(context, db)

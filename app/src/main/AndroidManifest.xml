@@ -1,10 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Storage & Backup Permissions (Scoped Storage / SAF) -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" tools:ignore="ScopedStorage" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- Storage & Backup Permissions — requested like notification/sms so emulator (already granted) and
+         phone (not granted) both show a system popup after reinstall, enabling auto-backup read/write
+         for every entry. On API 30+ Documents/Hisab via File API requires All-files access. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
 
     <!-- SMS Payment Auto-Detection & Notification Permissions -->
     <uses-permission android:name="android.permission.RECEIVE_SMS" />

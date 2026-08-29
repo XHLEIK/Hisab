@@ -9,6 +9,7 @@ import com.example.hisab.data.db.entity.TransactionEntity
 import com.example.hisab.data.model.CategoryBreakdown
 import com.example.hisab.data.model.DailyTotal
 import com.example.hisab.data.model.TransactionType
+import com.example.hisab.util.SplitAccounting
 import com.example.hisab.data.repository.AccountRepository
 import com.example.hisab.data.repository.CategoryRepository
 import com.example.hisab.data.repository.TransactionRepository
@@ -138,11 +139,9 @@ class AnalyticsViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     val savingsAccountBalance: StateFlow<Double> = combine(allTransactions, accounts) { txns, accList ->
-        val savingsAcc = accList.firstOrNull { 
-            it.name.contains("Savings", ignoreCase = true) || it.type.equals("SAVINGS", ignoreCase = true)
-        }
+        val savingsAcc = accList.firstOrNull { SplitAccounting.isSavingsAccount(it) }
         val targetName = savingsAcc?.name ?: "Savings"
-        calculateBalanceForAccount(targetName, txns)
+        SplitAccounting.accountBalance(targetName, txns)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     val savingsAccountName: StateFlow<String> = accounts.map { list ->
@@ -193,7 +192,7 @@ class AnalyticsViewModel(
     val selectedSecondaryAccountName = MutableStateFlow<String?>(null)
 
     val primaryAccountBalance: StateFlow<Double> = combine(allTransactions, primaryAccountName) { txns, primaryName ->
-        calculateBalanceForAccount(primaryName, txns)
+        SplitAccounting.accountBalance(primaryName, txns)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     val secondaryAccounts: StateFlow<List<String>> = combine(accountNames, primaryAccountName) { names, primaryName ->
@@ -202,23 +201,8 @@ class AnalyticsViewModel(
 
     val selectedAccountBalance: StateFlow<Double> = combine(allTransactions, selectedSecondaryAccountName, secondaryAccounts) { txns, selected, secList ->
         val target = selected ?: secList.firstOrNull()
-        if (target != null) calculateBalanceForAccount(target, txns) else 0.0
+        if (target != null) SplitAccounting.accountBalance(target, txns) else 0.0
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
-
-    private fun calculateBalanceForAccount(accName: String, txns: List<TransactionEntity>): Double {
-        var balance = 0.0
-        txns.forEach { tx ->
-            if (tx.type == TransactionType.INCOME && tx.account == accName) {
-                balance += tx.amount
-            } else if (tx.type == TransactionType.EXPENSE && tx.account == accName) {
-                balance -= tx.amount
-            } else if (tx.type == TransactionType.TRANSFER) {
-                if (tx.account == accName) balance -= tx.amount
-                if (tx.toAccount == accName) balance += tx.amount
-            }
-        }
-        return balance
-    }
 
     // ── Category Breakdown with Filter & Dynamic MoM % ─────────────
     val categoryFilter = MutableStateFlow(CategoryFilterType.EXPENSE)

@@ -49,5 +49,8 @@ data class TransactionEntity(
     val confidence: String? = null,
 
     /** Bank-issued reference carried over from the originating SMS, if any. */
-    val referenceNumber: String? = null
+    val referenceNumber: String? = null,
+
+    /** Subtype; null on pre-v9 rows means NORMAL for backward compat. */
+    val subtype: String? = null
 )

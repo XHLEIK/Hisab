@@ -31,6 +31,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Code
@@ -72,6 +73,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -92,10 +94,19 @@ import com.example.hisab.data.model.TransactionType
 import com.example.hisab.data.repository.AccountRepository
 import com.example.hisab.data.repository.BackupRepository
 import com.example.hisab.data.repository.CategoryRepository
+import com.example.hisab.data.sms.PrefsSmsDiagnosticsLog
+import com.example.hisab.data.sms.SmsDiagnosticEntry
 import com.example.hisab.ui.components.AddAccountDialog
 import com.example.hisab.ui.components.CategoryEditDialog
 import com.example.hisab.ui.theme.HisabTheme
 import com.example.hisab.util.CategoryIconMapper
+import com.example.hisab.util.CurrencyFormatter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 import androidx.compose.foundation.layout.statusBarsPadding
 
@@ -143,6 +154,12 @@ fun SettingsScreen(
     var selectedExportFormat by remember { mutableStateOf<ExportFormat?>(null) }
     var showExportFormatDialog by remember { mutableStateOf(false) }
     var showOpenSourceDialog by remember { mutableStateOf(false) }
+
+    // Hidden SMS diagnostics viewer: five taps on the version line, the usual Android build-number
+    // gesture. Kept out of the way because it is a debugging aid for one reported class of bug, not a
+    // feature — but reachable without a debug build, because the bug only shows up on the user's phone.
+    var versionTapCount by remember { mutableStateOf(0) }
+    var showDiagnosticsDialog by remember { mutableStateOf(false) }
     var showPrivacyNoticeDialog by remember { mutableStateOf(false) }
     var showUserAgreementDialog by remember { mutableStateOf(false) }
     var showRestrictedSettingsDialog by remember { mutableStateOf(false) }
@@ -452,28 +469,36 @@ fun SettingsScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clickable {
+                                    versionTapCount++
+                                    if (versionTapCount >= VERSION_TAPS_FOR_DIAGNOSTICS) {
+                                        showDiagnosticsDialog = true
+                                    }
+                                }
                                 .padding(horizontal = 16.dp, vertical = 12.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "Hisab v3.1.2",
+                                    text = "Hisab v${com.example.hisab.util.AppVersion.name(context)}",
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = colors.textPrimary
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = "Build 312",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
+                                com.example.hisab.util.AppVersion.code(context)?.let { buildNumber ->
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "Build $buildNumber",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
                                 }
                             }
                             Spacer(modifier = Modifier.height(4.dp))
@@ -488,6 +513,22 @@ fun SettingsScreen(
                             color = colors.cardBorder.copy(alpha = 0.5f),
                             thickness = 0.5.dp
                         )
+
+                        // Revealed by the version-line gesture above, and it stays for the session so
+                        // the user isn't asked to tap five times again on the way back.
+                        if (versionTapCount >= VERSION_TAPS_FOR_DIAGNOSTICS) {
+                            SettingsItem(
+                                icon = Icons.Filled.BugReport,
+                                title = "SMS Auto-Logging Diagnostics",
+                                subtitle = "The last ${PrefsSmsDiagnosticsLog.CAPACITY} decisions the SMS pipeline made",
+                                onClick = { showDiagnosticsDialog = true }
+                            )
+
+                            androidx.compose.material3.HorizontalDivider(
+                                color = colors.cardBorder.copy(alpha = 0.5f),
+                                thickness = 0.5.dp
+                            )
+                        }
 
                         // Developer Credit Item
                         SettingsItem(
@@ -918,6 +959,11 @@ fun SettingsScreen(
                 }
             }
         )
+    }
+
+    // SMS Auto-Logging Diagnostics Dialog (hidden behind the version-line gesture)
+    if (showDiagnosticsDialog) {
+        SmsDiagnosticsDialog(onDismiss = { showDiagnosticsDialog = false })
     }
 
     // Privacy Notice Dialog
@@ -1652,6 +1698,113 @@ private fun ExportFormatDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
+            }
+        }
+    )
+}
+
+/** Taps on the version line that reveal the SMS diagnostics log. */
+private const val VERSION_TAPS_FOR_DIAGNOSTICS = 5
+
+/**
+ * Shows the SMS pipeline's decision log, newest first.
+ *
+ * This exists because the defect that prompted the v3.2.1 hardening — "bank SMS arrive but sometimes
+ * no notification appears" — was undiagnosable from the outside: nine different paths could end a
+ * message in silence and none of them left a trace. Each line here names the outcome and the reason,
+ * so the same report next time points at a gate instead of a guess.
+ */
+@Composable
+private fun SmsDiagnosticsDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val colors = HisabTheme.colors
+    val scope = rememberCoroutineScope()
+    val log = remember { PrefsSmsDiagnosticsLog(context) }
+
+    var entries by remember { mutableStateOf<List<SmsDiagnosticEntry>>(emptyList()) }
+    var reloadToken by remember { mutableStateOf(0) }
+
+    LaunchedEffect(reloadToken) {
+        entries = withContext(Dispatchers.IO) { log.recent() }
+    }
+
+    val stamp = remember { DateTimeFormatter.ofPattern("dd MMM HH:mm:ss") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("SMS Auto-Logging Diagnostics", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(vertical = 4.dp)
+            ) {
+                if (entries.isEmpty()) {
+                    Text(
+                        text = "Nothing logged yet. Entries appear here as bank messages are " +
+                            "processed — one line per message, whatever the outcome.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.textSecondary
+                    )
+                } else {
+                    Text(
+                        text = "Newest first. \"NOTIFIED\" means the notification was accepted by " +
+                            "Android, which is not the same as you having seen it.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.textTertiary
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    entries.forEach { entry ->
+                        val when0 = Instant.ofEpochMilli(entry.timestamp)
+                            .atZone(ZoneId.systemDefault()).format(stamp)
+                        val amount = entry.amount
+                            ?.let { CurrencyFormatter.format(it) }
+                            ?: "—"
+                        Text(
+                            text = "$when0  •  ${entry.sender}  •  $amount",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = colors.textTertiary
+                        )
+                        Text(
+                            text = buildString {
+                                append(entry.outcome)
+                                append("  [")
+                                append(entry.origin)
+                                append(']')
+                                entry.reason?.let { append("  —  ").append(it) }
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = when (entry.outcome) {
+                                "NOTIFIED", "MERGED", "RECOVERED" -> Color(0xFF10B981)
+                                "FAILED", "CLAIMED_NOT_NOTIFIED", "RECOVERY_FAILED" -> Color(0xFFEF4444)
+                                else -> colors.textSecondary
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            if (entries.isNotEmpty()) {
+                TextButton(
+                    onClick = {
+                        // Clear off the main thread, bump the token back on it: the token drives
+                        // recomposition, so it belongs where Compose expects state writes.
+                        scope.launch {
+                            withContext(Dispatchers.IO) { log.clear() }
+                            reloadToken++
+                        }
+                    }
+                ) {
+                    Text("Clear log")
+                }
             }
         }
     )

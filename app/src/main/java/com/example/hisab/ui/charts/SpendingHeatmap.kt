@@ -23,6 +23,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,7 +44,33 @@ fun SpendingHeatmap(
     val firstDayOfWeek = yearMonth.atDay(1).dayOfWeek.value // 1=Mon, 7=Sun
     val dailyMap = remember(data) { data.associate { it.date.dayOfMonth to it.totalAmount } }
     val maxAmount = remember(data) { data.maxOfOrNull { it.totalAmount } ?: 1.0 }
-    val minAmount = remember(data) { data.filter { it.totalAmount > 0 }.minOfOrNull { it.totalAmount } ?: 0.0 }
+
+    fun lerpColor(a: Color, b: Color, t: Float): Color {
+        return Color(
+            red = a.red + (b.red - a.red) * t,
+            green = a.green + (b.green - a.green) * t,
+            blue = a.blue + (b.blue - a.blue) * t,
+            alpha = a.alpha + (b.alpha - a.alpha) * t
+        )
+    }
+
+    // Continuous color gradient: light green (lowest expense) → yellow → orange → dark red (highest)
+    // Each day gets a unique shade based on its position relative to the max.
+    fun expenseColor(intensity: Float): Color {
+        val stops = listOf(
+            0.0f to Color(0xFFC8E6C9),
+            0.25f to Color(0xFFA5D6A7),
+            0.50f to Color(0xFFFFF176),
+            0.75f to Color(0xFFFFCC80),
+            1.0f to Color(0xFFEF5350)
+        )
+        val lower = stops.last { it.first <= intensity }
+        val upper = stops.first { it.first >= intensity }
+        if (lower == upper) return lower.second
+        val range = upper.first - lower.first
+        val t = if (range > 0f) (intensity - lower.first) / range else 0f
+        return lerpColor(lower.second, upper.second, t)
+    }
 
     val totalCells = firstDayOfWeek - 1 + daysInMonth
     val weeks = (totalCells + 6) / 7
@@ -106,16 +133,13 @@ fun SpendingHeatmap(
 
                         if (day in 1..daysInMonth) {
                             val amount = dailyMap[day] ?: 0.0
-                            val intensity = if (amount <= 0) 0f
-                                else if (maxAmount > minAmount) ((amount - minAmount) / (maxAmount - minAmount)).toFloat()
-                                else 1f
+                            // Relative grading: 0.0 = no expense, 1.0 = highest expense day
+                            val intensity = if (amount <= 0 || maxAmount <= 0) 0f
+                                else (amount / maxAmount).toFloat()
 
                             val cellColor = when {
                                 amount <= 0 -> colors.heatmapZero
-                                intensity < 0.25f -> colors.heatmapLow
-                                intensity < 0.50f -> colors.heatmapMedium
-                                intensity < 0.75f -> colors.heatmapHigh
-                                else -> colors.heatmapMax
+                                else -> expenseColor(intensity)
                             }
 
                             val x = dayOfWeek * (cellSizePx + cellPaddingPx)
@@ -160,10 +184,12 @@ fun SpendingHeatmap(
 
             val legendColors = listOf(
                 colors.heatmapZero,
-                colors.heatmapLow,
-                colors.heatmapMedium,
-                colors.heatmapHigh,
-                colors.heatmapMax
+                expenseColor(0.1f),
+                expenseColor(0.3f),
+                expenseColor(0.5f),
+                expenseColor(0.7f),
+                expenseColor(0.9f),
+                expenseColor(1.0f)
             )
             Canvas(modifier = Modifier.width(100.dp).height(14.dp)) {
                 val boxWidth = size.width / legendColors.size

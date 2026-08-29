@@ -1,19 +1,35 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android Auto Backup rules for API 31+ (targetSdk is 36, so this is the file that applies;
+    backup_rules.xml covers API 28-30).
+
+    This is what makes the ledger survive an uninstall/reinstall without any storage permission.
+    AutoBackupManager.performBackup() always writes hisab_auto_backup.json to filesDir/backups/
+    before it attempts shared Documents, and restoreIfEmpty() reads that app-private copy first —
+    so including this one directory is enough for a reinstall to come back with its data.
+
+    Why an explicit <include> rather than backing everything up:
+
+      * The Room database is deliberately NOT backed up. Room runs in WAL mode, so a live .db is
+        only consistent together with its -wal/-shm sidecars; a backup taken mid-write restores a
+        torn database. The JSON snapshot has no such hazard, and restoreFromJson() rebuilds the
+        database from it.
+
+      * SharedPreferences are deliberately NOT backed up, because "sms_processed_hashes" lives
+        there. That file is the INV-1 performance cache, and peek()==true is by definition a safe
+        skip. Restoring stale "already seen" marks alongside a JSON-rebuilt database would make
+        the catch-up scan skip messages that never made it into the restored ledger — losing
+        transactions outright. Room is the sole dedup authority (INV-2); the cache must never be
+        restored ahead of it.
+
+    An <include> list is exclusive, so both exclusions hold by construction. If you ever broaden
+    this, re-read the two points above first.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <include domain="file" path="backups/" />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <include domain="file" path="backups/" />
     </device-transfer>
-    -->
 </data-extraction-rules>

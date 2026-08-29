@@ -10,6 +10,11 @@ data class ParsedBankSms(
     val accountLast4: String? = null,
     val merchantOrPayee: String? = null,
     val endingBalance: Double? = null,
+    /**
+     * Bank-issued transaction reference, already normalised and validated by [SmsReference].
+     * `null` means "no reference this parse can vouch for" — never a best-effort guess.
+     */
+    val referenceNumber: String? = null,
     val rawBody: String
 )
 
@@ -130,10 +135,34 @@ object SmsBankParser {
     )
 
     // ── Merchant / Payee Extraction Patterns ──────────────────────────────
+    // `ref` was removed from the second alternation: it swept the reference number into
+    // merchantOrPayee, so "UPI Ref No 313159087592" produced a payee of "313159087592".
+    // References now have a field of their own (see REFERENCE_PATTERNS).
     private val MERCHANT_PATTERNS = listOf(
         Pattern.compile("(?:cr\\.?\\s+to|to|at|info:)\\s+([a-zA-Z0-9\\s&\\.'-]{2,25})(?:\\s+on|\\s+ref|\\s+via|\\s+a/c|\\.|,|\\$) ", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("(?:vpa|upi|ref)\\s+([a-zA-Z0-9\\.@_-]{3,30})", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("(?:vpa|upi)\\s+([a-zA-Z0-9\\.@_-]{3,30})", Pattern.CASE_INSENSITIVE),
         Pattern.compile("(?:cr\\.?\\s+to)\\s+([a-zA-Z0-9\\.@_-]{3,35})", Pattern.CASE_INSENSITIVE)
+    )
+
+    /**
+     * Structural words the merchant patterns can capture when the real payee sits elsewhere in the
+     * body — "Dear BOB UPI User:" yields "User", which is worse than no payee at all because it is
+     * shown verbatim in the auto-logging notification.
+     */
+    private val MERCHANT_STOP_WORDS = setOf(
+        "USER", "REF", "REFERENCE", "NO", "ON", "BAL", "AVLBAL", "AVAILABLE", "BALANCE",
+        "TXN", "TRANSACTION", "RRN", "UTR", "ID", "DR", "CR", "AC", "ACCOUNT"
+    )
+
+    // ── Reference Number Extraction Patterns ──────────────────────────────
+    // Ordered most-specific label first. Each requires a word boundary after the label, so
+    // "Refund123456" cannot masquerade as reference "UND123456" — a missed reference costs nothing
+    // (SmsHash falls back to its body tier) whereas a fabricated one corrupts transaction identity.
+    private val REFERENCE_PATTERNS = listOf(
+        Pattern.compile("\\b(?:upi\\s+)?rrn(?:\\s*(?:no|number))?\\b\\s*[:#.\\-]?\\s*([a-zA-Z0-9]+)", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("\\butr(?:\\s*(?:no|number))?\\b\\s*[:#.\\-]?\\s*([a-zA-Z0-9]+)", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("\\b(?:txn|transaction|tran)\\s*(?:id|no|number|ref(?:erence)?)\\b\\s*[:#.\\-]?\\s*([a-zA-Z0-9]+)", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("\\b(?:upi\\s+)?ref(?:erence)?(?:\\s*(?:no|number))?\\b\\s*[:#.\\-]?\\s*([a-zA-Z0-9]+)", Pattern.CASE_INSENSITIVE)
     )
 
     // ── Ending Balance Extraction Patterns ────────────────────────────────
@@ -195,9 +224,10 @@ object SmsBankParser {
         val endingBalance = extractEndingBalance(cleanBody)
         val type = determineTransactionDirection(cleanBody, amount, endingBalance) ?: return null
 
-        // ── Stage 5: Optional Account, Merchant Extraction ───────────
+        // ── Stage 5: Optional Account, Merchant, Reference Extraction ─
         val accountLast4 = extractAccountLast4(cleanBody)
         val merchantOrPayee = extractMerchant(cleanBody)
+        val referenceNumber = extractReferenceNumber(cleanBody)
 
         return ParsedBankSms(
             amount = amount,
@@ -207,6 +237,7 @@ object SmsBankParser {
             accountLast4 = accountLast4,
             merchantOrPayee = merchantOrPayee,
             endingBalance = endingBalance,
+            referenceNumber = referenceNumber,
             rawBody = cleanBody
         )
     }
@@ -356,11 +387,30 @@ object SmsBankParser {
     private fun extractMerchant(body: String): String? {
         for (pattern in MERCHANT_PATTERNS) {
             val matcher = pattern.matcher(body)
-            if (matcher.find()) {
-                val name = matcher.group(1)?.trim()
-                if (!name.isNullOrEmpty() && name.length >= 2) {
-                    return name
-                }
+            while (matcher.find()) {
+                val name = matcher.group(1)?.trim() ?: continue
+                if (name.length < 2) continue
+                if (name.uppercase() in MERCHANT_STOP_WORDS) continue
+                return name
+            }
+        }
+        return null
+    }
+
+    /**
+     * Extracts the bank-issued reference number, or `null` when none can be vouched for.
+     *
+     * Every match of every pattern is offered to [SmsReference.normalize] and the first *accepted*
+     * one wins. Iterating past a rejected match matters: bodies routinely contain a decoy earlier
+     * than the real reference ("...refund of Rs 40 ... Ref:623681255058"), and stopping at the first
+     * regex hit would discard the genuine reference.
+     */
+    private fun extractReferenceNumber(body: String): String? {
+        for (pattern in REFERENCE_PATTERNS) {
+            val matcher = pattern.matcher(body)
+            while (matcher.find()) {
+                val normalized = SmsReference.normalize(matcher.group(1))
+                if (normalized != null) return normalized
             }
         }
         return null

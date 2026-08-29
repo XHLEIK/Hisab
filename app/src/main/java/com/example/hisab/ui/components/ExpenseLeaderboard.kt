@@ -32,7 +32,6 @@ import com.example.hisab.data.db.entity.TransactionEntity
 import com.example.hisab.data.model.TransactionType
 import com.example.hisab.ui.theme.ExpenseRed
 import com.example.hisab.ui.theme.HisabTheme
-import com.example.hisab.util.CategoryIconMapper
 import com.example.hisab.util.CurrencyFormatter
 
 private data class CategoryExpenseSummary(

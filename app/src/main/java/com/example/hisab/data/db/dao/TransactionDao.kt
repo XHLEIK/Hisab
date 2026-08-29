@@ -64,6 +64,41 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE sourceMessageHash = :hash LIMIT 1")
     suspend fun getBySourceHash(hash: String): TransactionEntity?
 
+    /**
+     * User-entered transactions on one account inside a wall-clock window, used to net the balance the
+     * app *should* expect before it accuses the user of an unlogged transaction.
+     *
+     * Two filters carry the whole meaning:
+     *
+     * `(source = 'MANUAL' OR source IS NULL) AND sourceMessageHash IS NULL` — only movements the app
+     * learned about from the **user**. Anything derived from a bank message is deliberately excluded:
+     * that message's own `AvlBal` was already written into `accounts.lastKnownBalance` when it was
+     * processed, so netting it again double-counts and manufactures a discrepancy exactly the size of
+     * the transaction. This is the same "the user entered this" definition
+     * [findMatchingManualTransaction] uses, on purpose — one notion of manual, not two.
+     *
+     * `createdAt` rather than `date` — the window's endpoints are `accounts.lastBalanceTimestamp` and
+     * an SMS timestamp, both epoch millis, while `date` is only day-granular. A back-dated hand entry
+     * therefore nets into the window it was *entered* in, which is the conservative direction: netting
+     * can only shrink a discrepancy, never invent one.
+     */
+    @Query(
+        """
+        SELECT * FROM transactions
+        WHERE createdAt > :afterCreatedAt AND createdAt <= :untilCreatedAt
+          AND (account = :account OR toAccount = :account)
+          AND (source = 'MANUAL' OR source IS NULL)
+          AND sourceMessageHash IS NULL
+          AND (subtype IS NULL OR subtype != 'SPLIT_REIMBURSEMENT')
+        ORDER BY createdAt ASC
+        """
+    )
+    suspend fun getUserEnteredForAccountBetween(
+        account: String,
+        afterCreatedAt: Long,
+        untilCreatedAt: Long
+    ): List<TransactionEntity>
+
     // ── Monthly Queries ──────────────────────────────────
 
     @Query("""
@@ -89,10 +124,16 @@ interface TransactionDao {
     fun getTotalIncome(startDate: LocalDate, endDate: LocalDate): Flow<Double>
 
     @Query("""
-        SELECT COALESCE(SUM(amount), 0.0) FROM transactions 
-        WHERE type = 'EXPENSE' AND date >= :startDate AND date <= :endDate
+        SELECT COALESCE(SUM(CASE WHEN subtype = 'SPLIT_REIMBURSEMENT' THEN -amount ELSE amount END), 0.0)
+        FROM transactions WHERE type = 'EXPENSE' AND date >= :startDate AND date <= :endDate
     """)
     fun getTotalExpense(startDate: LocalDate, endDate: LocalDate): Flow<Double>
+
+    @Query("""
+        SELECT COALESCE(SUM(amount), 0.0) FROM transactions 
+        WHERE type = 'EXPENSE' AND subtype = 'SPLIT_REIMBURSEMENT' AND date >= :startDate AND date <= :endDate
+    """)
+    fun getTotalSplitReimbursement(startDate: LocalDate, endDate: LocalDate): Flow<Double>
 
     @Query("""
         SELECT COUNT(*) FROM transactions 
@@ -105,7 +146,7 @@ interface TransactionDao {
     @Query("""
         SELECT date, SUM(amount) as totalAmount 
         FROM transactions 
-        WHERE type = :type AND date >= :startDate AND date <= :endDate
+        WHERE type = :type AND (subtype IS NULL OR subtype != 'SPLIT_REIMBURSEMENT') AND date >= :startDate AND date <= :endDate
         GROUP BY date 
         ORDER BY date ASC
     """)
@@ -123,7 +164,7 @@ interface TransactionDao {
             COUNT(t.id) as transactionCount
         FROM transactions t
         INNER JOIN categories c ON t.categoryId = c.id
-        WHERE t.type = :type AND t.date >= :startDate AND t.date <= :endDate
+        WHERE t.type = :type AND (t.subtype IS NULL OR t.subtype != 'SPLIT_REIMBURSEMENT') AND t.date >= :startDate AND t.date <= :endDate
         GROUP BY t.categoryId
         ORDER BY totalAmount DESC
     """)
@@ -173,7 +214,7 @@ interface TransactionDao {
     @Query("""
         SELECT date, SUM(amount) as totalAmount 
         FROM transactions 
-        WHERE type = 'EXPENSE' AND date >= :startDate AND date <= :endDate
+        WHERE type = 'EXPENSE' AND (subtype IS NULL OR subtype != 'SPLIT_REIMBURSEMENT') AND date >= :startDate AND date <= :endDate
         GROUP BY date 
         ORDER BY totalAmount DESC 
         LIMIT 1
@@ -196,6 +237,20 @@ interface TransactionDao {
 
     @Query("UPDATE transactions SET categoryId = (SELECT id FROM categories WHERE type = 'TRANSFER' AND name = 'Savings' LIMIT 1) WHERE type = 'TRANSFER' AND (categoryId IN (SELECT id FROM categories WHERE type != 'TRANSFER') OR categoryId NOT IN (SELECT id FROM categories))")
     suspend fun repairCorruptedTransferCategories()
+
+    // ── Split Reimbursement — gross / reimbursed / net (single source of truth via SplitAccounting) ──
+
+    @Query("SELECT COALESCE(SUM(amount), 0.0) FROM transactions WHERE type = 'EXPENSE' AND (subtype IS NULL OR subtype = 'NORMAL') AND categoryId = :categoryId")
+    suspend fun getGrossExpenseForCategory(categoryId: Long): Double
+
+    @Query("SELECT COALESCE(SUM(amount), 0.0) FROM transactions WHERE type = 'EXPENSE' AND subtype = 'SPLIT_REIMBURSEMENT' AND categoryId = :categoryId")
+    suspend fun getSplitReimbursementForCategory(categoryId: Long): Double
+
+    @Query("SELECT COALESCE(SUM(amount), 0.0) FROM transactions WHERE type = 'EXPENSE' AND (subtype IS NULL OR subtype = 'NORMAL') AND date >= :startDate AND date <= :endDate")
+    suspend fun getGrossExpenseBetween(startDate: LocalDate, endDate: LocalDate): Double
+
+    @Query("SELECT COALESCE(SUM(amount), 0.0) FROM transactions WHERE type = 'EXPENSE' AND subtype = 'SPLIT_REIMBURSEMENT' AND date >= :startDate AND date <= :endDate")
+    suspend fun getSplitReimbursementBetween(startDate: LocalDate, endDate: LocalDate): Double
 }
 
 /**

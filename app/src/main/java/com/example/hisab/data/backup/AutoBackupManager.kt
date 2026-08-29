@@ -39,7 +39,7 @@ class AutoBackupManager(
 
     companion object {
         private const val TAG = "AutoBackupManager"
-        private const val BACKUP_VERSION = 6
+        private const val BACKUP_VERSION = 7
         private const val MAIN_BACKUP_NAME = "hisab_auto_backup.json"
     }
 
@@ -75,75 +75,198 @@ class AutoBackupManager(
     }
 
     /**
-     * Exports full JSON backup string.
+     * Exports a JSON backup string.
+     *
+     * [transactions] lets a caller narrow the ledger to rows it already selected — the month-scoped
+     * export is the reason this exists. Accounts and categories always come along in full: a
+     * transaction row is meaningless without the account and category it points at. Pending bank
+     * rows are unlogged suggestions belonging to no month's ledger, so [includePending] drops them
+     * from a scoped export while the full backup keeps them.
      */
-    suspend fun exportBackupString(): String = withContext(Dispatchers.IO) {
-        val transactions = database.transactionDao().getAllTransactionsSync()
-        val categories = database.categoryDao().getAllSync()
-        val accounts = database.accountDao().getAllSync()
-        val pendingTxs = database.pendingTransactionDao().getAllPendingSync()
-        serializeToJson(transactions, categories, accounts, pendingTxs)
+    suspend fun exportBackupString(
+        transactions: List<TransactionEntity>? = null,
+        includePending: Boolean = true
+    ): String = withContext(Dispatchers.IO) {
+        serializeToJson(
+            transactions ?: database.transactionDao().getAllTransactionsSync(),
+            database.categoryDao().getAllSync(),
+            database.accountDao().getAllSync(),
+            if (includePending) database.pendingTransactionDao().getAllPendingSync() else emptyList()
+        )
     }
 
     /**
-     * Saves backup content to Documents/Hisab/hisab_auto_backup.json using MediaStore and File API.
+     * Saves backup content to Documents/Hisab/hisab_auto_backup.json.
+     *
+     * SINGLE-FILE DISCIPLINE: exactly ONE public backup file may exist.
+     *
+     * On Android 10+ (scoped storage), ALWAYS use MediaStore UPSERT — POSIX writes to
+     * external Documents silently succeed on some OEMs but produce files invisible to other
+     * apps, and then a subsequent MediaStore insert creates a deconflicted (1), (2) copy.
+     * Bypassing POSIX entirely on API 29+ eliminates the dual-write that causes duplicates.
+     *
+     * On Android 9 and below, POSIX write works reliably — no MediaStore needed.
      */
     private fun saveToDocumentsFolder(jsonContent: String) {
         try {
-            // 1. Direct POSIX writing to all available external documents directories
-            val targetDirNames = listOf("Hisab", "")
-            val posixParentDirs = listOfNotNull(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                File("/storage/emulated/0/Documents"),
-                File("/storage/emulated/0/Download"),
-                context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
-                context.getExternalFilesDir(null)
-            )
-
-            for (parentDir in posixParentDirs) {
-                for (dirName in targetDirNames) {
-                    try {
-                        val dir = if (dirName.isEmpty()) parentDir else File(parentDir, dirName)
-                        if (!dir.exists()) dir.mkdirs()
-                        val file = File(dir, MAIN_BACKUP_NAME)
-                        file.writeText(jsonContent, Charsets.UTF_8)
-                    } catch (_: Exception) {}
-                }
-            }
-
-            // 2. MediaStore insertion for Android 10+ (API 29+) scoped storage indexing
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val resolver = context.contentResolver
-                val queryUri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-                val selection = "${MediaStore.Files.FileColumns.DISPLAY_NAME} = ? AND ${MediaStore.Files.FileColumns.RELATIVE_PATH} LIKE ?"
-                val selectionArgs = arrayOf(MAIN_BACKUP_NAME, "%Documents/Hisab%")
+                // Android 10+: scoped storage — MediaStore is the ONLY reliable path.
+                upsertMediaStoreBackup(jsonContent)
+            } else {
+                // Android 9 and below: POSIX writes work directly.
+                val hisabDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "Hisab")
+                try {
+                    if (!hisabDir.exists()) hisabDir.mkdirs()
+                    File(hisabDir, MAIN_BACKUP_NAME).writeText(jsonContent, Charsets.UTF_8)
+                } catch (_: Exception) {}
+            }
+            cleanupStrayBackupFiles()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to write to public Documents folder", e)
+        }
+    }
 
-                val existingUri = resolver.query(queryUri, arrayOf(MediaStore.Files.FileColumns._ID), selection, selectionArgs, null)?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID))
-                        MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY, id)
-                    } else null
-                }
+    /**
+     * MediaStore upsert for devices where direct File access is blocked (scoped storage).
+     * Matches ALL hisab_auto_backup*.json variants in Documents/Hisab, updates the canonical
+     * row, or renames the newest "(N)" variant back to the canonical name instead of letting
+     * Android create yet another deconflicted duplicate.
+     */
+    private fun upsertMediaStoreBackup(jsonContent: String) {
+        val resolver = context.contentResolver
+        val queryUri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+        val selection = "${MediaStore.Files.FileColumns.DISPLAY_NAME} LIKE ? AND ${MediaStore.Files.FileColumns.RELATIVE_PATH} LIKE ?"
+        val selectionArgs = arrayOf("hisab_auto_backup%.json", "%Documents/Hisab%")
 
-                val targetUri = existingUri ?: run {
-                    val contentValues = ContentValues().apply {
-                        put(MediaStore.Files.FileColumns.DISPLAY_NAME, MAIN_BACKUP_NAME)
-                        put(MediaStore.Files.FileColumns.MIME_TYPE, "application/json")
-                        put(MediaStore.Files.FileColumns.RELATIVE_PATH, "Documents/Hisab/")
-                        put(MediaStore.Files.FileColumns.IS_PENDING, 0)
-                    }
-                    resolver.insert(queryUri, contentValues)
-                }
-
-                targetUri?.let { uri ->
-                    resolver.openOutputStream(uri, "wt")?.use { out ->
-                        out.write(jsonContent.toByteArray(Charsets.UTF_8))
-                    }
+        data class Row(val id: Long, val name: String, val modified: Long)
+        val rows = mutableListOf<Row>()
+        try {
+            resolver.query(
+                queryUri,
+                arrayOf(MediaStore.Files.FileColumns._ID, MediaStore.Files.FileColumns.DISPLAY_NAME, MediaStore.Files.FileColumns.DATE_MODIFIED),
+                selection, selectionArgs, null
+            )?.use { cursor ->
+                val idIdx = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+                val nameIdx = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+                val modIdx = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)
+                while (cursor.moveToNext()) {
+                    rows.add(Row(cursor.getLong(idIdx), cursor.getString(nameIdx) ?: "", cursor.getLong(modIdx)))
                 }
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to write to public Documents folder", e)
+            Log.w(TAG, "MediaStore backup lookup failed", e)
+        }
+
+        val exact = rows.firstOrNull { it.name.equals(MAIN_BACKUP_NAME, ignoreCase = true) }
+        val newestVariant = rows.filter { !it.name.equals(MAIN_BACKUP_NAME, ignoreCase = true) }.maxByOrNull { it.modified }
+
+        val targetUri: android.net.Uri? = when {
+            exact != null -> MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY, exact.id)
+            newestVariant != null -> {
+                // Reclaim a deconflicted duplicate: rename it to the canonical name instead of
+                // inserting yet another (N) file.
+                val renamed = try {
+                    resolver.update(
+                        MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY, newestVariant.id),
+                        ContentValues().apply { put(MediaStore.Files.FileColumns.DISPLAY_NAME, MAIN_BACKUP_NAME) },
+                        null, null
+                    )
+                    true
+                } catch (_: Exception) {
+                    false
+                }
+                if (renamed) MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY, newestVariant.id) else null
+            }
+            else -> {
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.Files.FileColumns.DISPLAY_NAME, MAIN_BACKUP_NAME)
+                    put(MediaStore.Files.FileColumns.MIME_TYPE, "application/json")
+                    put(MediaStore.Files.FileColumns.RELATIVE_PATH, "Documents/Hisab/")
+                    put(MediaStore.Files.FileColumns.IS_PENDING, 1)
+                }
+                resolver.insert(queryUri, contentValues)
+            }
+        }
+
+        targetUri?.let { uri ->
+            try {
+                resolver.openOutputStream(uri, "wt")?.use { out ->
+                    out.write(jsonContent.toByteArray(Charsets.UTF_8))
+                }
+                // Clear IS_PENDING so the file is visible (no-op update on a pre-existing row).
+                resolver.update(uri, ContentValues().apply { put(MediaStore.Files.FileColumns.IS_PENDING, 0) }, null, null)
+            } catch (e: Exception) {
+                Log.w(TAG, "MediaStore backup write failed", e)
+                // Only clean up a row this call created — never a pre-existing file we merely updated.
+                if (exact == null && newestVariant == null) {
+                    try { resolver.delete(uri, null, null) } catch (_: Exception) {}
+                }
+            }
+        }
+
+        // Single-file discipline: drop any leftover variant rows we can remove (best effort).
+        val keepId = targetUri?.lastPathSegment?.toLongOrNull() ?: -1L
+        rows.filter { it.id != keepId }.forEach { row ->
+            try { resolver.delete(MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY, row.id), null, null) } catch (_: Exception) {}
+        }
+    }
+
+    /**
+     * Only ONE backup file may exist: Documents/Hisab/hisab_auto_backup.json.
+     * Best-effort removal of "(N)" deconflicted variants everywhere and of the old fan-out
+     * copies that previous versions scattered into the Documents/Downloads roots.
+     */
+    private fun cleanupStrayBackupFiles() {
+        // Search both Hisab/ subdirectory AND the parent directories (Documents/, Download/)
+        // for stray backup files. Previous versions scattered copies in the parent root.
+        val dirs = listOfNotNull(
+            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "Hisab"),
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
+            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Hisab"),
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+            File("/storage/emulated/0/Documents/Hisab"),
+            File("/storage/emulated/0/Documents"),
+            File("/storage/emulated/0/Download/Hisab"),
+            File("/storage/emulated/0/Download"),
+            File("/sdcard/Documents"),
+            File("/sdcard/Download")
+        )
+        for (dir in dirs) {
+            try {
+                val files = dir.listFiles() ?: continue
+                for (f in files) {
+                    if (!f.isFile) continue
+                    val name = f.name.lowercase()
+                    if (!name.startsWith("hisab_auto_backup") || !name.endsWith(".json")) continue
+                    val inHisabDir = f.parentFile?.name.equals("Hisab", ignoreCase = true)
+                    val isCanonical = name == MAIN_BACKUP_NAME && inHisabDir
+                    if (!isCanonical) try { f.delete() } catch (_: Exception) {}
+                }
+            } catch (_: Exception) {}
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                val resolver = context.contentResolver
+                val queryUri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                val selection = "${MediaStore.Files.FileColumns.DISPLAY_NAME} LIKE ? AND ${MediaStore.Files.FileColumns.RELATIVE_PATH} LIKE ?"
+                resolver.query(
+                    queryUri,
+                    arrayOf(MediaStore.Files.FileColumns._ID, MediaStore.Files.FileColumns.DISPLAY_NAME),
+                    selection,
+                    arrayOf("hisab_auto_backup%.json", "%Documents/Hisab%"),
+                    null
+                )?.use { cursor ->
+                    val idIdx = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+                    val nameIdx = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+                    while (cursor.moveToNext()) {
+                        val name = cursor.getString(nameIdx) ?: ""
+                        if (name.equals(MAIN_BACKUP_NAME, ignoreCase = true)) continue
+                        val rowUri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY, cursor.getLong(idIdx))
+                        try { resolver.delete(rowUri, null, null) } catch (_: Exception) {}
+                    }
+                }
+            } catch (_: Exception) {}
         }
     }
 
@@ -171,6 +294,11 @@ class AutoBackupManager(
 
     /**
      * Attempts auto-restore if database is empty on fresh install.
+     *
+     * The internal copy is carried across reinstalls by Android Auto Backup, but a stale
+     * cloud snapshot can exist with zero transactions — that was the "backup imported"
+     * toast with nothing actually restored. Both candidates are now compared by how much
+     * data they actually contain and success is only reported when rows really landed.
      */
     suspend fun restoreIfEmpty(): Boolean = withContext(Dispatchers.IO) {
         try {
@@ -178,25 +306,95 @@ class AutoBackupManager(
                 return@withContext false
             }
 
+            data class Candidate(val json: String, val txCount: Int)
+            val candidates = mutableListOf<Candidate>()
+
             val internalFile = File(File(context.filesDir, "backups"), MAIN_BACKUP_NAME)
-            val jsonStr = if (internalFile.exists() && internalFile.length() > 0) {
-                internalFile.readText(Charsets.UTF_8)
-            } else {
-                readFromDocumentsFolder()
+            if (internalFile.exists() && internalFile.length() > 0) {
+                val content = runCatching { internalFile.readText(Charsets.UTF_8) }.getOrNull()
+                if (content != null && isValidBackupJson(content)) {
+                    candidates.add(Candidate(content, JSONObject(content).optJSONArray("transactions")!!.length()))
+                }
             }
 
-            if (!jsonStr.isNullOrBlank()) {
-                return@withContext restoreFromJson(jsonStr)
+            val external = readFromDocumentsFolder()
+            if (external != null && isValidBackupJson(external)) {
+                candidates.add(Candidate(external, JSONObject(external).optJSONArray("transactions")!!.length()))
             }
-            false
+
+            val best = candidates.maxByOrNull { it.txCount } ?: return@withContext false
+            if (best.txCount <= 0) return@withContext false
+
+            val restored = restoreFromJson(best.json)
+            // Honesty guarantee: report success only if data actually landed in the database.
+            restored && database.transactionDao().getAllTransactionsSync().isNotEmpty()
         } catch (e: Exception) {
             Log.e(TAG, "Auto-restore failed", e)
             false
         }
     }
 
+    suspend fun getBackupTransactionCount(context: Context): Int = withContext(Dispatchers.IO) {
+        try {
+            val jsonStr = readFromDocumentsFolder()
+                ?: run {
+                    val internalFile = File(File(context.filesDir, "backups"), MAIN_BACKUP_NAME)
+                    if (internalFile.exists() && internalFile.length() > 0) internalFile.readText(Charsets.UTF_8) else null
+                }
+            if (jsonStr.isNullOrBlank()) return@withContext 0
+            val root = JSONObject(jsonStr)
+            root.optJSONArray("transactions")?.length() ?: 0
+        } catch (e: Exception) {
+            0
+        }
+    }
+
+    suspend fun restoreFromUri(context: Context, uri: android.net.Uri): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val jsonStr = context.contentResolver.openInputStream(uri)?.use { it.bufferedReader(Charsets.UTF_8).readText() }
+            if (jsonStr.isNullOrBlank() || !isValidBackupJson(jsonStr)) return@withContext false
+            val restored = restoreFromJson(jsonStr)
+            if (restored) {
+                // Make the restored file app-owned so future launches (and Android Auto
+                // Backup) always have the authoritative copy internally.
+                try {
+                    val internalDir = File(context.filesDir, "backups")
+                    if (!internalDir.exists()) internalDir.mkdirs()
+                    File(internalDir, MAIN_BACKUP_NAME).writeText(jsonStr, Charsets.UTF_8)
+                } catch (_: Exception) {}
+            }
+            restored
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to restore from uri $uri", e)
+            false
+        }
+    }
+
+    /** Structural validation: a Hisab backup must parse as JSON and carry a non-empty transactions array. */
+    private fun isValidBackupJson(content: String): Boolean = try {
+        val arr = JSONObject(content).optJSONArray("transactions")
+        arr != null && arr.length() > 0
+    } catch (_: Exception) {
+        false
+    }
+
+    private data class BackupCandidate(val content: String, val lastModified: Long, val isCanonical: Boolean)
+
+    /**
+     * Finds the best backup file from external storage.
+     *
+     * Priority: canonical name (hisab_auto_backup.json) in Hisab/ directory wins when it has
+     * transactions. Only falls back to "(N)" variants or other locations when the canonical
+     * file is missing or empty. Among candidates with the same transaction count, the most
+     * recently modified wins.
+     */
     private fun readFromDocumentsFolder(): String? {
-        // ── Step 1: Direct File System Search Across All Directories ─────────
+        val candidates = mutableListOf<BackupCandidate>()
+
+        // ── Step 1: Direct File System Search ──────────────────────────────
+        // Accept BOTH the canonical name AND deconflicted "(N)" variants.
+        // Previous app versions could leave hisab_auto_backup(1).json, (2).json, etc.
+        // when POSIX and MediaStore writes raced each other.
         val searchDirectories = listOfNotNull(
             File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "Hisab"),
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
@@ -206,10 +404,7 @@ class AutoBackupManager(
             File("/storage/emulated/0/Documents"),
             File("/storage/emulated/0/Download/Hisab"),
             File("/storage/emulated/0/Download"),
-            File("/sdcard/Documents/Hisab"),
-            File("/sdcard/Download"),
-            context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
-            context.getExternalFilesDir(null)
+            context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
         )
 
         for (dir in searchDirectories) {
@@ -217,55 +412,87 @@ class AutoBackupManager(
                 if (!dir.exists() || !dir.isDirectory) continue
                 val files = dir.listFiles() ?: continue
                 for (f in files) {
-                    if (f.isFile && f.length() > 0 && (f.name.endsWith(".json", ignoreCase = true) || f.name.equals(MAIN_BACKUP_NAME, ignoreCase = true))) {
+                    if (!f.isFile || f.length() == 0L) continue
+                    val nameLower = f.name.lowercase()
+                    // Accept any file whose name starts with "hisab_auto_backup" and ends with .json
+                    if (!nameLower.startsWith("hisab_auto_backup") || !nameLower.endsWith(".json")) continue
+                    val isCanonical = f.name.equals(MAIN_BACKUP_NAME, ignoreCase = true)
+                    try {
                         val content = f.readText(Charsets.UTF_8)
-                        if (content.contains("\"transactions\"")) {
-                            Log.d(TAG, "Found valid backup file at ${f.absolutePath}")
-                            return content
+                        if (isValidBackupJson(content)) {
+                            candidates.add(BackupCandidate(content, f.lastModified(), isCanonical))
                         }
-                    }
+                    } catch (_: Exception) {}
                 }
             } catch (_: Exception) {}
         }
 
-        // ── Step 2: MediaStore Query for Android 10+ (API 29+) ───────────────
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val volumeUris = listOf(
-                MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY),
-                MediaStore.Files.getContentUri("external")
+        // If any POSIX files found, use the best one (canonical wins, then most txns, then newest).
+        // Skip MediaStore — it may have stale indexed copies from before the duplication fix.
+        val posixBest = candidates
+            .sortedWith(
+                compareByDescending<BackupCandidate> { it.isCanonical }
+                    .thenByDescending { countTransactions(it.content) }
+                    .thenByDescending { it.lastModified }
             )
+            .firstOrNull()
+        if (posixBest != null) return posixBest.content
 
-            for (queryUri in volumeUris) {
-                try {
-                    val resolver = context.contentResolver
-                    val projection = arrayOf(MediaStore.Files.FileColumns._ID, MediaStore.Files.FileColumns.DISPLAY_NAME)
-                    val selection = "${MediaStore.Files.FileColumns.DISPLAY_NAME} LIKE ? OR ${MediaStore.Files.FileColumns.RELATIVE_PATH} LIKE ?"
-                    val selectionArgs = arrayOf("%.json%", "%Documents/Hisab%")
+        // ── Step 2: MediaStore Query for Android 10+ (API 29+) ───────────────
+        // Only reached when no POSIX file was found (scoped storage blocks File I/O).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                val resolver = context.contentResolver
+                val queryUri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                val projection = arrayOf(
+                    MediaStore.Files.FileColumns._ID,
+                    MediaStore.Files.FileColumns.DISPLAY_NAME,
+                    MediaStore.Files.FileColumns.DATE_MODIFIED
+                )
+                val selection = "${MediaStore.Files.FileColumns.DISPLAY_NAME} LIKE ? AND ${MediaStore.Files.FileColumns.RELATIVE_PATH} LIKE ?"
+                val selectionArgs = arrayOf("hisab_auto_backup%.json", "%Documents/Hisab%")
 
-                    resolver.query(queryUri, projection, selection, selectionArgs, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC")?.use { cursor ->
-                        val idIdx = cursor.getColumnIndex(MediaStore.Files.FileColumns._ID)
-                        while (cursor.moveToNext()) {
-                            val id = cursor.getLong(idIdx)
-                            val itemUri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY, id)
-                            try {
-                                val content = resolver.openInputStream(itemUri)?.use { stream ->
-                                    stream.bufferedReader(Charsets.UTF_8).readText()
-                                }
-                                if (!content.isNullOrBlank() && content.contains("\"transactions\"")) {
-                                    Log.d(TAG, "Found valid backup file via MediaStore query")
-                                    return content
-                                }
-                            } catch (_: Exception) {}
-                        }
+                resolver.query(queryUri, projection, selection, selectionArgs, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC")?.use { cursor ->
+                    val idIdx = cursor.getColumnIndex(MediaStore.Files.FileColumns._ID)
+                    val nameIdx = cursor.getColumnIndex(MediaStore.Files.FileColumns.DISPLAY_NAME)
+                    val modIdx = cursor.getColumnIndex(MediaStore.Files.FileColumns.DATE_MODIFIED)
+                    while (cursor.moveToNext()) {
+                        val id = cursor.getLong(idIdx)
+                        val name = cursor.getString(nameIdx) ?: ""
+                        val isCanonical = name.equals(MAIN_BACKUP_NAME, ignoreCase = true)
+                        val modified = if (modIdx >= 0) cursor.getLong(modIdx) * 1000L else 0L
+                        val itemUri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY, id)
+                        try {
+                            val content = resolver.openInputStream(itemUri)?.use { stream ->
+                                stream.bufferedReader(Charsets.UTF_8).readText()
+                            }
+                            if (!content.isNullOrBlank() && isValidBackupJson(content)) {
+                                candidates.add(BackupCandidate(content, modified, isCanonical))
+                            }
+                        } catch (_: Exception) {}
                     }
-                } catch (e: Exception) {
-                    Log.w(TAG, "MediaStore query failed for volume", e)
                 }
+            } catch (e: Exception) {
+                Log.w(TAG, "MediaStore query failed", e)
             }
         }
 
-        return null
+        // Prefer canonical by transaction count, then by recency
+        val canonicalMs = candidates.filter { it.isCanonical }.maxByOrNull { it.lastModified }
+        if (canonicalMs != null) return canonicalMs.content
+
+        // Last resort: any valid backup with the most transactions
+        return candidates
+            .groupBy { countTransactions(it.content) }
+            .maxByOrNull { it.key }
+            ?.value?.maxByOrNull { it.lastModified }
+            ?.content
     }
+
+    /** Count transactions in a backup JSON string without full parsing. */
+    private fun countTransactions(json: String): Int = try {
+        JSONObject(json).optJSONArray("transactions")?.length() ?: 0
+    } catch (_: Exception) { 0 }
 
     /**
      * Parses JSON string and restores accounts (with bank links), categories, transactions, and pending bank transactions into database.
@@ -393,6 +620,8 @@ class AutoBackupManager(
                 val txSource = obj.optNullableString("source")
                 val txConfidence = obj.optNullableString("confidence")
                 val txReference = obj.optNullableString("referenceNumber")
+                // v7 field (schema v9); tolerant read keeps pre-v9 backups restorable.
+                val txSubtype = obj.optNullableString("subtype")
 
                 val categoryKey = "${categoryName}_${type}"
                 val categoryId = categoryMap[categoryKey] ?: run {
@@ -416,7 +645,8 @@ class AutoBackupManager(
                     sourceMessageHash = txHash?.takeIf { it !in existingTxnHashes },
                     source = txSource,
                     confidence = txConfidence,
-                    referenceNumber = txReference
+                    referenceNumber = txReference,
+                    subtype = txSubtype
                 )
 
                 val fp = computeFingerprint(tempTx)
@@ -561,6 +791,8 @@ class AutoBackupManager(
             obj.put("source", tx.source ?: JSONObject.NULL)
             obj.put("confidence", tx.confidence ?: JSONObject.NULL)
             obj.put("referenceNumber", tx.referenceNumber ?: JSONObject.NULL)
+            // v7: split reimbursement subtype (schema v9)
+            obj.put("subtype", tx.subtype ?: JSONObject.NULL)
             transactionsArr.put(obj)
         }
         root.put("transactions", transactionsArr)
@@ -598,7 +830,7 @@ class AutoBackupManager(
     }
 
     private fun computeFingerprint(tx: TransactionEntity): String {
-        return "${tx.amount}_${tx.type}_${tx.date}_${tx.notes}_${tx.account}_${tx.toAccount}_${tx.createdAt}"
+        return "${tx.amount}_${tx.type}_${tx.subtype}_${tx.date}_${tx.notes}_${tx.account}_${tx.toAccount}_${tx.createdAt}"
     }
 
     private fun computeChecksum(data: String): String {

@@ -51,6 +51,21 @@ class HistoryViewModel(
             initialValue = emptyList()
         )
 
+    val recentExpenseCategories: StateFlow<List<CategoryEntity>> = combine(
+        categories,
+        transactionRepository.getAllTransactionsFlow()
+    ) { cats, txs ->
+        val expenseCats = cats.filter { it.type == TransactionType.EXPENSE }
+        val lastUsed = txs.filter { it.type == TransactionType.EXPENSE }
+            .groupBy { it.categoryId }
+            .mapValues { (_, list) -> list.maxOf { it.createdAt } }
+        expenseCats.sortedByDescending { lastUsed[it.id] ?: 0L }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
     val accounts: StateFlow<List<String>> = (accountRepository?.getAllAccountNames() ?: transactionRepository.getAllAccounts())
         .stateIn(
             scope = viewModelScope,

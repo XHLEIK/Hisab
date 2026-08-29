@@ -1,5 +1,9 @@
 package com.example.hisab.ui.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -25,14 +29,71 @@ fun HisabNavHost(
     backupRepository: BackupRepository,
     pendingTransactionRepository: PendingTransactionRepository? = null,
     modifier: Modifier = Modifier,
-    onAddTransaction: () -> Unit = {}
+    onAddTransaction: () -> Unit = {},
+    slideDirection: Int = 1
 ) {
     NavHost(
         navController = navController,
         startDestination = Screen.Dashboard.route,
-        modifier = modifier
+        modifier = modifier,
+        enterTransition = {
+            slideIntoContainer(
+                towards = if (slideDirection > 0) AnimatedContentTransitionScope.SlideDirection.Left else AnimatedContentTransitionScope.SlideDirection.Right,
+                animationSpec = tween(300),
+                initialOffset = { it / 4 }
+            ) + fadeIn(tween(300))
+        },
+        exitTransition = {
+            slideOutOfContainer(
+                towards = if (slideDirection > 0) AnimatedContentTransitionScope.SlideDirection.Left else AnimatedContentTransitionScope.SlideDirection.Right,
+                animationSpec = tween(300),
+                targetOffset = { it / 4 }
+            ) + fadeOut(tween(200))
+        },
+        popEnterTransition = {
+            slideIntoContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                animationSpec = tween(300),
+                initialOffset = { it / 4 }
+            ) + fadeIn(tween(300))
+        },
+        popExitTransition = {
+            slideOutOfContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                animationSpec = tween(300)
+            ) + fadeOut(tween(200))
+        }
     ) {
-        composable(Screen.Dashboard.route) {
+        composable(
+            Screen.Dashboard.route,
+            enterTransition = {
+                slideIntoContainer(
+                    towards = if (slideDirection > 0) AnimatedContentTransitionScope.SlideDirection.Left else AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(300),
+                    initialOffset = { it / 4 }
+                ) + fadeIn(tween(300))
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    towards = if (slideDirection > 0) AnimatedContentTransitionScope.SlideDirection.Left else AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(300),
+                    targetOffset = { it / 4 }
+                ) + fadeOut(tween(200))
+            },
+            popEnterTransition = {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(300),
+                    initialOffset = { it / 4 }
+                ) + fadeIn(tween(300))
+            },
+            popExitTransition = {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(300)
+                ) + fadeOut(tween(200))
+            }
+        ) {
             DashboardScreen(
                 transactionRepository = transactionRepository,
                 categoryRepository = categoryRepository,
@@ -50,21 +111,108 @@ fun HisabNavHost(
                 }
             )
         }
-        composable(Screen.Analytics.route) {
+        composable(
+            Screen.Analytics.route,
+            enterTransition = {
+                slideIntoContainer(
+                    towards = if (slideDirection > 0) AnimatedContentTransitionScope.SlideDirection.Left else AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(300),
+                    initialOffset = { it / 4 }
+                ) + fadeIn(tween(300))
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    towards = if (slideDirection > 0) AnimatedContentTransitionScope.SlideDirection.Left else AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(300),
+                    targetOffset = { it / 4 }
+                ) + fadeOut(tween(200))
+            },
+            popEnterTransition = {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(300),
+                    initialOffset = { it / 4 }
+                ) + fadeIn(tween(300))
+            },
+            popExitTransition = {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(300)
+                ) + fadeOut(tween(200))
+            }
+        ) {
             AnalyticsScreen(
                 transactionRepository = transactionRepository,
                 categoryRepository = categoryRepository,
                 accountRepository = accountRepository
             )
         }
-        composable(Screen.History.route) {
+        composable(
+            Screen.History.route,
+            enterTransition = {
+                slideIntoContainer(
+                    towards = if (slideDirection > 0) AnimatedContentTransitionScope.SlideDirection.Left else AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(300),
+                    initialOffset = { it / 4 }
+                ) + fadeIn(tween(300))
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    towards = if (slideDirection > 0) AnimatedContentTransitionScope.SlideDirection.Left else AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(300),
+                    targetOffset = { it / 4 }
+                ) + fadeOut(tween(200))
+            },
+            popEnterTransition = {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(300),
+                    initialOffset = { it / 4 }
+                ) + fadeIn(tween(300))
+            },
+            popExitTransition = {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(300)
+                ) + fadeOut(tween(200))
+            }
+        ) {
             HistoryScreen(
                 transactionRepository = transactionRepository,
                 categoryRepository = categoryRepository,
                 accountRepository = accountRepository
             )
         }
-        composable(Screen.Settings.route) {
+        composable(
+            Screen.Settings.route,
+            enterTransition = {
+                slideIntoContainer(
+                    towards = if (slideDirection > 0) AnimatedContentTransitionScope.SlideDirection.Left else AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(300),
+                    initialOffset = { it / 4 }
+                ) + fadeIn(tween(300))
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    towards = if (slideDirection > 0) AnimatedContentTransitionScope.SlideDirection.Left else AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(300),
+                    targetOffset = { it / 4 }
+                ) + fadeOut(tween(200))
+            },
+            popEnterTransition = {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(300),
+                    initialOffset = { it / 4 }
+                ) + fadeIn(tween(300))
+            },
+            popExitTransition = {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(300)
+                ) + fadeOut(tween(200))
+            }
+        ) {
             SettingsScreen(
                 categoryRepository = categoryRepository,
                 accountRepository = accountRepository,

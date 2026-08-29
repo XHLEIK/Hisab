@@ -23,6 +23,7 @@ import androidx.room.migration.Migration
 import com.example.hisab.data.db.dao.PendingTransactionDao
 import com.example.hisab.data.db.entity.PendingTransactionEntity
 import com.example.hisab.data.db.migration.MigrationSqlV7ToV8
+import com.example.hisab.data.db.migration.MigrationSqlV8ToV9
 
 @Database(
     entities = [
@@ -33,7 +34,7 @@ import com.example.hisab.data.db.migration.MigrationSqlV7ToV8
         AccountEntity::class,
         PendingTransactionEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -235,6 +236,16 @@ abstract class HisabDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                for (statement in MigrationSqlV8ToV9.STATEMENTS) {
+                    try {
+                        db.execSQL(statement)
+                    } catch (_: Exception) {}
+                }
+            }
+        }
+
         @Volatile
         private var INSTANCE: HisabDatabase? = null
 
@@ -246,7 +257,7 @@ abstract class HisabDatabase : RoomDatabase() {
                     "hisab_database"
                 )
                     .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                    .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                    .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                     .fallbackToDestructiveMigration(true)
                     .addCallback(SeedDatabaseCallback())
                     .build()

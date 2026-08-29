@@ -71,6 +71,7 @@ fun HistoryScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val transactions by viewModel.transactions.collectAsState()
     val categories by viewModel.categories.collectAsState()
+    val recentExpenseCategories by viewModel.recentExpenseCategories.collectAsState()
     val accounts by viewModel.accounts.collectAsState()
 
     var selectedTransactionForOptions by remember { mutableStateOf<TransactionEntity?>(null) }
@@ -85,24 +86,12 @@ fun HistoryScreen(
             .toSortedMap(compareByDescending { it })
     }
 
-    val filteredTotal = transactions.sumOf { tx ->
-        when (tx.type) {
-            TransactionType.EXPENSE -> -tx.amount
-            TransactionType.INCOME -> tx.amount
-            TransactionType.TRANSFER -> 0.0
-        }
-    }
+    val filteredTotal = transactions.sumOf { com.example.hisab.util.SplitAccounting.balanceContribution(it) }
 
     // Calculate daily sums for each group once when grouped changes
     val dailySums = remember(grouped) {
         grouped.mapValues { (_, txns) ->
-            txns.sumOf { tx ->
-                when (tx.type) {
-                    TransactionType.EXPENSE -> -tx.amount
-                    TransactionType.INCOME -> tx.amount
-                    TransactionType.TRANSFER -> 0.0
-                }
-            }
+            txns.sumOf { com.example.hisab.util.SplitAccounting.balanceContribution(it) }
         }
     }
 
@@ -308,6 +297,7 @@ fun HistoryScreen(
         QuickAddSheet(
             categories = categories,
             accounts = accounts,
+            recentExpenseCategories = recentExpenseCategories,
             onDismiss = { editingTransaction = null },
             editTransaction = editingTransaction,
             onSave = { transaction ->

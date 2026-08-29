@@ -29,17 +29,20 @@ object SmsNotificationHelper {
     // ── NEW: 2-Stage Pipeline Actions ────────────────────────────────
     const val ACTION_SELECT_EXPENSE_CATEGORY = "com.example.hisab.ACTION_SELECT_EXPENSE_CATEGORY"
     const val ACTION_SELECT_INCOME_CATEGORY = "com.example.hisab.ACTION_SELECT_INCOME_CATEGORY"
+    const val ACTION_SELECT_SPLIT_CATEGORY = "com.example.hisab.ACTION_SELECT_SPLIT_CATEGORY"
+    const val ACTION_LOG_SPLIT = "com.example.hisab.ACTION_LOG_SPLIT"
 
     const val EXTRA_PENDING_ID = "extra_pending_id"
     const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
     const val EXTRA_CATEGORY_NAME = "extra_category_name"
+    const val EXTRA_CATEGORY_ID = "extra_category_id"
     const val EXTRA_TRANSACTION_TYPE = "extra_transaction_type" // "EXPENSE", "INCOME", "TRANSFER"
     const val EXTRA_SOURCE_ACCOUNT = "extra_source_account"
     const val EXTRA_TO_ACCOUNT = "extra_to_account"
     const val EXTRA_AMOUNT = "extra_amount"
     const val EXTRA_BANK_NAME = "extra_bank_name"
     const val EXTRA_PAGE_INDEX = "extra_page_index"
-    const val EXTRA_PAGINATION_MODE = "extra_pagination_mode" // "EXPENSE", "INCOME", "TRANSFER_DEBIT", "TRANSFER_CREDIT"
+    const val EXTRA_PAGINATION_MODE = "extra_pagination_mode" // "EXPENSE", "INCOME", "TRANSFER_DEBIT", "TRANSFER_CREDIT", "SPLIT"
     const val EXTRA_TX_ID = "extra_tx_id"
 
     fun createNotificationChannel(context: Context) {
@@ -111,7 +114,9 @@ object SmsNotificationHelper {
             .setDefaults(NotificationCompat.DEFAULT_ALL)
 
         if (pending.type == "CREDIT") {
-            // ── CREDIT Stage 1: [ 💰 Income ] [ ⇄ Transfer In ] [ ❌ Dismiss ] ──
+            // ── CREDIT Stage 1: [ 💰 Income ] [ ⇄ Transfer In ] [ 🧾 Split ] ──
+            // Dismiss is carried as deleteIntent (swipe), not a 4th visible action — keeps 3 visible actions
+            // within the per-notification cap while preserving exactly-once handling.
             val title = "💰 Income Received: $formattedAmount"
             val body = "Credited to ${pending.bankName}${if (!pending.accountLast4.isNullOrEmpty()) " (A/C **${pending.accountLast4})" else ""}. Select type:"
             builder.setContentTitle(title).setContentText(body)
@@ -148,8 +153,21 @@ object SmsNotificationHelper {
             )
             builder.addAction(0, "⇄ Transfer In", swapCreditPendingIntent)
 
-            // Button 3: [ ❌ Dismiss ]
-            builder.addAction(0, "❌ Dismiss", dismissPendingIntent)
+            // Button 3: [ 🧾 Split ] → Stage 2 Split reimbursement picker (never income)
+            val splitIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+                action = ACTION_SELECT_SPLIT_CATEGORY
+                putExtra(EXTRA_PENDING_ID, pending.id)
+                putExtra(EXTRA_NOTIFICATION_ID, notificationId)
+                putExtra(EXTRA_AMOUNT, pending.amount)
+                putExtra(EXTRA_BANK_NAME, pending.bankName)
+            }
+            val splitPendingIntent = PendingIntent.getBroadcast(
+                context,
+                notificationId + 3,
+                splitIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            builder.addAction(0, "🧾 Split", splitPendingIntent)
 
         } else {
             // ── DEBIT Stage 1: [ 💸 Expense ] [ ⇄ Transfer ] [ ❌ Dismiss ] ──
@@ -290,6 +308,111 @@ object SmsNotificationHelper {
         notificationManager.notify(notificationId, builder.build())
     }
 
+    /**
+     * Posts Stage-2 Split reimbursement picker — shows only expense categories that can absorb the credit
+     * without going negative, ranked: remaining > 0 first, then most recently used, then largest gross.
+     * One tap on a category directly materialises an EXPENSE/SPLIT_REIMBURSEMENT.
+     */
+    suspend fun postSplitCategoryPickerNotification(
+        context: Context,
+        pendingId: Long,
+        notificationId: Int,
+        amount: Double,
+        bankName: String,
+        pageIndex: Int = 0
+    ) {
+        createNotificationChannel(context)
+
+        val db = HisabDatabase.getDatabase(context)
+        val categoryDao = db.categoryDao()
+        val transactionDao = db.transactionDao()
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val formattedAmount = CurrencyFormatter.format(amount)
+        val allExpenseCats = categoryDao.getAllSync().filter { it.type == TransactionType.EXPENSE }
+        val allTx = transactionDao.getAllTransactionsSync()
+
+        data class Ranked(val cat: CategoryEntity, val gross: Double, val reimbursed: Double, val remaining: Double, val lastUsed: Long)
+
+        val ranked = allExpenseCats.mapNotNull { cat ->
+            val gross = allTx.filter { it.categoryId == cat.id && it.type == TransactionType.EXPENSE && it.subtype != "SPLIT_REIMBURSEMENT" }.sumOf { it.amount }
+            if (gross <= 0.0) return@mapNotNull null
+            val reimbursed = allTx.filter { it.categoryId == cat.id && it.subtype == "SPLIT_REIMBURSEMENT" }.sumOf { it.amount }
+            val remaining = gross - reimbursed
+            if (remaining <= 0.0) return@mapNotNull null
+            val lastUsed = allTx.filter { it.categoryId == cat.id && it.type == TransactionType.EXPENSE }.maxOfOrNull { it.createdAt } ?: 0L
+            Ranked(cat, gross, reimbursed, remaining, lastUsed)
+        }.sortedWith(compareByDescending<Ranked> { it.remaining }.thenByDescending { it.lastUsed }.thenByDescending { it.gross })
+
+        val openAppIntent = Intent(context, MainActivity::class.java)
+        val openAppPendingIntent = PendingIntent.getActivity(
+            context,
+            notificationId,
+            openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        if (ranked.isEmpty()) {
+            val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle("🧾 Split — ₹200 split repayment")
+                .setContentText("No eligible expense categories yet. Create an expense first.")
+                .setContentIntent(openAppPendingIntent)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
+            notificationManager.notify(notificationId, builder.build())
+            return
+        }
+
+        val total = ranked.size
+        val idx1 = (pageIndex * 2) % total
+        val idx2 = (pageIndex * 2 + 1) % total
+        val r1 = ranked[idx1]
+        val r2 = if (total > 1 && idx1 != idx2) ranked[idx2] else null
+
+        val r1Emoji = getCategoryEmoji(r1.cat.iconName)
+        val r2Emoji = r2?.let { getCategoryEmoji(it.cat.iconName) }
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("🧾 Split repayment — $formattedAmount")
+            .setContentText("Choose expense category for this split:")
+            .setSubText("Tap to reimburse ${r1.cat.name} — ${CurrencyFormatter.format(r1.remaining)} remaining")
+            .setContentIntent(openAppPendingIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+
+        builder.addAction(
+            createSplitAction(context, notificationId, pendingId, r1.cat.id, r1.cat.name, amount, bankName, "$r1Emoji ${r1.cat.name}")
+        )
+        if (r2 != null && r2.cat.id != r1.cat.id) {
+            builder.addAction(
+                createSplitAction(context, notificationId, pendingId, r2.cat.id, r2.cat.name, amount, bankName, "$r2Emoji ${r2.cat.name}")
+            )
+        }
+
+        val paginateIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+            action = ACTION_PAGINATE_NOTIFICATION
+            putExtra(EXTRA_PENDING_ID, pendingId)
+            putExtra(EXTRA_NOTIFICATION_ID, notificationId)
+            putExtra(EXTRA_PAGE_INDEX, pageIndex + 1)
+            putExtra(EXTRA_PAGINATION_MODE, "SPLIT")
+            putExtra(EXTRA_AMOUNT, amount)
+            putExtra(EXTRA_BANK_NAME, bankName)
+        }
+        val paginatePendingIntent = PendingIntent.getBroadcast(
+            context,
+            notificationId + 3,
+            paginateIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        builder.addAction(0, "🔄 More...", paginatePendingIntent)
+
+        notificationManager.notify(notificationId, builder.build())
+    }
+
     // ══════════════════════════════════════════════════════════════════════
     //  Credit Inward Transfer Source Account Picker (Unchanged Architecture)
     // ══════════════════════════════════════════════════════════════════════
@@ -307,7 +430,7 @@ object SmsNotificationHelper {
     ) {
         val db = HisabDatabase.getDatabase(context)
         val accounts = db.accountDao().getAllSync()
-        val availableSources = accounts.filter { !it.bankCode.equals(creditedBankName, ignoreCase = true) }
+        val availableSources = accounts.filter { !BankAliasRegistry.matches(it.bankCode, creditedBankName, null) }
         val total = if (availableSources.isNotEmpty()) availableSources.size else 2
 
         val idx1 = (pageIndex * 2) % total
@@ -455,11 +578,14 @@ object SmsNotificationHelper {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
-            .setContentTitle("⚠️ Missed Transaction Detected: $formattedAmount")
-            .setContentText("Bank AvlBal is $formattedActual. Tap to review and log in Hisab.")
+            // The discrepancy is a *net*: it can be one transaction or several, in either direction.
+            // The old copy ("an unlogged transaction of ₹X") asserted a count the arithmetic cannot
+            // support, which is the same claim the dashboard card was fixed to stop making.
+            .setContentTitle("⚠️ $formattedAmount of unlogged activity")
+            .setContentText("Your $formattedActual bank balance doesn't match Hisab. Tap to review.")
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText("A balance sync discrepancy was detected for ${pending.bankName}. Your bank balance is $formattedActual, indicating an unlogged transaction of $formattedAmount. Tap to record it.")
+                    .bigText("${pending.bankName} reports a balance of $formattedActual, which is $formattedAmount away from what Hisab expected. That gap is a net total — it may be one transaction or several. Tap to review and record it.")
             )
 
         notificationManager.notify(notificationId, builder.build())
@@ -616,6 +742,35 @@ object SmsNotificationHelper {
             putExtra(EXTRA_AMOUNT, amount)
         }
         val requestCode = (notificationId + buttonLabel.hashCode()) and 0x7FFFFFFF
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        return NotificationCompat.Action.Builder(0, buttonLabel, pendingIntent).build()
+    }
+
+    private fun createSplitAction(
+        context: Context,
+        notificationId: Int,
+        pendingId: Long,
+        categoryId: Long,
+        categoryName: String,
+        amount: Double,
+        bankName: String,
+        buttonLabel: String
+    ): NotificationCompat.Action {
+        val intent = Intent(context, NotificationActionReceiver::class.java).apply {
+            action = ACTION_LOG_SPLIT
+            putExtra(EXTRA_PENDING_ID, pendingId)
+            putExtra(EXTRA_NOTIFICATION_ID, notificationId)
+            putExtra(EXTRA_CATEGORY_ID, categoryId)
+            putExtra(EXTRA_CATEGORY_NAME, categoryName)
+            putExtra(EXTRA_AMOUNT, amount)
+            putExtra(EXTRA_BANK_NAME, bankName)
+        }
+        val requestCode = (notificationId + buttonLabel.hashCode() + categoryId.hashCode()) and 0x7FFFFFFF
         val pendingIntent = PendingIntent.getBroadcast(
             context,
             requestCode,

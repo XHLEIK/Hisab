@@ -47,7 +47,8 @@ fun FloatingGlassmorphicBottomBar(
     currentDestination: NavDestination?,
     onNavigate: (Screen) -> Unit,
     hazeState: HazeState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    selectedRoute: String? = null
 ) {
     val colors = HisabTheme.colors
     val colorScheme = MaterialTheme.colorScheme
@@ -106,9 +107,10 @@ fun FloatingGlassmorphicBottomBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Screen.bottomNavItems.forEach { screen ->
-                    val isSelected = currentDestination?.hierarchy?.any {
-                        it.route == screen.route
-                    } == true
+                    val isSelected = when {
+                        selectedRoute != null -> screen.route == selectedRoute
+                        else -> currentDestination?.hierarchy?.any { it.route == screen.route } == true
+                    }
 
                     Box(
                         modifier = Modifier

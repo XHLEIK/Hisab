@@ -62,6 +62,7 @@ import java.time.LocalDate
 import androidx.compose.foundation.layout.statusBarsPadding
 
 import com.example.hisab.data.repository.PendingTransactionRepository
+import com.example.hisab.data.db.entity.PendingTransactionEntity
 import com.example.hisab.ui.components.PendingTransactionsCard
 
 @Composable
@@ -90,9 +91,11 @@ fun DashboardScreen(
     val summary by viewModel.monthlySummary.collectAsState()
     val recentTransactions by viewModel.recentTransactions.collectAsState()
     val categories by viewModel.categories.collectAsState()
+    val recentExpenseCategories by viewModel.recentExpenseCategories.collectAsState()
     val accounts by viewModel.accounts.collectAsState()
+    val linkedAccounts by viewModel.linkedAccounts.collectAsState()
     val savingsRate by viewModel.savingsRate.collectAsState()
-    val savingsAmount by viewModel.totalSavingsAmount.collectAsState()
+    val savingsAmount by viewModel.heroSavingsTransfer.collectAsState()
     val limitConfig by viewModel.limitConfig.collectAsState()
     val limitStatus by viewModel.spendingLimitStatus.collectAsState()
     val safeDailyPace by viewModel.safeDailyPace.collectAsState()
@@ -106,6 +109,9 @@ fun DashboardScreen(
     var showAddAccountDialog by remember { mutableStateOf(false) }
     var selectedTransactionForOptions by remember { mutableStateOf<TransactionEntity?>(null) }
     var editingTransaction by remember { mutableStateOf<TransactionEntity?>(null) }
+
+    /** The inferred pending row the user tapped "Review" on; drives the completion sheet below. */
+    var reviewingInferred by remember { mutableStateOf<PendingTransactionEntity?>(null) }
 
     val colors = HisabTheme.colors
     val categoryMap = remember(categories) { categories.associateBy { it.id } }
@@ -206,7 +212,8 @@ fun DashboardScreen(
                 PendingTransactionsCard(
                     pendingTransactions = pendingTransactions,
                     onApprove = { pending, category -> viewModel.approvePendingTransaction(pending, category) },
-                    onDismiss = { pending -> viewModel.dismissPendingTransaction(pending) }
+                    onDismiss = { pending -> viewModel.dismissPendingTransaction(pending) },
+                    onReview = { pending -> reviewingInferred = pending }
                 )
             }
 
@@ -347,6 +354,7 @@ fun DashboardScreen(
         QuickAddSheet(
             categories = categories,
             accounts = accounts,
+            recentExpenseCategories = recentExpenseCategories,
             onDismiss = { editingTransaction = null },
             editTransaction = editingTransaction,
             onSave = { transaction ->
@@ -364,11 +372,34 @@ fun DashboardScreen(
         QuickAddSheet(
             categories = categories,
             accounts = accounts,
+            recentExpenseCategories = recentExpenseCategories,
             initialType = addSheetInitialType,
             onDismiss = { showAddSheet = false },
             onSave = { transaction ->
                 viewModel.addTransaction(transaction)
                 showAddSheet = false
+            },
+            onAddAccount = { name, type ->
+                viewModel.addAccount(name, type)
+            }
+        )
+    }
+
+    // Inferred-activity completion sheet. An inferred row knows only an amount and an account, so the
+    // sheet opens as a normal *new* entry with those two pre-filled and everything else — category,
+    // date, notes — left to the user. Saving logs the entry and consumes the marker in one step.
+    reviewingInferred?.let { marker ->
+        QuickAddSheet(
+            categories = categories,
+            accounts = accounts,
+            recentExpenseCategories = recentExpenseCategories,
+            initialType = if (marker.type == "CREDIT") TransactionType.INCOME else TransactionType.EXPENSE,
+            initialAmount = marker.amount,
+            initialAccount = viewModel.resolveAccountName(marker, linkedAccounts),
+            onDismiss = { reviewingInferred = null },
+            onSave = { transaction ->
+                viewModel.logInferredActivity(marker, transaction)
+                reviewingInferred = null
             },
             onAddAccount = { name, type ->
                 viewModel.addAccount(name, type)

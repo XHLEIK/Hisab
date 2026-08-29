@@ -14,8 +14,8 @@ android {
         applicationId = "com.example.hisab"
         minSdk = 28
         targetSdk = 36
-        versionCode = 320
-        versionName = "3.2.0"
+        versionCode = 400
+        versionName = "4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -29,6 +29,7 @@ android {
     sourceSets {
         getByName("test") {
             // Exposes the exported schema JSONs to unit tests as a classpath resource.
+            @Suppress("DEPRECATION")
             resources.srcDir("$projectDir/schemas")
         }
     }
@@ -52,11 +53,43 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             val keyStoreFile = rootProject.file("release.keystore")
             if (keyStoreFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
+            } else {
+                // Without this guard a missing keystore fell through silently and produced
+                // app-release-unsigned.apk. An unsigned APK cannot install, so the only APK left to
+                // sideload was app-debug.apk — debuggable and debug-signed, which is the shape Play
+                // Protect blocks hardest on an app holding RECEIVE_SMS/READ_SMS. Fail at build time
+                // instead of discovering it on a user's phone.
+                tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }
+                    .configureEach {
+                        doFirst {
+                            throw GradleException(
+                                "release.keystore is missing — a release build would be unsigned " +
+                                    "and uninstallable. Create it with:\n" +
+                                    "keytool -genkeypair -keystore release.keystore -alias hisab " +
+                                    "-keyalg RSA -keysize 2048 -validity 10950"
+                            )
+                        }
+                    }
             }
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+        // Optimized development variant — release-like size (R8 + shrink) but debuggable.
+        // Use on storage-constrained emulator/device instead of normal debug.
+        // Keeps debugging: debuggable true, line numbers preserved via proguard-rules.pro
+        // (SourceFile/LineNumberTable), same functionality/UI as release, signed with debug keystore.
+        create("staging") {
+            initWith(getByName("debug"))
+            isMinifyEnabled = true
+            isShrinkResources = true
+            isDebuggable = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -85,14 +118,6 @@ android {
     }
 }
 
-tasks.register<Exec>("cleanEmulatorTemp") {
-    group = "install"
-    description = "Cleans stale APK temporary files from connected Android emulator to prevent INSTALL_FAILED_INSUFFICIENT_STORAGE."
-    val adbPath = "${System.getenv("LOCALAPPDATA")}\\Android\\Sdk\\platform-tools\\adb.exe"
-    commandLine(adbPath, "shell", "rm -rf /data/local/tmp/* ; pm trim-caches 2000000000")
-    isIgnoreExitValue = true
-}
-
 dependencies {
     // Core
     implementation(libs.androidx.core.ktx)
@@ -100,7 +125,6 @@ dependencies {
 
     // Export & Backup
     implementation(libs.poi.ooxml)
-    implementation(libs.gson)
 
     // Lifecycle
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -125,10 +149,6 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
-    // Vico Charts
-    implementation(libs.vico.compose)
-    implementation(libs.vico.compose.m3)
-
     // DataStore Preferences
     implementation(libs.androidx.datastore.preferences)
 
@@ -137,6 +157,7 @@ dependencies {
 
     // Testing
     testImplementation(libs.junit)
+    testImplementation(libs.gson)
     testImplementation(libs.sqlite.jdbc)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

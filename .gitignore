@@ -60,3 +60,17 @@ Thumbs.db
 # NDk / C++ build outputs
 .externalNativeBuild
 .cxx/
+
+# graphify local artifacts (regenerate with: python graphify-out/rebuild.py)
+graphify-out/cache/
+graphify-out/graph.html
+graphify-out/
+
+
+AGENTS.md
+CLAUDE.md
+
+.claude/
+.freebuff/
+.opencode/
+

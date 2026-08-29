@@ -30,8 +30,16 @@ class BackupRepository(
         try {
             val transactions = transactionRepository.getAllTransactionsSync()
             val categories = categoryRepository.getAllCategoriesSync()
+            // Current account balances come from the FULL ledger (SplitAccounting is the
+            // single source of truth). A month-filtered row list cannot produce a
+            // current balance, so the PDF's balance block is computed here, unscoped.
+            val accountDao = HisabDatabase.getDatabase(context).accountDao()
+            val accountNames = accountDao.getAllSync().map { it.name }
+            val currentBalances = accountNames.associateWith { name ->
+                com.example.hisab.util.SplitAccounting.accountBalance(name, transactions)
+            }
             val reportGenerator = ReportGenerator(context)
-            reportGenerator.generateReport(uri, format, transactions, categories, targetMonth)
+            reportGenerator.generateReport(uri, format, transactions, categories, targetMonth, currentBalances)
         } catch (e: Exception) {
             Result.failure(e)
         }

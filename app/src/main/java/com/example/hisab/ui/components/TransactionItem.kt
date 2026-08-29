@@ -1,6 +1,7 @@
 package com.example.hisab.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,7 +29,6 @@ import androidx.compose.ui.unit.sp
 import com.example.hisab.data.db.entity.TransactionEntity
 import com.example.hisab.data.model.TransactionType
 import com.example.hisab.ui.theme.HisabTheme
-import com.example.hisab.util.CategoryIconMapper
 import com.example.hisab.util.CurrencyFormatter
 import com.example.hisab.util.DateUtils
 
@@ -45,6 +45,7 @@ fun TransactionItem(
     val colors = HisabTheme.colors
     val isTransfer = transaction.type == TransactionType.TRANSFER
     val isExpense = transaction.type == TransactionType.EXPENSE
+    val isSplit = transaction.subtype == "SPLIT_REIMBURSEMENT"
 
     val transferColor = Color(0xFF64B5F6) // Muted cyan blue for transfers
     val incomeColor = Color(0xFF00E676) // Bright green for income
@@ -66,11 +67,13 @@ fun TransactionItem(
     }
 
     val amountColor = when {
+        isSplit -> Color(0xFF8B5CF6)
         isTransfer -> parsedColor
         isExpense -> expenseColor
         else -> incomeColor
     }
     val amountPrefix = when {
+        isSplit -> "↳ "
         isTransfer -> "⇄ "
         isExpense -> "−"
         else -> "+"
@@ -112,17 +115,39 @@ fun TransactionItem(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = displayName,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = colors.textPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = displayName,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                if (isSplit) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFF8B5CF6).copy(alpha = 0.14f))
+                            .border(0.7.dp, Color(0xFF8B5CF6).copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "Split",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF8B5CF6),
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
 
-            val subtitleText = remember(transaction, isTransfer, showDate) {
-                if (isTransfer) {
+            val subtitleText = remember(transaction, isTransfer, isSplit, showDate) {
+                if (isSplit) {
+                    "Split reimbursement • ${transaction.account}"
+                } else if (isTransfer) {
                     val fromAcc = transaction.account
                     val toAcc = transaction.toAccount ?: "Account"
                     val accDirection = "$fromAcc → $toAcc"
@@ -139,7 +164,7 @@ fun TransactionItem(
             Text(
                 text = subtitleText,
                 style = MaterialTheme.typography.bodySmall,
-                color = colors.textSecondary,
+                color = if (isSplit) Color(0xFF8B5CF6) else colors.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

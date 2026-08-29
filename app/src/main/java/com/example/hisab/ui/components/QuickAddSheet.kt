@@ -21,6 +21,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,6 +50,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.hisab.data.db.entity.CategoryEntity
 import com.example.hisab.data.db.entity.TransactionEntity
+import com.example.hisab.data.model.TransactionConfidence
+import com.example.hisab.data.model.TransactionSource
+import com.example.hisab.data.model.TransactionSubtype
 import com.example.hisab.data.model.TransactionType
 import com.example.hisab.ui.theme.HisabTheme
 import com.example.hisab.util.DateUtils
@@ -65,7 +70,10 @@ fun QuickAddSheet(
     editTransaction: TransactionEntity? = null,
     editCategoryId: Long? = null,
     initialType: TransactionType = TransactionType.EXPENSE,
-    onAddAccount: ((name: String, type: String) -> Unit)? = null
+    initialAmount: Double? = null,
+    initialAccount: String? = null,
+    onAddAccount: ((name: String, type: String) -> Unit)? = null,
+    recentExpenseCategories: List<CategoryEntity> = emptyList()
 ) {
     val colors = HisabTheme.colors
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -74,7 +82,7 @@ fun QuickAddSheet(
         mutableStateOf(editTransaction?.type ?: initialType)
     }
     var amountText by remember {
-        mutableStateOf(editTransaction?.amount?.let {
+        mutableStateOf((editTransaction?.amount ?: initialAmount)?.let {
             if (it == it.toLong().toDouble()) it.toLong().toString() else it.toString()
         } ?: "")
     }
@@ -84,17 +92,59 @@ fun QuickAddSheet(
         )
     }
 
+    // Split reimbursement state — for manual income that is actually a split repayment
+    val isEditingSplit = editTransaction?.subtype == TransactionSubtype.SPLIT_REIMBURSEMENT.name
+    var isSplit by remember {
+        mutableStateOf(isEditingSplit)
+    }
+
     LaunchedEffect(type) {
         if (editTransaction == null || editTransaction.type != type) {
-            val matchingCat = categories.firstOrNull { it.type == type }
-            if (matchingCat != null) {
-                selectedCategoryId = matchingCat.id
+            if (isSplit && type == TransactionType.INCOME) {
+                // keep split picker on expense categories
+            } else {
+                val matchingCat = categories.firstOrNull { it.type == type }
+                if (matchingCat != null) {
+                    selectedCategoryId = matchingCat.id
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(isSplit) {
+        if (isSplit) {
+            // Switch to recent expense categories when split is checked
+            val targetCategories = if (recentExpenseCategories.isNotEmpty()) recentExpenseCategories else categories.filter { it.type == TransactionType.EXPENSE }
+            val firstRecent = targetCategories.firstOrNull()
+            if (firstRecent != null) {
+                // If current selection is not an expense category, switch to first recent
+                val currentCat = categories.firstOrNull { it.id == selectedCategoryId }
+                if (currentCat == null || currentCat.type != TransactionType.EXPENSE) {
+                    selectedCategoryId = firstRecent.id
+                }
+            }
+        } else {
+            // When unchecking split, revert to income categories if type is INCOME
+            if (type == TransactionType.INCOME) {
+                val matchingCat = categories.firstOrNull { it.type == TransactionType.INCOME }
+                if (matchingCat != null) {
+                    // Only switch if current is expense category (from split)
+                    val currentCat = categories.firstOrNull { it.id == selectedCategoryId }
+                    if (currentCat?.type == TransactionType.EXPENSE) {
+                        selectedCategoryId = matchingCat.id
+                    }
+                }
             }
         }
     }
 
     var selectedAccount by remember {
-        mutableStateOf(editTransaction?.account ?: accounts.firstOrNull() ?: "Primary Bank")
+        mutableStateOf(
+            editTransaction?.account
+                ?: initialAccount?.takeIf { it.isNotBlank() }
+                ?: accounts.firstOrNull()
+                ?: "Primary Bank"
+        )
     }
     var selectedToAccount by remember {
         mutableStateOf(
@@ -113,7 +163,21 @@ fun QuickAddSheet(
     var showDatePicker by remember { mutableStateOf(false) }
     var showAddAccountDialog by remember { mutableStateOf(false) }
 
-    val filteredCategories = categories.filter { it.type == type }
+    val filteredCategories = remember(categories, type, isSplit, recentExpenseCategories) {
+        if (isSplit) {
+            if (recentExpenseCategories.isNotEmpty()) recentExpenseCategories
+            else categories.filter { it.type == TransactionType.EXPENSE }
+        } else {
+            categories.filter { it.type == type }
+        }
+    }
+
+    // Ensure selected category is valid for current filtered list
+    LaunchedEffect(filteredCategories, selectedCategoryId) {
+        if (filteredCategories.isNotEmpty() && filteredCategories.none { it.id == selectedCategoryId }) {
+            selectedCategoryId = filteredCategories.first().id
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -137,7 +201,6 @@ fun QuickAddSheet(
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 32.dp)
         ) {
-            // ── Title ────────────────────────────────────
             Text(
                 text = if (editTransaction != null) "Edit Entry" else "Add Entry",
                 style = MaterialTheme.typography.headlineSmall,
@@ -146,7 +209,6 @@ fun QuickAddSheet(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            // ── Type Toggle ──────────────────────────────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -160,6 +222,7 @@ fun QuickAddSheet(
                     color = colors.expense,
                     onClick = {
                         type = TransactionType.EXPENSE
+                        isSplit = false
                         selectedCategoryId = categories.firstOrNull { it.type == TransactionType.EXPENSE }?.id ?: 0L
                     },
                     modifier = Modifier.weight(1f)
@@ -180,6 +243,7 @@ fun QuickAddSheet(
                     color = MaterialTheme.colorScheme.primary,
                     onClick = {
                         type = TransactionType.TRANSFER
+                        isSplit = false
                         selectedCategoryId = categories.firstOrNull { it.type == TransactionType.TRANSFER }?.id ?: 0L
                         if (accounts.size > 1 && selectedAccount == selectedToAccount) {
                             selectedToAccount = accounts.firstOrNull { it != selectedAccount } ?: accounts.getOrNull(1) ?: "Secondary Bank"
@@ -189,9 +253,49 @@ fun QuickAddSheet(
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // ── Amount Display ───────────────────────────
+            // Split reimbursement checkbox — visible for Income (add) and for editing split (any type)
+            if (type == TransactionType.INCOME || isEditingSplit) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (isSplit) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                        .clickable { isSplit = !isSplit }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = isSplit,
+                        onCheckedChange = { isSplit = it },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = MaterialTheme.colorScheme.primary,
+                            uncheckedColor = colors.textTertiary
+                        )
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Split reimbursement",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isSplit) MaterialTheme.colorScheme.primary else colors.textPrimary
+                        )
+                        Text(
+                            text = if (isSplit) "Reduces expense instead of increasing income"
+                            else "Mark as expense reimbursement (recent expense categories)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colors.textSecondary
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -211,11 +315,9 @@ fun QuickAddSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // ── Numeric Keypad ───────────────────────────
             NumericKeypad(
                 onDigit = { digit ->
                     if (digit == "." && amountText.contains(".")) {
-                        // ignore duplicate dot
                     } else if (digit == "." && amountText.isEmpty()) {
                         amountText = "0."
                     } else {
@@ -235,13 +337,20 @@ fun QuickAddSheet(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // ── Category Picker ──────────────────────────
             Text(
-                text = "Category",
+                text = if (isSplit) "Reimbursed Category" else "Category",
                 style = MaterialTheme.typography.titleSmall,
                 color = colors.textSecondary,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
+            if (isSplit) {
+                Text(
+                    text = "Recent expense categories",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.textTertiary,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+            }
             CategoryPicker(
                 categories = filteredCategories,
                 selectedCategoryId = selectedCategoryId,
@@ -250,8 +359,7 @@ fun QuickAddSheet(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ── Account Picker (From / To) ───────────────
-            if (type == TransactionType.TRANSFER) {
+            if (type == TransactionType.TRANSFER && !isSplit) {
                 if (accounts.size < 2) {
                     Box(
                         modifier = Modifier
@@ -328,7 +436,6 @@ fun QuickAddSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ── Date & Notes Row ─────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -380,26 +487,43 @@ fun QuickAddSheet(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // ── Save Button ──────────────────────────────
             val canSave = amountText.isNotBlank() &&
                     amountText.toDoubleOrNull() != null &&
                     amountText.toDouble() > 0 &&
                     selectedCategoryId > 0 &&
-                    (type != TransactionType.TRANSFER || (accounts.size >= 2 && selectedAccount != selectedToAccount))
+                    (type != TransactionType.TRANSFER || isSplit || (accounts.size >= 2 && selectedAccount != selectedToAccount))
 
             Button(
                 onClick = {
                     val amount = amountText.toDoubleOrNull() ?: return@Button
+                    val isSplitSave = isSplit
+                    val (finalType, finalSubtype, finalCategoryId) = if (isSplitSave) {
+                        Triple(TransactionType.EXPENSE, TransactionSubtype.SPLIT_REIMBURSEMENT.name, selectedCategoryId)
+                    } else {
+                        Triple(type, editTransaction?.subtype, selectedCategoryId)
+                    }
+                    // For split edit that was toggled off, clear subtype
+                    val resolvedSubtype = if (isSplitSave) TransactionSubtype.SPLIT_REIMBURSEMENT.name
+                    else if (editTransaction != null && !isSplitSave && editTransaction.subtype == TransactionSubtype.SPLIT_REIMBURSEMENT.name) null
+                    else editTransaction?.subtype
+
+                    val finalTypeResolved = if (isSplitSave) TransactionType.EXPENSE else type
+
                     val transaction = TransactionEntity(
                         id = editTransaction?.id ?: 0,
                         amount = amount,
-                        type = type,
-                        categoryId = selectedCategoryId,
+                        type = finalTypeResolved,
+                        categoryId = finalCategoryId,
                         account = selectedAccount,
-                        toAccount = if (type == TransactionType.TRANSFER) selectedToAccount else null,
+                        toAccount = if (finalTypeResolved == TransactionType.TRANSFER && !isSplitSave) selectedToAccount else null,
                         date = selectedDate,
                         notes = notes.trim(),
-                        createdAt = editTransaction?.createdAt ?: System.currentTimeMillis()
+                        createdAt = editTransaction?.createdAt ?: System.currentTimeMillis(),
+                        sourceMessageHash = editTransaction?.sourceMessageHash,
+                        referenceNumber = editTransaction?.referenceNumber,
+                        source = editTransaction?.source ?: TransactionSource.MANUAL.name,
+                        confidence = TransactionConfidence.MANUAL.name,
+                        subtype = resolvedSubtype
                     )
                     onSave(transaction)
                 },

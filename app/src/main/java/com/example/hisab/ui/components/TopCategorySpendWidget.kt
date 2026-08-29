@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.hisab.data.db.entity.CategoryEntity
 import com.example.hisab.ui.theme.HisabTheme
-import com.example.hisab.util.CategoryIconMapper
 import com.example.hisab.util.CurrencyFormatter
 
 @Composable
