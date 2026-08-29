@@ -44,11 +44,19 @@ fun SpendingHeatmap(
     val firstDayOfWeek = yearMonth.atDay(1).dayOfWeek.value // 1=Mon, 7=Sun
     val dailyMap = remember(data) { data.associate { it.date.dayOfMonth to it.totalAmount } }
 
-    // Non-zero min/max for true relative normalization
-    val nonZeroAmounts = remember(data) { data.map { it.totalAmount }.filter { it > 0.0 } }
-    val minNonZero = remember(nonZeroAmounts) { nonZeroAmounts.minOrNull() ?: 0.0 }
-    val maxNonZero = remember(nonZeroAmounts) { nonZeroAmounts.maxOrNull() ?: 0.0 }
-    val uniqueNonZeroCount = remember(nonZeroAmounts) { nonZeroAmounts.map { it.toLong() }.distinct().size }
+    // Rank-based intensity: each unique non-zero amount gets a distinct
+    // position in the gradient, evenly spaced regardless of numeric gaps.
+    val uniqueSortedAmounts = remember(data) {
+        data.map { it.totalAmount }.filter { it > 0.0 }.map { it.toLong() }.distinct().sorted()
+    }
+    // Map from raw amount (Long) → intensity [0, 1] based on rank
+    val rankMap = remember(uniqueSortedAmounts) {
+        val count = uniqueSortedAmounts.size
+        if (count <= 1) emptyMap()
+        else uniqueSortedAmounts.mapIndexed { idx, amt ->
+            amt to idx.toFloat() / (count - 1).toFloat()
+        }.toMap()
+    }
 
     fun lerpColor(a: Color, b: Color, t: Float): Color {
         return Color(
@@ -82,13 +90,14 @@ fun SpendingHeatmap(
         return lerpColor(lower.second, upper.second, t)
     }
 
-    // Compute intensity: min-max normalize non-zero values to [0, 1]
+    // Rank-based intensity: unique values get evenly spaced positions.
+    // Example: 4 unique values → intensities 0.0, 0.333, 0.667, 1.0
     fun computeIntensity(amount: Double): Float {
         if (amount <= 0) return 0f
-        if (uniqueNonZeroCount <= 1) return 1f  // single value → strongest color
-        val range = maxNonZero - minNonZero
-        if (range <= 0) return 0.75f  // all identical → strong mid-high
-        return ((amount - minNonZero) / range).toFloat().coerceIn(0f, 1f)
+        val key = amount.toLong()
+        val uniqueCount = uniqueSortedAmounts.size
+        if (uniqueCount <= 1) return 1f  // single value → strongest color
+        return rankMap[key] ?: 0.75f
     }
 
     val totalCells = firstDayOfWeek - 1 + daysInMonth
