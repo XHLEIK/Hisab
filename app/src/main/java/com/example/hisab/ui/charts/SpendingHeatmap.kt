@@ -67,16 +67,17 @@ fun SpendingHeatmap(
         )
     }
 
-    // 9-stop monochromatic red gradient: muted wine → rose → crimson → burgundy
+    // 9-stop monochromatic red gradient: muted rose → crimson → burgundy
     // Single-hue red intensity scale for a premium finance-oriented look.
+    // Lightest stop is still dark enough for white date text (contrast ≥ 7:1).
     fun expenseColor(intensity: Float): Color {
         val stops = listOf(
-            0.0f to Color(0xFF3D1221),   // muted dark wine (lowest)
-            0.125f to Color(0xFF5C1A2B),  // dark rose
-            0.25f to Color(0xFF7A2840),   // rose-red
-            0.375f to Color(0xFF8C2D4A),  // medium-dark red
-            0.5f to Color(0xFFA03050),    // clear red
-            0.625f to Color(0xFFB52D45),  // strong red
+            0.0f to Color(0xFF7B3045),   // muted rose (lowest)
+            0.125f to Color(0xFF8C3A55),  // medium rose
+            0.25f to Color(0xFF9E4465),   // rose-red
+            0.375f to Color(0xFFB04E72),  // medium red
+            0.5f to Color(0xFFC25060),    // clear red
+            0.625f to Color(0xFFC94050),  // strong red
             0.75f to Color(0xFFC62828),   // classic red
             0.875f to Color(0xFFA31525),  // dark crimson
             1.0f to Color(0xFF7F0000)     // very dark burgundy (highest)
