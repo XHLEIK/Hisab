@@ -442,6 +442,106 @@ class ReportGenerator(private val context: Context) {
         canvas2.drawText("Page $pageNumber of $pageNumber  •  Hisab Whole Month Visual Analytics Statement", (pageWidth / 2 - 110).toFloat(), 815f, subTitlePaint)
         pdfDoc.finishPage(chartPage)
 
+        // ── Section 4: Daily Expense Heatmap ───────────────────────────────────
+        val heatPageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNumber + 1).create()
+        val heatPage = pdfDoc.startPage(heatPageInfo)
+        val c = heatPage.canvas
+
+        c.drawText("Daily Expense Heatmap", 35f, 42f, titlePaint)
+        c.drawLine(35f, 55f, (pageWidth - 35).toFloat(), 55f, linePaint)
+
+        // Build daily expense totals
+        val dailyExpenses = transactions
+            .filter { it.type == TransactionType.EXPENSE }
+            .groupBy { it.date.dayOfMonth }
+            .mapValues { (_, txs) -> txs.sumOf { it.amount } }
+
+        // Rank-based intensity (same logic as SpendingHeatmap)
+        val uniqueSorted = dailyExpenses.values.map { it.toLong() }.distinct().sorted()
+        val uniqueCount = uniqueSorted.size
+        val rankMap = if (uniqueCount <= 1) emptyMap()
+            else uniqueSorted.mapIndexed { idx, amt -> amt to idx.toFloat() / (uniqueCount - 1).toFloat() }.toMap()
+
+        fun heatIntensity(amount: Double): Float {
+            if (amount <= 0) return 0f
+            if (uniqueCount <= 1) return 1f
+            return rankMap[amount.toLong()] ?: 0.75f
+        }
+
+        // Red palette stops (monochromatic)
+        fun heatColor(intensity: Float): Int {
+            val stops = listOf(
+                0.0f to intArrayOf(0x7B, 0x30, 0x45),
+                0.125f to intArrayOf(0x8C, 0x3A, 0x55),
+                0.25f to intArrayOf(0x9E, 0x44, 0x65),
+                0.375f to intArrayOf(0xB0, 0x4E, 0x72),
+                0.5f to intArrayOf(0xC2, 0x50, 0x60),
+                0.625f to intArrayOf(0xC9, 0x40, 0x50),
+                0.75f to intArrayOf(0xC6, 0x28, 0x28),
+                0.875f to intArrayOf(0xA3, 0x15, 0x25),
+                1.0f to intArrayOf(0x7F, 0x00, 0x00)
+            )
+            val lower = stops.last { it.first <= intensity }
+            val upper = stops.first { it.first >= intensity }
+            if (lower == upper) return Color.rgb(lower.second[0], lower.second[1], lower.second[2])
+            val range = upper.first - lower.first
+            val t = if (range > 0f) (intensity - lower.first) / range else 0f
+            val r = (lower.second[0] + (upper.second[0] - lower.second[0]) * t).toInt()
+            val g = (lower.second[1] + (upper.second[1] - lower.second[1]) * t).toInt()
+            val b = (lower.second[2] + (upper.second[2] - lower.second[2]) * t).toInt()
+            return Color.rgb(r, g, b)
+        }
+
+        // Calendar grid
+        val targetYm = targetMonth ?: java.time.YearMonth.now()
+        val heatDaysInMonth = targetYm.lengthOfMonth()
+        val heatFirstDow = targetYm.atDay(1).dayOfWeek.value // 1=Mon
+        val heatWeeks = ((heatFirstDow - 1 + heatDaysInMonth) + 6) / 7
+
+        val heatCellSize = 62f
+        val heatGap = 6f
+        val heatStartX = 35f
+        var heatY = 75f
+
+        // Weekday headers
+        val heatWeekdays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+        heatWeekdays.forEachIndexed { i, label ->
+            c.drawText(label, heatStartX + i * (heatCellSize + heatGap) + heatCellSize / 2 - 12f, heatY, dayLabelPaint)
+        }
+        heatY += 16f
+
+        val heatZeroPaint = Paint().apply { color = Color.parseColor("#F1F5F9"); style = Paint.Style.FILL; isAntiAlias = true }
+        val heatDateText = Paint().apply { color = Color.WHITE; textSize = 10f; isFakeBoldText = true; isAntiAlias = true }
+        val heatAmountText = Paint().apply { color = Color.WHITE; textSize = 7f; isAntiAlias = true }
+        val heatBorderPaint = Paint().apply { color = Color.parseColor("#E2E8F0"); style = Paint.Style.STROKE; strokeWidth = 0.5f; isAntiAlias = true }
+
+        for (week in 0 until heatWeeks) {
+            for (dow in 0..6) {
+                val cellIdx = week * 7 + dow
+                val day = cellIdx - (heatFirstDow - 2)
+                if (day !in 1..heatDaysInMonth) continue
+
+                val x = heatStartX + dow * (heatCellSize + heatGap)
+                val y = heatY + week * (heatCellSize + heatGap)
+
+                val amount = dailyExpenses[day] ?: 0.0
+                val bgPaint = if (amount <= 0) heatZeroPaint
+                    else Paint().apply { color = heatColor(heatIntensity(amount)); style = Paint.Style.FILL; isAntiAlias = true }
+
+                val rect = RectF(x, y, x + heatCellSize, y + heatCellSize)
+                c.drawRoundRect(rect, 6f, 6f, bgPaint)
+                c.drawRoundRect(rect, 6f, 6f, heatBorderPaint)
+
+                c.drawText("$day", x + 6f, y + 14f, heatDateText)
+                if (amount > 0) {
+                    c.drawText(CurrencyFormatter.format(amount), x + 6f, y + heatCellSize - 6f, heatAmountText)
+                }
+            }
+        }
+
+        c.drawText("Page ${pageNumber + 1}  •  Hisab Daily Expense Heatmap", (pageWidth / 2 - 90).toFloat(), 815f, subTitlePaint)
+        pdfDoc.finishPage(heatPage)
+
         pdfDoc.writeTo(stream)
         pdfDoc.close()
     }
