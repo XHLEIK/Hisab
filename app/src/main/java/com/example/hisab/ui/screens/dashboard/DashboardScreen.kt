@@ -20,9 +20,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -31,6 +33,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +61,7 @@ import com.example.hisab.ui.components.TransactionOptionsBottomSheet
 import com.example.hisab.ui.theme.HisabTheme
 import com.example.hisab.util.DateUtils
 import java.time.LocalDate
+import kotlinx.coroutines.launch
 
 import androidx.compose.foundation.layout.statusBarsPadding
 
@@ -72,7 +76,8 @@ fun DashboardScreen(
     accountRepository: AccountRepository? = null,
     pendingTransactionRepository: PendingTransactionRepository? = null,
     onAddTransaction: () -> Unit = {},
-    onSeeAllTransactions: () -> Unit = {}
+    onSeeAllTransactions: () -> Unit = {},
+    onNavigateToExport: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val viewModel: DashboardViewModel = viewModel(
@@ -119,6 +124,11 @@ fun DashboardScreen(
 
     val today = LocalDate.now()
     val isEndOfMonth = today.dayOfMonth >= today.lengthOfMonth() - 1
+    val scope = rememberCoroutineScope()
+    val backupPrefs = remember { com.example.hisab.data.backup.BackupPreferences(context) }
+    val dismissedMonth by backupPrefs.dismissedBackupCardMonth.collectAsState(initial = "")
+    val currentYearMonth = remember(today) { java.time.YearMonth.from(today).toString() } // YYYY-MM
+    val showBackupCard = isEndOfMonth && dismissedMonth != currentYearMonth
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -158,7 +168,7 @@ fun DashboardScreen(
             }
 
             // ── End-of-Month Backup Reminder Banner ──────
-            if (isEndOfMonth) {
+            if (showBackupCard) {
                 item {
                     Box(
                         modifier = Modifier
@@ -167,6 +177,7 @@ fun DashboardScreen(
                             .clip(RoundedCornerShape(14.dp))
                             .background(MaterialTheme.colorScheme.primaryContainer)
                             .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+                            .clickable { onNavigateToExport() }
                             .padding(14.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -188,6 +199,20 @@ fun DashboardScreen(
                                     text = "End of month! Go to Settings to export your CSV backup.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = colors.textSecondary
+                                )
+                            }
+                            IconButton(
+                                onClick = {
+                                    scope.launch {
+                                        backupPrefs.setDismissedBackupCardMonth(currentYearMonth)
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = "Dismiss",
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }

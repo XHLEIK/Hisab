@@ -460,6 +460,7 @@ fun HisabApp(
     )
     val scope = rememberCoroutineScope()
     val currentRouteForBar = com.example.hisab.ui.navigation.Screen.bottomNavItems[pagerState.currentPage].route
+    var settingsExportTrigger by remember { mutableStateOf(0) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -484,6 +485,14 @@ fun HisabApp(
                         pendingTransactionRepository = pendingTransactionRepository,
                         onSeeAllTransactions = {
                             scope.launch { pagerState.animateScrollToPage(com.example.hisab.ui.navigation.Screen.bottomNavItems.indexOf(com.example.hisab.ui.navigation.Screen.History)) }
+                        },
+                        onNavigateToExport = {
+                            scope.launch {
+                                val settingsIdx = com.example.hisab.ui.navigation.Screen.bottomNavItems.indexOf(com.example.hisab.ui.navigation.Screen.Settings)
+                                pagerState.animateScrollToPage(settingsIdx)
+                                // Trigger scroll inside Settings to make Export visible; no auto-open dialog
+                                settingsExportTrigger++
+                            }
                         }
                     )
                     is com.example.hisab.ui.navigation.Screen.Analytics -> com.example.hisab.ui.screens.analytics.AnalyticsScreen(
@@ -499,7 +508,8 @@ fun HisabApp(
                     is com.example.hisab.ui.navigation.Screen.Settings -> com.example.hisab.ui.screens.settings.SettingsScreen(
                         categoryRepository = categoryRepository,
                         accountRepository = accountRepository,
-                        backupRepository = backupRepository
+                        backupRepository = backupRepository,
+                        scrollToExportTrigger = settingsExportTrigger
                     )
                 }
             }

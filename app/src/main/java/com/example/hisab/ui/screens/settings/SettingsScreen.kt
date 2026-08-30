@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -114,7 +115,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 fun SettingsScreen(
     categoryRepository: CategoryRepository,
     backupRepository: BackupRepository,
-    accountRepository: AccountRepository? = null
+    accountRepository: AccountRepository? = null,
+    scrollToExportTrigger: Int = 0
 ) {
     val viewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModel.Factory(categoryRepository, backupRepository, accountRepository)
@@ -198,8 +200,25 @@ fun SettingsScreen(
         }
     }
 
+    val listState = rememberLazyListState()
+
+    // When navigated from Dashboard backup card, scroll so Data & Backup / Export is visible (do NOT auto-open dialog)
+    LaunchedEffect(scrollToExportTrigger) {
+        if (scrollToExportTrigger > 0) {
+            // Accounts are variable size, so estimate: scroll near Data & Backup section
+            // Data & Backup is after accounts + categories (approx accounts.size + 9 static items)
+            // Clamp to valid index; use animateScrollToItem for smooth scroll
+            kotlinx.coroutines.delay(300)
+            val estimatedIndex = (accounts.size + 10).coerceAtLeast(0)
+            try {
+                listState.animateScrollToItem(estimatedIndex)
+            } catch (_: Exception) { }
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)

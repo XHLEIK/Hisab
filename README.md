@@ -1,13 +1,13 @@
 <p align="center">
   <img src="docs/logo.png" width="128" height="128" alt="Hisab Logo" />
-  <h1 align="center">Hisab (हिसाब) v4.0</h1>
-  <p align="center"><b>Smart Offline-First Personal Finance Tracker for Android (v4.0 Backup & Permission Overhaul)</b></p>
+  <h1 align="center">Hisab (हिसाब) v4.1</h1>
+  <p align="center"><b>Smart Offline-First Personal Finance Tracker for Android (v4.1 Full-Screen Transaction Composer)</b></p>
   <p align="center">
-    <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.0.apk">
-      <img src="https://img.shields.io/badge/📥_Download_APK-v4.0-00E5A0?style=for-the-badge&logo=android&logoColor=black" alt="Download APK" />
+    <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.1.apk">
+      <img src="https://img.shields.io/badge/📥_Download_APK-v4.1-00E5A0?style=for-the-badge&logo=android&logoColor=black" alt="Download APK" />
     </a>
-    <a href="https://github.com/XHLEIK/Hisab/releases/tag/v4.0">
-      <img src="https://img.shields.io/badge/GitHub-v4.0_Release-blue?style=for-the-badge&logo=github" alt="GitHub Release" />
+    <a href="https://github.com/XHLEIK/Hisab/releases/tag/v4.1">
+      <img src="https://img.shields.io/badge/GitHub-v4.1_Release-blue?style=for-the-badge&logo=github" alt="GitHub Release" />
     </a>
     <a href="LICENSE">
       <img src="https://img.shields.io/badge/License-Apache_2.0-orange?style=for-the-badge" alt="License" />
@@ -17,17 +17,17 @@
 
 ---
 
-## 📲 Click to Download APK (v4.0 Release)
+## 📲 Click to Download APK (v4.1 Release)
 
 <p align="center">
-  <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.0.apk">
-    <img src="https://img.shields.io/badge/⚡_DIRECT_DOWNLOAD-Hisab__v4.0.apk-00E5A0?style=for-the-badge&logo=android&logoColor=black" alt="Direct APK Download" />
+  <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.1.apk">
+    <img src="https://img.shields.io/badge/⚡_DIRECT_DOWNLOAD-Hisab__v4.1.apk-00E5A0?style=for-the-badge&logo=android&logoColor=black" alt="Direct APK Download" />
   </a>
 </p>
 
-- **APK File**: `Hisab_v4.0.apk` (and `Hisab_v3.1.2.apk`, `Hisab_v3.1.1.apk`, `Hisab_v3.1.apk`, `Hisab_v3.0.apk`)
-- **File Location**: [`releases/Hisab_v4.0.apk`](https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.0.apk)
-- **Latest Tag**: [`v4.0`](https://github.com/XHLEIK/Hisab/releases/tag/v4.0)
+- **APK File**: `Hisab_v4.1.apk` (and `Hisab_v4.0.apk`, `Hisab_v3.1.2.apk`, `Hisab_v3.1.1.apk`, `Hisab_v3.1.apk`, `Hisab_v3.0.apk`)
+- **File Location**: [`releases/Hisab_v4.1.apk`](https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.1.apk)
+- **Latest Tag**: [`v4.1`](https://github.com/XHLEIK/Hisab/releases/tag/v4.1)
 
 ---
 
@@ -39,9 +39,19 @@ Designed with a sleek, adaptive fintech UI supporting both **Light Mode** and **
 
 ---
 
-## ✨ Key Features & Changelog (v4.0 Update)
+## ✨ Key Features & Changelog (v4.1 Update)
 
-### 1. 🗂️ Single-File Backup Discipline
+### 🆕 v4.1 — Full-Screen Premium Transaction Composer
+- **Full-screen Add/Edit experience**: `Add Entry` / `Edit Entry` now open as a true full-screen composer (`Dialog` + `Scaffold`) — `Dashboard`/`History` no longer bleeds around edges. Subtle drag handle (`40×4dp`) at top + natural swipe-down dismiss (finger-tracking `Animatable` + `draggable` `160dp`/`800 velocity` threshold, `tween 220/260`) replaces the redundant header `X`/`✓` — bottom `Save`/`Update` is the sole commit action. Gesture matches `Category Picker` (`ModalBottomSheet`) and is confined to the header so calculator/category/account/date interactions never accidentally dismiss.
+- **One unified glass bottom dock**: Calculator + Account + Date/Notes + Save live on a single `Haze` (`HazeState`/`hazeChild` `0.82/14dp` `0.5dp` border `24dp` top) translucent dock (`shadow 8dp`, `surfaceContainerHigh 0.82`) — no competing sticky `calculator + giant Account panel` layers. `Scaffold bottomBar` `navigationBarsPadding+imePadding` keeps it above keyboard/nav bar.
+- **Persistent calculator (compact & premium)**: `NumericKeypad` reworked to `5×4` (`% ÷ × −` / `7 8 9 +` / `4 5 6 ⌫` / `1 2 3 =` tall `=` 98dp / `00 0 .`) `46dp` keys `6dp` gaps `12dp` radius — dense but comfortable. Pure-Kotlin `CalculatorEngine` (`BigDecimal`, shunting-yard, standard `×÷%` → `+-` precedence, contextual `%`: `50%→0.5`, `1000×10%→100`, `1000+10%→1100`, `÷0→null`, `00`/`Backspace`/`=` only, no `C`).
+- **Single-page hierarchy (no hidden content)**: `Header → Type → Amount (₹ displayMedium, no heavy card) → [Split] → Category → Calculator → Account/From-To → Date/Notes → Save`. Main page is now `fillMaxSize` non-scrollable with type-specific responsive gaps (`Expense 14/10/8/16/14` vs `Income+Split 6/4/4/8/8` vs `Transfer 8/6/6/12/10`) — `Category` card (`40dp→36dp` when `Income+Split`) always finishes `16dp+` above calculator top, no overlap/clipping on small screens, no nested scroll jitter (`LazyVerticalGrid` → static `Column(chunked 4)` for picker grid, outer `Column` handles scroll only in picker).
+- **Compact category selector + dedicated picker**: Main screen shows only selected category — `Box(14dp, border 0.5dp)` `40dp Circle` emoji + `titleSmall` name + `type` label + `ChevronRight` (`+ Select a category` placeholder when `selectedCategoryId==0`). Tap opens dedicated `ModalBottomSheet` (`20dp` top, dragHandle) — `Search` (`contains ignoreCase` immediate) + `Recent (4)` `LazyRow` (`CategoryStripItem 96-156dp 44dp`) + `All Categories` `4-col` `CategoryGridPickerItem(44dp 18sp, 2-lines)` scrollable `560dp` `rememberScrollState` — scales `6→50` categories, no horizontal carousel swipe fatigue, `Select a category` shown until user picks.
+- **Income + Split + Transfer polish**: `Split Reimbursement` compact `12→8dp` padding when `Income+Split`; `Reimbursed Category` label; `Expense` reference layout untouched; `Transfer` `FROM`/`TO` `labelSmall Bold 0.8sp` + `1dp divider 0.35` + `AccountPicker` (no large green arrow), `ACCOUNT` header `AccountBalanceWallet 16dp + ACCOUNT 0.8sp + N accounts` + `horizontalScroll` `Spacer 8+2dp` so `+ Add Account` never clipped.
+- **Bug fixes**: `888` now correctly shows `888` (was only first digit — `amountText` vs `calculator.expression` `State` sync fixed), `−` unicode vs `-` and `×÷` handling normalized, `10+20×2=50` precedence fixed.
+
+### v4.0 — Backup & Permission Overhaul (previous)
+#### 1. 🗂️ Single-File Backup Discipline
 - **Eliminated duplicate backup files**: The app now enforces exactly ONE backup file (`hisab_auto_backup.json`) in `Documents/Hisab/`. Previous versions could create deconflicted copies like `hisab_auto_backup(1).json` due to POSIX and MediaStore write races.
 - **Smart deconfliction cleanup**: On startup and after every backup, stray `(N)` variant files are cleaned up from Documents, Downloads, and MediaStore.
 - **Best-candidate import**: When restoring, the app now searches all `hisab_auto_backup*.json` variants (including deconflicted copies) and picks the one with the most transactions — so old backup files are never silently ignored.
