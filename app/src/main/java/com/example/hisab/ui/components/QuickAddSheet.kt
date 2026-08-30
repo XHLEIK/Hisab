@@ -30,6 +30,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -77,6 +79,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -147,6 +150,9 @@ fun QuickAddSheet(
     val isEditingSplit = editTransaction?.subtype == TransactionSubtype.SPLIT_REIMBURSEMENT.name
     var isSplit by remember { mutableStateOf(isEditingSplit) }
     val isIncomeSplitMode = type == TransactionType.INCOME && isSplit
+    val configuration = LocalConfiguration.current
+    val isShortScreen = configuration.screenHeightDp < 700
+    val isVeryShort = configuration.screenHeightDp < 620
 
     val filteredCategories = remember(categories, type, isSplit, recentExpenseCategories) {
         if (isSplit) {
@@ -383,16 +389,22 @@ fun QuickAddSheet(
                         }
                         // Responsive gaps: Income+Split needs extra compaction to keep Reimbursed Category visible
                         val topGap = when {
+                            isVeryShort -> 4.dp
+                            isShortScreen -> 6.dp
                             type == TransactionType.EXPENSE -> 14.dp
                             isIncomeSplitMode -> 6.dp
                             else -> 8.dp
                         }
                         val amountVert = when {
+                            isVeryShort -> 4.dp
+                            isShortScreen -> 6.dp
                             type == TransactionType.EXPENSE -> 10.dp
                             isIncomeSplitMode -> 4.dp
                             else -> 6.dp
                         }
                         val dividerVert = when {
+                            isVeryShort -> 4.dp
+                            isShortScreen -> 4.dp
                             type == TransactionType.EXPENSE -> 8.dp
                             isIncomeSplitMode -> 4.dp
                             else -> 6.dp
@@ -425,11 +437,15 @@ fun QuickAddSheet(
                             .imePadding()
                     ) {
                         val dockSpacedBy = when {
+                            isVeryShort -> 6.dp
+                            isShortScreen -> 8.dp
                             type == TransactionType.TRANSFER -> 8.dp
                             isIncomeSplitMode -> 8.dp
                             else -> 10.dp
                         }
                         val dockVertPad = when {
+                            isVeryShort -> 8.dp
+                            isShortScreen -> 10.dp
                             isIncomeSplitMode -> 10.dp
                             type == TransactionType.TRANSFER -> 10.dp
                             else -> 12.dp
@@ -548,11 +564,15 @@ fun QuickAddSheet(
             ) { innerPadding ->
                 // Single non-scrollable page — responsive gaps to keep Category always above calculator
                 val contentVertPad = when {
+                    isVeryShort -> 6.dp
+                    isShortScreen -> 8.dp
                     type == TransactionType.EXPENSE -> 16.dp
                     isIncomeSplitMode -> 8.dp
                     else -> 12.dp
                 }
                 val contentSpacedBy = when {
+                    isVeryShort -> 6.dp
+                    isShortScreen -> 8.dp
                     isIncomeSplitMode -> 8.dp
                     type == TransactionType.INCOME -> 10.dp
                     type == TransactionType.TRANSFER -> 10.dp
@@ -572,7 +592,12 @@ fun QuickAddSheet(
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(if (isSplit) colorScheme.primary.copy(alpha = 0.08f) else colorScheme.surfaceVariant.copy(alpha = 0.5f))
                                 .clickable { isSplit = !isSplit }
-                                .padding(horizontal = 12.dp, vertical = if (isIncomeSplitMode) 8.dp else 10.dp),
+                                .padding(horizontal = 12.dp, vertical = when {
+                                    isVeryShort -> 6.dp
+                                    isShortScreen -> 8.dp
+                                    isIncomeSplitMode -> 8.dp
+                                    else -> 10.dp
+                                }),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Checkbox(checked = isSplit, onCheckedChange = { isSplit = it }, colors = CheckboxDefaults.colors(checkedColor = colorScheme.primary, uncheckedColor = colors.textTertiary))
@@ -595,7 +620,12 @@ fun QuickAddSheet(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = if (isIncomeSplitMode) 6.dp else 10.dp)
+                            .padding(top = when {
+                                isVeryShort -> 4.dp
+                                isShortScreen -> 6.dp
+                                isIncomeSplitMode -> 6.dp
+                                else -> 10.dp
+                            })
                             .clip(RoundedCornerShape(14.dp))
                             .background(
                                 if (selectedCategory != null) {
@@ -612,14 +642,26 @@ fun QuickAddSheet(
                                 shape = RoundedCornerShape(14.dp)
                             )
                             .clickable { categorySearchQuery = ""; showCategoryPicker = true }
-                            .padding(horizontal = 14.dp, vertical = if (isIncomeSplitMode) 10.dp else 14.dp)
+                            .padding(horizontal = 14.dp, vertical = when {
+                                isVeryShort -> 8.dp
+                                isShortScreen -> 10.dp
+                                isIncomeSplitMode -> 10.dp
+                                else -> 14.dp
+                            })
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.weight(1f)) {
                                 if (selectedCategory != null) {
                                     Box(
                                         modifier = Modifier
-                                            .size(if (isIncomeSplitMode) 36.dp else 40.dp)
+                                            .size(
+                                                when {
+                                                    isVeryShort -> 32.dp
+                                                    isShortScreen -> 36.dp
+                                                    isIncomeSplitMode -> 36.dp
+                                                    else -> 40.dp
+                                                }
+                                            )
                                             .clip(androidx.compose.foundation.shape.CircleShape)
                                             .background(
                                                 try { androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(selectedCategory.colorHex)).copy(alpha = 0.15f) }
