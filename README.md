@@ -1,13 +1,13 @@
 <p align="center">
   <img src="docs/logo.png" width="128" height="128" alt="Hisab Logo" />
-  <h1 align="center">Hisab (हिसाब) v4.1</h1>
-  <p align="center"><b>Smart Offline-First Personal Finance Tracker for Android (v4.1 Full-Screen Transaction Composer)</b></p>
+  <h1 align="center">Hisab (हिसाब) v4.2.1</h1>
+  <p align="center"><b>Smart Offline-First Personal Finance Tracker for Android (v4.2.1 Single-Page Composer)</b></p>
   <p align="center">
-    <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.1.apk">
-      <img src="https://img.shields.io/badge/📥_Download_APK-v4.1-00E5A0?style=for-the-badge&logo=android&logoColor=black" alt="Download APK" />
+    <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.2.1.apk">
+      <img src="https://img.shields.io/badge/📥_Download_APK-v4.2.1-00E5A0?style=for-the-badge&logo=android&logoColor=black" alt="Download APK" />
     </a>
-    <a href="https://github.com/XHLEIK/Hisab/releases/tag/v4.1">
-      <img src="https://img.shields.io/badge/GitHub-v4.1_Release-blue?style=for-the-badge&logo=github" alt="GitHub Release" />
+    <a href="https://github.com/XHLEIK/Hisab/releases/tag/v4.2.1">
+      <img src="https://img.shields.io/badge/GitHub-v4.2.1_Release-blue?style=for-the-badge&logo=github" alt="GitHub Release" />
     </a>
     <a href="LICENSE">
       <img src="https://img.shields.io/badge/License-Apache_2.0-orange?style=for-the-badge" alt="License" />
@@ -17,17 +17,17 @@
 
 ---
 
-## 📲 Click to Download APK (v4.1 Release)
+## 📲 Click to Download APK (v4.2.1 Release)
 
 <p align="center">
-  <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.1.apk">
-    <img src="https://img.shields.io/badge/⚡_DIRECT_DOWNLOAD-Hisab__v4.1.apk-00E5A0?style=for-the-badge&logo=android&logoColor=black" alt="Direct APK Download" />
+  <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.2.1.apk">
+    <img src="https://img.shields.io/badge/⚡_DIRECT_DOWNLOAD-Hisab__v4.2.1.apk-00E5A0?style=for-the-badge&logo=android&logoColor=black" alt="Direct APK Download" />
   </a>
 </p>
 
-- **APK File**: `Hisab_v4.1.apk` (and `Hisab_v4.0.apk`, `Hisab_v3.1.2.apk`, `Hisab_v3.1.1.apk`, `Hisab_v3.1.apk`, `Hisab_v3.0.apk`)
-- **File Location**: [`releases/Hisab_v4.1.apk`](https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.1.apk)
-- **Latest Tag**: [`v4.1`](https://github.com/XHLEIK/Hisab/releases/tag/v4.1)
+- **APK File**: `Hisab_v4.2.1.apk` (and `Hisab_v4.1.apk`, `Hisab_v4.0.apk`, `Hisab_v3.1.2.apk`, `Hisab_v3.1.1.apk`, `Hisab_v3.1.apk`, `Hisab_v3.0.apk`)
+- **File Location**: [`releases/Hisab_v4.2.1.apk`](https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.2.1.apk)
+- **Latest Tag**: [`v4.2.1`](https://github.com/XHLEIK/Hisab/releases/tag/v4.2.1)
 
 ---
 
@@ -39,9 +39,16 @@ Designed with a sleek, adaptive fintech UI supporting both **Light Mode** and **
 
 ---
 
-## ✨ Key Features & Changelog (v4.1 Update)
+## ✨ Key Features & Changelog (v4.2.1 Update)
 
-### 🆕 v4.1 — Full-Screen Premium Transaction Composer
+### 🆕 v4.2.1 — Single-Page Linear Composer + Swipe-Anywhere
+
+- **Single-page linear flow (the big fix)**: `Header → Type → Amount → Split (Income only, minimal)` → `Category` → `Numpad` → `Account/From-To` → `Date/Note` → `Save` now live in one `verticalScroll` `Column(20dp/16dp, spacedBy verticalGap)` inside a full-screen `Dialog` — no competing `Scaffold bottomBar` overlay, so `Category` can never be hidden behind the calculator on any phone height/density/font-scale. `Expense` reference unchanged; `Income+Split` (`Reimbursed Category`) and `Transfer` (`FROM`/`TO` without green arrow) now always fully visible above numpad.
+- **Swipe-down from anywhere**: Outer `Box(offset{IntOffset(0,swipeOffsetY)} nestedScroll(swipeNestedConnection) pointerInput(detectVerticalDragGestures))` + `Animatable(0f)` `swipeThreshold 160dp` `tween 220/260` — when `mainScrollState.value==0` and dragging down, the whole page follows finger; release past threshold → `animateTo 800dp → onDismiss()`, else snap back. Replaces header-only drag, `Back` still same path, no accidental dismiss while interacting with calculator/category/account.
+- **Proper spacing & larger keypad**: `verticalGap 12/10/8dp`, `NumericKeypad` `48dp` keys `12dp` radius `titleLarge Bold 22sp` `spacedBy 8dp` `=104dp` (was `34dp 10dp 18sp 4dp/68dp` — too small/empty), `Save` `52dp 14dp titleMedium Bold contentPadding 14dp` (was `48dp 12dp titleSmall` thin). Gaps not too big, everything compact yet breathable, `heightIn(min 64dp)` category card never collapses to strip, `horizontalScroll Spacer 8+2dp` keeps `+ Add Account` visible.
+- **Responsive without overlap**: `isShortScreen<700dp` `isVeryShort<620dp` via `LocalConfiguration.screenHeightDp` drives `topGap 14→8→6→4dp`, `amountVert 10→6→4dp`, `contentVertPad 16→8→6dp`, `Category top 10→6→4dp` `vertical 14→10→8dp` `icon 40→36→32dp`, `dock` removed — single scroll handles all, `imePadding()+navigationBarsPadding()` respected, `light/dark` via `HisabTheme`/`colorScheme` unchanged.
+
+### v4.1 — Full-Screen Premium Transaction Composer
 - **Full-screen Add/Edit experience**: `Add Entry` / `Edit Entry` now open as a true full-screen composer (`Dialog` + `Scaffold`) — `Dashboard`/`History` no longer bleeds around edges. Subtle drag handle (`40×4dp`) at top + natural swipe-down dismiss (finger-tracking `Animatable` + `draggable` `160dp`/`800 velocity` threshold, `tween 220/260`) replaces the redundant header `X`/`✓` — bottom `Save`/`Update` is the sole commit action. Gesture matches `Category Picker` (`ModalBottomSheet`) and is confined to the header so calculator/category/account/date interactions never accidentally dismiss.
 - **One unified glass bottom dock**: Calculator + Account + Date/Notes + Save live on a single `Haze` (`HazeState`/`hazeChild` `0.82/14dp` `0.5dp` border `24dp` top) translucent dock (`shadow 8dp`, `surfaceContainerHigh 0.82`) — no competing sticky `calculator + giant Account panel` layers. `Scaffold bottomBar` `navigationBarsPadding+imePadding` keeps it above keyboard/nav bar.
 - **Persistent calculator (compact & premium)**: `NumericKeypad` reworked to `5×4` (`% ÷ × −` / `7 8 9 +` / `4 5 6 ⌫` / `1 2 3 =` tall `=` 98dp / `00 0 .`) `46dp` keys `6dp` gaps `12dp` radius — dense but comfortable. Pure-Kotlin `CalculatorEngine` (`BigDecimal`, shunting-yard, standard `×÷%` → `+-` precedence, contextual `%`: `50%→0.5`, `1000×10%→100`, `1000+10%→1100`, `÷0→null`, `00`/`Backspace`/`=` only, no `C`).

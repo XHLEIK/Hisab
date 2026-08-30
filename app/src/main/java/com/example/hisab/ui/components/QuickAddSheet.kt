@@ -3,6 +3,7 @@
 package com.example.hisab.ui.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -30,19 +31,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
@@ -53,14 +52,11 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -76,8 +72,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -98,17 +92,9 @@ import com.example.hisab.data.model.TransactionType
 import com.example.hisab.ui.theme.HisabTheme
 import com.example.hisab.util.CalculatorEngine
 import com.example.hisab.util.DateUtils
-import dev.chrisbanes.haze.HazeDefaults
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeChild
-import dev.chrisbanes.haze.hazeSource
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-
-private val DockShape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-private const val DockAlpha = 0.82f
-private val DockBlur = 14.dp
 
 @Composable
 fun QuickAddSheet(
@@ -125,10 +111,9 @@ fun QuickAddSheet(
     recentExpenseCategories: List<CategoryEntity> = emptyList()
 ) {
     val colors = HisabTheme.colors
+    val colorScheme = MaterialTheme.colorScheme
 
-    var type by remember {
-        mutableStateOf(editTransaction?.type ?: initialType)
-    }
+    var type by remember { mutableStateOf(editTransaction?.type ?: initialType) }
     var amountText by remember(editTransaction, initialAmount) {
         mutableStateOf((editTransaction?.amount ?: initialAmount)?.let {
             if (it == it.toLong().toDouble()) it.toLong().toString() else it.toString()
@@ -143,64 +128,49 @@ fun QuickAddSheet(
     }
 
     var selectedCategoryId by remember {
-        mutableLongStateOf(
-            editCategoryId ?: editTransaction?.categoryId ?: 0L
-        )
+        mutableLongStateOf(editCategoryId ?: editTransaction?.categoryId ?: 0L)
     }
     val isEditingSplit = editTransaction?.subtype == TransactionSubtype.SPLIT_REIMBURSEMENT.name
     var isSplit by remember { mutableStateOf(isEditingSplit) }
-    val isIncomeSplitMode = type == TransactionType.INCOME && isSplit
-    val configuration = LocalConfiguration.current
-    val isShortScreen = configuration.screenHeightDp < 700
-    val isVeryShort = configuration.screenHeightDp < 620
 
     val filteredCategories = remember(categories, type, isSplit, recentExpenseCategories) {
         if (isSplit) {
             if (recentExpenseCategories.isNotEmpty()) recentExpenseCategories else categories.filter { it.type == TransactionType.EXPENSE }
         } else categories.filter { it.type == type }
     }
-
-    // Do NOT auto-select first category on type change; show placeholder if no valid selection
     LaunchedEffect(type) {
         if (editTransaction == null || editTransaction.type != type) {
-            val currentCat = categories.firstOrNull { it.id == selectedCategoryId }
-            val isValidForNewType = when {
-                isSplit && type == TransactionType.INCOME -> currentCat?.type == TransactionType.EXPENSE
-                else -> currentCat?.type == type
+            val cur = categories.firstOrNull { it.id == selectedCategoryId }
+            val valid = when {
+                isSplit && type == TransactionType.INCOME -> cur?.type == TransactionType.EXPENSE
+                else -> cur?.type == type
             }
-            if (!isValidForNewType) {
-                val stillValid = filteredCategories.any { it.id == selectedCategoryId }
-                if (!stillValid) selectedCategoryId = 0L
-            }
+            if (!valid && filteredCategories.none { it.id == selectedCategoryId }) selectedCategoryId = 0L
         }
     }
     LaunchedEffect(isSplit) {
         if (isSplit) {
-            val currentCat = categories.firstOrNull { it.id == selectedCategoryId }
-            if (currentCat == null || currentCat.type != TransactionType.EXPENSE) {
-                val stillValid = filteredCategories.any { it.id == selectedCategoryId }
-                if (!stillValid) selectedCategoryId = 0L
+            val cur = categories.firstOrNull { it.id == selectedCategoryId }
+            if (cur == null || cur.type != TransactionType.EXPENSE) {
+                if (filteredCategories.none { it.id == selectedCategoryId }) selectedCategoryId = 0L
             }
-        } else {
-            if (type == TransactionType.INCOME) {
-                val currentCat = categories.firstOrNull { it.id == selectedCategoryId }
-                if (currentCat?.type == TransactionType.EXPENSE) {
-                    val stillValid = filteredCategories.any { it.id == selectedCategoryId }
-                    if (!stillValid) selectedCategoryId = 0L
-                }
-            }
+        } else if (type == TransactionType.INCOME) {
+            val cur = categories.firstOrNull { it.id == selectedCategoryId }
+            if (cur?.type == TransactionType.EXPENSE && filteredCategories.none { it.id == selectedCategoryId }) selectedCategoryId = 0L
+        }
+    }
+    LaunchedEffect(filteredCategories, selectedCategoryId) {
+        if (selectedCategoryId != 0L && filteredCategories.isNotEmpty() && filteredCategories.none { it.id == selectedCategoryId }) {
+            val exists = categories.any { it.id == selectedCategoryId }
+            if (!exists || editTransaction == null) selectedCategoryId = 0L
         }
     }
 
     var selectedAccount by remember {
-        mutableStateOf(
-            editTransaction?.account ?: initialAccount?.takeIf { it.isNotBlank() } ?: accounts.firstOrNull() ?: "Primary Bank"
-        )
+        mutableStateOf(editTransaction?.account ?: initialAccount?.takeIf { it.isNotBlank() } ?: accounts.firstOrNull() ?: "Primary Bank")
     }
     var selectedToAccount by remember {
-        mutableStateOf(
-            editTransaction?.toAccount ?: accounts.getOrNull(1) ?: accounts.firstOrNull() ?: "Secondary Bank"
-        )
+        mutableStateOf(editTransaction?.toAccount ?: accounts.getOrNull(1) ?: accounts.firstOrNull() ?: "Secondary Bank")
     }
     var selectedDate by remember { mutableStateOf(editTransaction?.date ?: LocalDate.now()) }
     var notes by remember { mutableStateOf(editTransaction?.notes ?: "") }
@@ -209,37 +179,9 @@ fun QuickAddSheet(
     var showCategoryPicker by remember { mutableStateOf(false) }
     var categorySearchQuery by remember { mutableStateOf("") }
     val categoryPickerScroll = rememberScrollState()
-    val swipeOffsetY = remember { Animatable(0f) }
-    val swipeScope = rememberCoroutineScope()
-    val swipeDensity = LocalDensity.current
-    val swipeThresholdPx = with(swipeDensity) { 160.dp.toPx() }
-    val swipeDraggableState = rememberDraggableState { delta ->
-        swipeScope.launch {
-            val newValue = (swipeOffsetY.value + delta).coerceAtLeast(0f)
-            swipeOffsetY.snapTo(newValue)
-        }
-    }
-
-    LaunchedEffect(filteredCategories, selectedCategoryId) {
-        // Do not auto-select first category; keep placeholder (0) if no valid selection
-        // Only ensure that if a category is selected but not in filtered list, clear it
-        // But do not substitute first category
-        if (selectedCategoryId != 0L && filteredCategories.isNotEmpty() && filteredCategories.none { it.id == selectedCategoryId }) {
-            // If the currently selected category is not valid for this type, clear to placeholder
-            // Preserve edit mode's existing category only if it's still in the overall categories list
-            val existsInAll = categories.any { it.id == selectedCategoryId }
-            if (!existsInAll || editTransaction == null) {
-                selectedCategoryId = 0L
-            } else {
-                // For edit mode, if the category exists but not in filtered (e.g., type mismatch), keep it as is
-                // The picker will still show it, but main selector will show it
-            }
-        }
-    }
 
     val evaluatedForSave = calculator.peekEvaluatedAmount()
-    val canSave = evaluatedForSave != null && evaluatedForSave > 0 &&
-        selectedCategoryId > 0 &&
+    val canSave = evaluatedForSave != null && evaluatedForSave > 0 && selectedCategoryId > 0 &&
         (type != TransactionType.TRANSFER || isSplit || (accounts.size >= 2 && selectedAccount != selectedToAccount))
 
     fun performSave() {
@@ -271,456 +213,364 @@ fun QuickAddSheet(
         onSave(transaction)
     }
 
+    val configuration = LocalConfiguration.current
+    val isShortScreen = configuration.screenHeightDp < 700
+    val isVeryShort = configuration.screenHeightDp < 620
+    val swipeOffsetY = remember { Animatable(0f) }
+    val swipeScope = rememberCoroutineScope()
+    val swipeDensity = LocalDensity.current
+    val swipeThresholdPx = with(swipeDensity) { 160.dp.toPx() }
+    val mainScrollState = rememberScrollState()
+    val swipeDraggableState = rememberDraggableState { delta ->
+        if (mainScrollState.value == 0 && delta > 0) {
+            swipeScope.launch {
+                val newValue = (swipeOffsetY.value + delta).coerceAtLeast(0f)
+                swipeOffsetY.snapTo(newValue)
+            }
+        } else if (delta < 0 && swipeOffsetY.value > 0) {
+            swipeScope.launch {
+                val newValue = (swipeOffsetY.value + delta).coerceAtLeast(0f)
+                swipeOffsetY.snapTo(newValue)
+            }
+        }
+    }
+    val swipeNestedConnection = remember {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                if (mainScrollState.value == 0 && available.y > 0) {
+                    swipeScope.launch {
+                        val newValue = (swipeOffsetY.value + available.y).coerceAtLeast(0f)
+                        swipeOffsetY.snapTo(newValue)
+                    }
+                    return available
+                }
+                if (swipeOffsetY.value > 0 && available.y < 0) {
+                    swipeScope.launch {
+                        val newValue = (swipeOffsetY.value + available.y).coerceAtLeast(0f)
+                        swipeOffsetY.snapTo(newValue)
+                    }
+                    return available
+                }
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+            override fun onPostScroll(consumed: androidx.compose.ui.geometry.Offset, available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+            override suspend fun onPreFling(available: androidx.compose.ui.unit.Velocity): androidx.compose.ui.unit.Velocity {
+                // Fling handling for swipe
+                if (available.y > 0 && swipeOffsetY.value > 0) {
+                    swipeScope.launch {
+                        val shouldDismiss = swipeOffsetY.value > swipeThresholdPx || available.y > 800f
+                        if (shouldDismiss) {
+                            swipeOffsetY.animateTo(with(swipeDensity) { 800.dp.toPx() }, tween(220))
+                            onDismiss()
+                        } else {
+                            swipeOffsetY.animateTo(0f, tween(260))
+                        }
+                    }
+                    return available
+                }
+                return androidx.compose.ui.unit.Velocity.Zero
+            }
+            override suspend fun onPostFling(consumed: androidx.compose.ui.unit.Velocity, available: androidx.compose.ui.unit.Velocity): androidx.compose.ui.unit.Velocity {
+                swipeScope.launch {
+                    val shouldDismiss = swipeOffsetY.value > swipeThresholdPx
+                    if (shouldDismiss) {
+                        swipeOffsetY.animateTo(with(swipeDensity) { 800.dp.toPx() }, tween(220))
+                        onDismiss()
+                    } else {
+                        swipeOffsetY.animateTo(0f, tween(260))
+                    }
+                }
+                return super.onPostFling(consumed, available)
+            }
+        }
+    }
+    val verticalGap = when {
+        isVeryShort -> 8.dp
+        isShortScreen -> 10.dp
+        else -> 12.dp
+    }
+    val smallGap = when {
+        isVeryShort -> 6.dp
+        isShortScreen -> 8.dp
+        else -> 10.dp
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
-        val hazeState = remember { HazeState() }
-        val colorScheme = MaterialTheme.colorScheme
-        val dockSurface = colorScheme.surfaceContainerHigh.copy(alpha = DockAlpha)
-        val glassBorderBrush = remember(colors.cardBorder) {
-            Brush.verticalGradient(
-                colors = listOf(
-                    Color.White.copy(alpha = 0.42f),
-                    Color.White.copy(alpha = 0.18f),
-                    colors.cardBorder.copy(alpha = 0.14f)
-                )
-            )
-        }
-
-        // Scrim behind full-screen composer
+        // Scrim + swipe-dismiss container
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.32f))
         ) {
-            // Swipe-dismiss container — whole screen follows finger
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .offset { IntOffset(0, swipeOffsetY.value.roundToInt()) }
                     .background(colorScheme.background)
+                    .nestedScroll(swipeNestedConnection)
             ) {
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    containerColor = Color.Transparent,
-                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                    topBar = {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(colorScheme.surface)
-                                .statusBarsPadding()
-                                .draggable(
-                                    state = swipeDraggableState,
-                                    orientation = Orientation.Vertical,
-                                    onDragStopped = { velocity ->
-                                        swipeScope.launch {
-                                            val shouldDismiss = swipeOffsetY.value > swipeThresholdPx || velocity > 800f
-                                            if (shouldDismiss) {
-                                                swipeOffsetY.animateTo(with(swipeDensity) { 800.dp.toPx() }, tween(220))
-                                                onDismiss()
-                                            } else {
-                                                swipeOffsetY.animateTo(0f, tween(260))
-                                            }
-                                        }
-                                    }
-                                )
-                        ) {
-                        // Header — X removed; swipe-down (drag handle) is dismissal, bottom Save is sole action
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(colorScheme.surface)
-                        ) {
-                            // Subtle drag handle — communicates pull-down (matches Category Picker)
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.CenterHorizontally)
-                                    .padding(top = 10.dp, bottom = 6.dp)
-                                    .width(40.dp)
-                                    .height(4.dp)
-                                    .clip(RoundedCornerShape(2.dp))
-                                    .background(colors.textTertiary.copy(alpha = 0.35f))
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = if (editTransaction != null) "Edit Entry" else "Add Entry",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colors.textPrimary,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-                        // Type selector - cohesive segmented control
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(colorScheme.surfaceVariant)
-                                .padding(4.dp)
-                        ) {
-                            TypeToggleButton(text = "Expense", isSelected = type == TransactionType.EXPENSE, color = colors.expense, onClick = {
-                                type = TransactionType.EXPENSE; isSplit = false
-                                // Do not auto-select first; show placeholder
-                                val currentCat = categories.firstOrNull { it.id == selectedCategoryId }
-                                if (currentCat?.type != TransactionType.EXPENSE) selectedCategoryId = 0L
-                            }, modifier = Modifier.weight(1f))
-                            TypeToggleButton(text = "Income", isSelected = type == TransactionType.INCOME, color = colors.income, onClick = {
-                                type = TransactionType.INCOME
-                                val currentCat = categories.firstOrNull { it.id == selectedCategoryId }
-                                if (currentCat?.type != TransactionType.INCOME) selectedCategoryId = 0L
-                            }, modifier = Modifier.weight(1f))
-                            TypeToggleButton(text = "Transfer", isSelected = type == TransactionType.TRANSFER, color = colorScheme.primary, onClick = {
-                                type = TransactionType.TRANSFER; isSplit = false
-                                val currentCat = categories.firstOrNull { it.id == selectedCategoryId }
-                                if (currentCat?.type != TransactionType.TRANSFER) selectedCategoryId = 0L
-                                if (accounts.size > 1 && selectedAccount == selectedToAccount) {
-                                    selectedToAccount = accounts.firstOrNull { it != selectedAccount } ?: accounts.getOrNull(1) ?: "Secondary Bank"
-                                }
-                            }, modifier = Modifier.weight(1f))
-                        }
-                        // Responsive gaps: Income+Split needs extra compaction to keep Reimbursed Category visible
-                        val topGap = when {
-                            isVeryShort -> 4.dp
-                            isShortScreen -> 6.dp
-                            type == TransactionType.EXPENSE -> 14.dp
-                            isIncomeSplitMode -> 6.dp
-                            else -> 8.dp
-                        }
-                        val amountVert = when {
-                            isVeryShort -> 4.dp
-                            isShortScreen -> 6.dp
-                            type == TransactionType.EXPENSE -> 10.dp
-                            isIncomeSplitMode -> 4.dp
-                            else -> 6.dp
-                        }
-                        val dividerVert = when {
-                            isVeryShort -> 4.dp
-                            isShortScreen -> 4.dp
-                            type == TransactionType.EXPENSE -> 8.dp
-                            isIncomeSplitMode -> 4.dp
-                            else -> 6.dp
-                        }
-                        Spacer(modifier = Modifier.height(topGap))
-                        // Amount - visual focus, spacious, no heavy card
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = amountVert),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = if (amountText.isEmpty()) "₹0" else "₹$amountText",
-                                style = MaterialTheme.typography.displayMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = if (amountText.isEmpty()) colors.textTertiary else colors.textPrimary,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                        HorizontalDivider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 20.dp, vertical = dividerVert))
-                    }
-                },
-                bottomBar = {
-                    // Single unified glass dock: Calculator + compact Account/Date/Note + Save
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .imePadding()
-                    ) {
-                        val dockSpacedBy = when {
-                            isVeryShort -> 6.dp
-                            isShortScreen -> 8.dp
-                            type == TransactionType.TRANSFER -> 8.dp
-                            isIncomeSplitMode -> 8.dp
-                            else -> 10.dp
-                        }
-                        val dockVertPad = when {
-                            isVeryShort -> 8.dp
-                            isShortScreen -> 10.dp
-                            isIncomeSplitMode -> 10.dp
-                            type == TransactionType.TRANSFER -> 10.dp
-                            else -> 12.dp
-                        }
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .shadow(elevation = 8.dp, shape = DockShape, clip = false, ambientColor = Color.Black.copy(alpha = 0.24f), spotColor = Color.Black.copy(alpha = 0.32f))
-                                .clip(DockShape)
-                                .hazeChild(state = hazeState, style = HazeDefaults.style(backgroundColor = dockSurface, blurRadius = DockBlur))
-                                .background(dockSurface)
-                                .border(width = 0.5.dp, brush = glassBorderBrush, shape = DockShape)
-                                .padding(horizontal = 16.dp, vertical = dockVertPad)
-                        ) {
-                            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(dockSpacedBy)) {
-                                // Calculator - compact dense but comfortable
-                                NumericKeypad(
-                                    onInput = { token -> calculator.input(token); syncAmount() },
-                                    onBackspace = { calculator.backspace(); syncAmount() },
-                                    onEquals = { calculator.evaluate(); syncAmount() }
-                                )
-                                // Account — compact, no wasted heading line; Transfer From/To clearly separated
-                                if (type == TransactionType.TRANSFER && !isSplit) {
-                                    if (accounts.size < 2) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clip(RoundedCornerShape(12.dp))
-                                                .background(colorScheme.primaryContainer.copy(alpha = 0.5f))
-                                                .padding(12.dp)
-                                        ) {
-                                            Column {
-                                                Text("Only 1 account exists", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = colorScheme.onPrimaryContainer)
-                                                Spacer(modifier = Modifier.height(2.dp))
-                                                Text("Create a secondary account to transfer.", style = MaterialTheme.typography.bodySmall, color = colors.textSecondary)
-                                                Spacer(modifier = Modifier.height(6.dp))
-                                                TextButton(onClick = { showAddAccountDialog = true }) { Text("+ Create Secondary Account", fontWeight = FontWeight.Bold) }
-                                            }
-                                        }
-                                    } else {
-                                        Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                                            // FROM — compact, no decorative arrow (per doIt.md)
-                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                                                Text("FROM", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, letterSpacing = androidx.compose.ui.unit.TextUnit(0.8f, androidx.compose.ui.unit.TextUnitType.Sp), color = colors.textSecondary)
-                                                Box(modifier = Modifier.height(1.dp).weight(1f).background(colors.cardBorder.copy(alpha = 0.35f)))
-                                            }
-                                            AccountPicker(accounts = accounts, selectedAccount = selectedAccount, onAccountSelected = { selectedAccount = it }, onAddAccountClick = { showAddAccountDialog = true })
-                                            // TO — clearly distinguishable via label, no large arrow
-                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                                                Text("TO", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, letterSpacing = androidx.compose.ui.unit.TextUnit(0.8f, androidx.compose.ui.unit.TextUnitType.Sp), color = colors.textSecondary)
-                                                Box(modifier = Modifier.height(1.dp).weight(1f).background(colors.cardBorder.copy(alpha = 0.35f)))
-                                            }
-                                            AccountPicker(accounts = accounts, selectedAccount = selectedToAccount, onAccountSelected = { selectedToAccount = it }, onAddAccountClick = { showAddAccountDialog = true })
-                                        }
-                                    }
-                                } else {
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                                Icon(Icons.Filled.AccountBalanceWallet, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(16.dp))
-                                                Text("ACCOUNT", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, letterSpacing = androidx.compose.ui.unit.TextUnit(0.8f, androidx.compose.ui.unit.TextUnitType.Sp), color = colors.textSecondary)
-                                            }
-                                            // Subtle count hint, not a full heading
-                                            Text("${accounts.size} accounts", style = MaterialTheme.typography.labelSmall, color = colors.textTertiary)
-                                        }
-                                        AccountPicker(accounts = accounts, selectedAccount = selectedAccount, onAccountSelected = { selectedAccount = it }, onAddAccountClick = { showAddAccountDialog = true })
-                                    }
-                                }
-                                // Date + Notes compact row
-                                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(colorScheme.surfaceVariant)
-                                            .clickable { showDatePicker = true }
-                                            .padding(horizontal = 12.dp, vertical = 10.dp)
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(Icons.Filled.CalendarToday, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(16.dp))
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text(DateUtils.formatShort(selectedDate), style = MaterialTheme.typography.bodySmall, color = colors.textPrimary, fontWeight = FontWeight.Medium)
-                                        }
-                                    }
-                                    OutlinedTextField(
-                                        value = notes,
-                                        onValueChange = { notes = it },
-                                        placeholder = { Text("Add note...", style = MaterialTheme.typography.bodySmall) },
-                                        modifier = Modifier.weight(1f),
-                                        textStyle = MaterialTheme.typography.bodySmall,
-                                        singleLine = true,
-                                        shape = RoundedCornerShape(12.dp),
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = colorScheme.primary,
-                                            unfocusedBorderColor = colors.cardBorder,
-                                            focusedContainerColor = colorScheme.surface.copy(alpha = 0.6f),
-                                            unfocusedContainerColor = colorScheme.surface.copy(alpha = 0.4f)
-                                        )
-                                    )
-                                }
-                                // Save
-                                Button(
-                                    onClick = { performSave() },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(48.dp),
-                                    enabled = canSave,
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = colorScheme.primary, contentColor = colorScheme.onPrimary, disabledContainerColor = colors.textTertiary.copy(alpha = 0.12f))
-                                ) {
-                                    Text(if (editTransaction != null) "Update" else "Save Entry", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-                }
-            ) { innerPadding ->
-                // Single non-scrollable page — responsive gaps to keep Category always above calculator
-                val contentVertPad = when {
-                    isVeryShort -> 6.dp
-                    isShortScreen -> 8.dp
-                    type == TransactionType.EXPENSE -> 16.dp
-                    isIncomeSplitMode -> 8.dp
-                    else -> 12.dp
-                }
-                val contentSpacedBy = when {
-                    isVeryShort -> 6.dp
-                    isShortScreen -> 8.dp
-                    isIncomeSplitMode -> 8.dp
-                    type == TransactionType.INCOME -> 10.dp
-                    type == TransactionType.TRANSFER -> 10.dp
-                    else -> 14.dp
-                }
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(horizontal = 20.dp, vertical = contentVertPad),
-                    verticalArrangement = Arrangement.spacedBy(contentSpacedBy)
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                        .imePadding()
+                        .verticalScroll(mainScrollState)
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(verticalGap)
                 ) {
-                    if (type == TransactionType.INCOME || isEditingSplit) {
-                        Row(
+                    // Drag handle + Header — handled by outer Box swipe, header just shows handle
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isSplit) colorScheme.primary.copy(alpha = 0.08f) else colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                                .clickable { isSplit = !isSplit }
-                                .padding(horizontal = 12.dp, vertical = when {
-                                    isVeryShort -> 6.dp
-                                    isShortScreen -> 8.dp
-                                    isIncomeSplitMode -> 8.dp
-                                    else -> 10.dp
-                                }),
-                            verticalAlignment = Alignment.CenterVertically
+                                .width(40.dp)
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(colors.textTertiary.copy(alpha = 0.35f))
+                        )
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Checkbox(checked = isSplit, onCheckedChange = { isSplit = it }, colors = CheckboxDefaults.colors(checkedColor = colorScheme.primary, uncheckedColor = colors.textTertiary))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Split reimbursement", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = if (isSplit) colorScheme.primary else colors.textPrimary)
-                                Text(if (isSplit) "Reduces expense instead of increasing income" else "Mark as expense reimbursement (recent expense categories)", style = MaterialTheme.typography.bodySmall, color = colors.textSecondary)
-                            }
+                            Text(
+                                text = if (editTransaction != null) "Edit Entry" else "Add Entry",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.textPrimary,
+                                textAlign = TextAlign.Center
+                            )
                         }
                     }
-                    // Category — compact selector (main screen shows only selected, picker handles full collection)
-                    val selectedCategory = remember(selectedCategoryId, categories) { categories.firstOrNull { it.id == selectedCategoryId } }
+
+                // Type selector
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(colorScheme.surfaceVariant)
+                        .padding(4.dp)
+                ) {
+                    TypeToggleButton(text = "Expense", isSelected = type == TransactionType.EXPENSE, color = colors.expense, onClick = {
+                        type = TransactionType.EXPENSE; isSplit = false
+                        val cur = categories.firstOrNull { it.id == selectedCategoryId }
+                        if (cur?.type != TransactionType.EXPENSE) selectedCategoryId = 0L
+                    }, modifier = Modifier.weight(1f))
+                    TypeToggleButton(text = "Income", isSelected = type == TransactionType.INCOME, color = colors.income, onClick = {
+                        type = TransactionType.INCOME
+                        val cur = categories.firstOrNull { it.id == selectedCategoryId }
+                        if (cur?.type != TransactionType.INCOME) selectedCategoryId = 0L
+                    }, modifier = Modifier.weight(1f))
+                    TypeToggleButton(text = "Transfer", isSelected = type == TransactionType.TRANSFER, color = colorScheme.primary, onClick = {
+                        type = TransactionType.TRANSFER; isSplit = false
+                        val cur = categories.firstOrNull { it.id == selectedCategoryId }
+                        if (cur?.type != TransactionType.TRANSFER) selectedCategoryId = 0L
+                        if (accounts.size > 1 && selectedAccount == selectedToAccount) {
+                            selectedToAccount = accounts.firstOrNull { it != selectedAccount } ?: accounts.getOrNull(1) ?: "Secondary Bank"
+                        }
+                    }, modifier = Modifier.weight(1f))
+                }
+
+                // Amount display
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (amountText.isEmpty()) "₹0" else "₹$amountText",
+                        style = MaterialTheme.typography.displayMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (amountText.isEmpty()) colors.textTertiary else colors.textPrimary,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                // Split reimbursement - only for Income, minimal texts
+                if (type == TransactionType.INCOME || isEditingSplit) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isSplit) colorScheme.primary.copy(alpha = 0.08f) else colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            .clickable { isSplit = !isSplit }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(checked = isSplit, onCheckedChange = { isSplit = it }, colors = CheckboxDefaults.colors(checkedColor = colorScheme.primary, uncheckedColor = colors.textTertiary))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Split reimbursement",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = if (isSplit) colorScheme.primary else colors.textPrimary
+                        )
+                    }
+                }
+
+                // Category - compact selector for all types
+                val selectedCategory = remember(selectedCategoryId, categories) { categories.firstOrNull { it.id == selectedCategoryId } }
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                         Text(if (isSplit) "Reimbursed Category" else "Category", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
                         Text("${filteredCategories.size} categories", style = MaterialTheme.typography.labelSmall, color = colors.textTertiary)
                     }
-                    if (isSplit) {
-                        Text("Recent expense categories", style = MaterialTheme.typography.bodySmall, color = colors.textTertiary, modifier = Modifier.padding(top = 4.dp, bottom = 2.dp))
-                    }
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = when {
-                                isVeryShort -> 4.dp
-                                isShortScreen -> 6.dp
-                                isIncomeSplitMode -> 6.dp
-                                else -> 10.dp
-                            })
-                            .clip(RoundedCornerShape(14.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .background(
                                 if (selectedCategory != null) {
-                                    try { androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(selectedCategory.colorHex)).copy(alpha = 0.10f) }
-                                    catch (e: Exception) { MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f) }
-                                } else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                                    try { Color(android.graphics.Color.parseColor(selectedCategory.colorHex)).copy(alpha = 0.10f) }
+                                    catch (e: Exception) { colorScheme.surfaceVariant.copy(alpha = 0.7f) }
+                                } else colorScheme.surfaceVariant.copy(alpha = 0.6f)
                             )
                             .border(
                                 width = 0.5.dp,
                                 color = if (selectedCategory != null) {
-                                    try { androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(selectedCategory.colorHex)).copy(alpha = 0.5f) }
+                                    try { Color(android.graphics.Color.parseColor(selectedCategory.colorHex)).copy(alpha = 0.5f) }
                                     catch (e: Exception) { colors.cardBorder }
                                 } else colors.cardBorder.copy(alpha = 0.8f),
-                                shape = RoundedCornerShape(14.dp)
+                                shape = RoundedCornerShape(12.dp)
                             )
                             .clickable { categorySearchQuery = ""; showCategoryPicker = true }
-                            .padding(horizontal = 14.dp, vertical = when {
-                                isVeryShort -> 8.dp
-                                isShortScreen -> 10.dp
-                                isIncomeSplitMode -> 10.dp
-                                else -> 14.dp
-                            })
+                            .padding(horizontal = 14.dp, vertical = 12.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.weight(1f)) {
                                 if (selectedCategory != null) {
                                     Box(
-                                        modifier = Modifier
-                                            .size(
-                                                when {
-                                                    isVeryShort -> 32.dp
-                                                    isShortScreen -> 36.dp
-                                                    isIncomeSplitMode -> 36.dp
-                                                    else -> 40.dp
-                                                }
-                                            )
-                                            .clip(androidx.compose.foundation.shape.CircleShape)
+                                        modifier = Modifier.size(36.dp).clip(androidx.compose.foundation.shape.CircleShape)
                                             .background(
-                                                try { androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(selectedCategory.colorHex)).copy(alpha = 0.15f) }
-                                                catch (e: Exception) { MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) }
+                                                try { Color(android.graphics.Color.parseColor(selectedCategory.colorHex)).copy(alpha = 0.15f) }
+                                                catch (e: Exception) { colorScheme.primary.copy(alpha = 0.15f) }
                                             ),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         val emoji = com.example.hisab.data.sms.SmsNotificationHelper.getCategoryEmoji(selectedCategory.iconName)
-                                        Text(text = emoji, fontSize = androidx.compose.ui.unit.TextUnit(20f, androidx.compose.ui.unit.TextUnitType.Sp))
+                                        Text(text = emoji, fontSize = androidx.compose.ui.unit.TextUnit(18f, androidx.compose.ui.unit.TextUnitType.Sp))
                                     }
                                     Column(modifier = Modifier.weight(1f, fill = false)) {
-                                        Text(
-                                            text = selectedCategory.name,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = colors.textPrimary,
-                                            maxLines = 1,
-                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                                        )
-                                        Text(
-                                            text = when (selectedCategory.type) {
-                                                TransactionType.EXPENSE -> "Expense"
-                                                TransactionType.INCOME -> "Income"
-                                                TransactionType.TRANSFER -> "Transfer"
-                                            },
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = colors.textTertiary
-                                        )
+                                        Text(selectedCategory.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = colors.textPrimary, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                        Text(when (selectedCategory.type) {
+                                            TransactionType.EXPENSE -> "Expense"
+                                            TransactionType.INCOME -> "Income"
+                                            TransactionType.TRANSFER -> "Transfer"
+                                        }, style = MaterialTheme.typography.labelSmall, color = colors.textTertiary)
                                     }
                                 } else {
                                     Box(
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(androidx.compose.foundation.shape.CircleShape)
-                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                        modifier = Modifier.size(36.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                                            .background(colorScheme.primary.copy(alpha = 0.12f)),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text(text = "+", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                        Text(text = "+", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = colorScheme.primary)
                                     }
-                                    Text(
-                                        text = "Select a category",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Medium,
-                                        color = colors.textSecondary,
-                                        modifier = Modifier.weight(1f, fill = false)
-                                    )
+                                    Text("Select a category", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, color = colors.textSecondary, modifier = Modifier.weight(1f, fill = false))
                                 }
                             }
-                            Icon(Icons.Filled.ChevronRight, contentDescription = "Open categories", tint = colors.textTertiary, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Filled.ChevronRight, contentDescription = "Open categories", tint = colors.textTertiary, modifier = Modifier.size(18.dp))
                         }
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
                 }
+
+                // Num pad
+                NumericKeypad(
+                    onInput = { token -> calculator.input(token); syncAmount() },
+                    onBackspace = { calculator.backspace(); syncAmount() },
+                    onEquals = { calculator.evaluate(); syncAmount() }
+                )
+
+                // Account selector
+                if (type == TransactionType.TRANSFER && !isSplit) {
+                    if (accounts.size < 2) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                                .background(colorScheme.primaryContainer.copy(alpha = 0.5f)).padding(12.dp)
+                        ) {
+                            Column {
+                                Text("Only 1 account exists", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = colorScheme.onPrimaryContainer)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("Create a secondary account to transfer.", style = MaterialTheme.typography.bodySmall, color = colors.textSecondary)
+                                Spacer(modifier = Modifier.height(6.dp))
+                                TextButton(onClick = { showAddAccountDialog = true }) { Text("+ Create Secondary Account", fontWeight = FontWeight.Bold) }
+                            }
+                        }
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(smallGap), modifier = Modifier.fillMaxWidth()) {
+                            Text("From", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, letterSpacing = androidx.compose.ui.unit.TextUnit(0.8f, androidx.compose.ui.unit.TextUnitType.Sp), color = colors.textSecondary)
+                            AccountPicker(accounts = accounts, selectedAccount = selectedAccount, onAccountSelected = { selectedAccount = it }, onAddAccountClick = { showAddAccountDialog = true })
+                            Text("To", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, letterSpacing = androidx.compose.ui.unit.TextUnit(0.8f, androidx.compose.ui.unit.TextUnitType.Sp), color = colors.textSecondary)
+                            AccountPicker(accounts = accounts, selectedAccount = selectedToAccount, onAccountSelected = { selectedToAccount = it }, onAddAccountClick = { showAddAccountDialog = true })
+                        }
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(Icons.Filled.AccountBalanceWallet, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(16.dp))
+                                Text("ACCOUNT", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, letterSpacing = androidx.compose.ui.unit.TextUnit(0.8f, androidx.compose.ui.unit.TextUnitType.Sp), color = colors.textSecondary)
+                            }
+                            Text("${accounts.size} accounts", style = MaterialTheme.typography.labelSmall, color = colors.textTertiary)
+                        }
+                        AccountPicker(accounts = accounts, selectedAccount = selectedAccount, onAccountSelected = { selectedAccount = it }, onAddAccountClick = { showAddAccountDialog = true })
+                    }
+                }
+
+                // Date and Note
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Box(
+                        modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(colorScheme.surfaceVariant)
+                            .clickable { showDatePicker = true }.padding(horizontal = 12.dp, vertical = 10.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.CalendarToday, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(DateUtils.formatShort(selectedDate), style = MaterialTheme.typography.bodySmall, color = colors.textPrimary, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                    OutlinedTextField(
+                        value = notes,
+                        onValueChange = { notes = it },
+                        placeholder = { Text("Add note...", style = MaterialTheme.typography.bodySmall) },
+                        modifier = Modifier.weight(1f),
+                        textStyle = MaterialTheme.typography.bodySmall,
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = colorScheme.primary,
+                            unfocusedBorderColor = colors.cardBorder,
+                            focusedContainerColor = colorScheme.surface.copy(alpha = 0.6f),
+                            unfocusedContainerColor = colorScheme.surface.copy(alpha = 0.4f)
+                        )
+                    )
+                }
+
+                // Save button - thicker and more prominent
+                Button(
+                    onClick = { performSave() },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    enabled = canSave,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = colorScheme.primary, contentColor = colorScheme.onPrimary, disabledContainerColor = colors.textTertiary.copy(alpha = 0.12f)),
+                    contentPadding = PaddingValues(vertical = 14.dp)
+                ) {
+                    Text(if (editTransaction != null) "Update Entry" else "Save Entry", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
             }
-            }
+                }
         }
     }
 
-    // Category Picker — dedicated bottom sheet (handles 30+ categories via search+grid, recent)
     if (showCategoryPicker) {
         val pickerSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         val searchedCategories = remember(filteredCategories, categorySearchQuery) {
@@ -737,30 +587,21 @@ fun QuickAddSheet(
             val pool = if (q.isEmpty()) baseRecent else baseRecent.filter { it.name.contains(q, ignoreCase = true) }
             pool.filter { c -> filteredCategories.any { it.id == c.id } }.distinctBy { it.id }.take(4)
         }
-                androidx.compose.material3.ModalBottomSheet(
-                    onDismissRequest = { showCategoryPicker = false },
-                    sheetState = pickerSheetState,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-                    dragHandle = {
-                        Box(
-                            modifier = Modifier
-                                .padding(top = 12.dp, bottom = 8.dp)
-                                .width(40.dp)
-                                .height(4.dp)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(HisabTheme.colors.textTertiary.copy(alpha = 0.3f))
-                        )
-                    }
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .imePadding()
-                            .heightIn(max = 560.dp)
-                            .verticalScroll(categoryPickerScroll)
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+        androidx.compose.material3.ModalBottomSheet(
+            onDismissRequest = { showCategoryPicker = false },
+            sheetState = pickerSheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+            dragHandle = {
+                Box(
+                    modifier = Modifier.padding(top = 12.dp, bottom = 8.dp).width(40.dp).height(4.dp)
+                        .clip(RoundedCornerShape(2.dp)).background(HisabTheme.colors.textTertiary.copy(alpha = 0.3f))
+                )
+            }
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().navigationBarsPadding().imePadding().heightIn(max = 560.dp)
+                    .verticalScroll(categoryPickerScroll).padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
@@ -863,53 +704,19 @@ private fun TypeToggleButton(text: String, isSelected: Boolean, color: Color, on
 }
 
 @Composable
-private fun CategoryChipStatic(category: CategoryEntity, isSelected: Boolean, onClick: () -> Unit) {
-    val parsedColor = try { androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(category.colorHex)) } catch (e: Exception) { MaterialTheme.colorScheme.primary }
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(4.dp)) {
-        Box(
-            modifier = Modifier
-                .size(52.dp)
-                .clip(androidx.compose.foundation.shape.CircleShape)
-                .background(if (isSelected) parsedColor.copy(alpha = 0.25f) else parsedColor.copy(alpha = 0.1f))
-                .then(if (isSelected) Modifier.border(2.dp, parsedColor, androidx.compose.foundation.shape.CircleShape) else Modifier),
-            contentAlignment = Alignment.Center
-        ) {
-            val emoji = com.example.hisab.data.sms.SmsNotificationHelper.getCategoryEmoji(category.iconName)
-            Text(text = emoji, fontSize = androidx.compose.ui.unit.TextUnit(22f, androidx.compose.ui.unit.TextUnitType.Sp))
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = category.name,
-            style = MaterialTheme.typography.labelSmall,
-            color = if (isSelected) HisabTheme.colors.textPrimary else HisabTheme.colors.textSecondary,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
 private fun CategoryStripItem(category: CategoryEntity, isSelected: Boolean, onClick: () -> Unit) {
-    val parsedColor = try { androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(category.colorHex)) } catch (e: Exception) { MaterialTheme.colorScheme.primary }
+    val parsedColor = try { Color(android.graphics.Color.parseColor(category.colorHex)) } catch (e: Exception) { MaterialTheme.colorScheme.primary }
     val borderColor = if (isSelected) parsedColor else HisabTheme.colors.cardBorder
     val container = if (isSelected) parsedColor.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
     Box(
-        modifier = Modifier
-            .widthIn(min = 96.dp, max = 156.dp)
-            .height(44.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(container)
-            .border(width = if (isSelected) 1.dp else 0.5.dp, color = borderColor.copy(alpha = if (isSelected) 0.9f else 0.8f), shape = RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier = Modifier.widthIn(min = 96.dp, max = 156.dp).height(44.dp).clip(RoundedCornerShape(12.dp))
+            .background(container).border(width = if (isSelected) 1.dp else 0.5.dp, color = borderColor.copy(alpha = if (isSelected) 0.9f else 0.8f), shape = RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Box(
-                modifier = Modifier
-                    .size(26.dp)
-                    .clip(androidx.compose.foundation.shape.CircleShape)
+                modifier = Modifier.size(26.dp).clip(androidx.compose.foundation.shape.CircleShape)
                     .background(parsedColor.copy(alpha = if (isSelected) 0.22f else 0.13f)),
                 contentAlignment = Alignment.Center
             ) {
@@ -931,21 +738,16 @@ private fun CategoryStripItem(category: CategoryEntity, isSelected: Boolean, onC
 
 @Composable
 private fun CategoryGridPickerItem(category: CategoryEntity, isSelected: Boolean, onClick: () -> Unit) {
-    val parsedColor = try { androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(category.colorHex)) } catch (e: Exception) { MaterialTheme.colorScheme.primary }
+    val parsedColor = try { Color(android.graphics.Color.parseColor(category.colorHex)) } catch (e: Exception) { MaterialTheme.colorScheme.primary }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(RoundedCornerShape(14.dp))
+        modifier = Modifier.clip(RoundedCornerShape(14.dp))
             .background(if (isSelected) parsedColor.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
             .border(width = if (isSelected) 1.dp else 0.5.dp, color = if (isSelected) parsedColor else HisabTheme.colors.cardBorder.copy(alpha = 0.6f), shape = RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 10.dp)
-            .fillMaxWidth(),
+            .clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 10.dp).fillMaxWidth(),
     ) {
         Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(androidx.compose.foundation.shape.CircleShape)
+            modifier = Modifier.size(44.dp).clip(androidx.compose.foundation.shape.CircleShape)
                 .background(parsedColor.copy(alpha = if (isSelected) 0.20f else 0.12f)),
             contentAlignment = Alignment.Center
         ) {

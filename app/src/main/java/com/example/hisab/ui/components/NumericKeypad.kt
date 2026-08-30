@@ -31,38 +31,38 @@ fun NumericKeypad(
     val colors = HisabTheme.colors
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Row 1: %  ÷  ×  −
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             CalculatorKey("%", onClick = { onInput("%") }, modifier = Modifier.weight(1f), isOperator = true)
             CalculatorKey("÷", onClick = { onInput("÷") }, modifier = Modifier.weight(1f), isOperator = true)
             CalculatorKey("×", onClick = { onInput("×") }, modifier = Modifier.weight(1f), isOperator = true)
             CalculatorKey("−", onClick = { onInput("−") }, modifier = Modifier.weight(1f), isOperator = true)
         }
         // Row 2: 7 8 9 +
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             CalculatorKey("7", onClick = { onInput("7") }, modifier = Modifier.weight(1f))
             CalculatorKey("8", onClick = { onInput("8") }, modifier = Modifier.weight(1f))
             CalculatorKey("9", onClick = { onInput("9") }, modifier = Modifier.weight(1f))
             CalculatorKey("+", onClick = { onInput("+") }, modifier = Modifier.weight(1f), isOperator = true)
         }
         // Row 3: 4 5 6 ⌫
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             CalculatorKey("4", onClick = { onInput("4") }, modifier = Modifier.weight(1f))
             CalculatorKey("5", onClick = { onInput("5") }, modifier = Modifier.weight(1f))
             CalculatorKey("6", onClick = { onInput("6") }, modifier = Modifier.weight(1f))
             CalculatorKey("⌫", onClick = onBackspace, modifier = Modifier.weight(1f), isOperator = true)
         }
         // Rows 4-5: left 3x2 grid + tall = on right
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Column(modifier = Modifier.weight(3f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(modifier = Modifier.weight(3f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     CalculatorKey("1", onClick = { onInput("1") }, modifier = Modifier.weight(1f))
                     CalculatorKey("2", onClick = { onInput("2") }, modifier = Modifier.weight(1f))
                     CalculatorKey("3", onClick = { onInput("3") }, modifier = Modifier.weight(1f))
                 }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     CalculatorKey("00", onClick = { onInput("00") }, modifier = Modifier.weight(1f))
                     CalculatorKey("0", onClick = { onInput("0") }, modifier = Modifier.weight(1f))
                     CalculatorKey(".", onClick = { onInput(".") }, modifier = Modifier.weight(1f))
@@ -72,7 +72,7 @@ fun NumericKeypad(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(98.dp)
+                    .height(104.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.primary)
                     .clickable(onClick = onEquals),
@@ -100,10 +100,10 @@ private fun CalculatorKey(
     val colors = HisabTheme.colors
     Box(
         modifier = modifier
-            .height(46.dp)
+            .height(48.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(
-                if (isOperator) colors.textTertiary.copy(alpha = 0.11f)
+                if (isOperator) colors.textTertiary.copy(alpha = 0.12f)
                 else MaterialTheme.colorScheme.surfaceVariant
             )
             .clickable(onClick = onClick),
@@ -111,10 +111,10 @@ private fun CalculatorKey(
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
             color = if (isOperator) colors.textSecondary else colors.textPrimary,
-            fontSize = if (text == "⌫") 17.sp else 18.sp
+            fontSize = if (text == "⌫") 20.sp else 22.sp
         )
     }
 }
