@@ -141,22 +141,24 @@ fun DashboardKpiGrid(
                             )
                         }
 
-                        // Ghost Pill Button
+                        // Ghost Pill Button with fixed width and primary border
                         Box(
                             modifier = Modifier
+                                .width(180.dp)
                                 .clip(RoundedCornerShape(14.dp))
                                 .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
-                                .border(1.dp, colors.cardBorder.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
+                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
                                 .clickable { showPicker = true }
                                 .padding(horizontal = 12.dp, vertical = 6.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                                 Text(
                                     text = DateUtils.formatMonthYear(selectedMonth),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = colors.textSecondary
+                                    color = colors.textSecondary,
+                                    maxLines = 1
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Icon(
@@ -181,23 +183,7 @@ fun DashboardKpiGrid(
                         }
                     }
 
-                    // Soft Status Badge (Top Right)
-                    val isPositive = netBalance >= 0
-                    val badgeColor = if (isPositive) incomeColor else expenseColor
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(badgeColor.copy(alpha = 0.10f))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = if (isPositive) "On Track" else "Deficit",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = badgeColor
-                        )
-                    }
+
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))

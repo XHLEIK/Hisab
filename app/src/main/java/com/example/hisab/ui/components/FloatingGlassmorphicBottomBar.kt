@@ -156,20 +156,9 @@ fun FloatingGlassmorphicBottomBar(
                     )
                     .clip(RoundedCornerShape(18.dp))
                     .background(
-                        Brush.horizontalGradient(
-                            colors = listOf(
-                                colorScheme.primary.copy(alpha = 0.0f),
-                                colorScheme.primary.copy(alpha = 0.22f),
-                                colorScheme.primary.copy(alpha = 0.22f),
-                                colorScheme.primary.copy(alpha = 0.0f)
-                            )
-                        )
+                        colorScheme.primary.copy(alpha = 0.60f)
                     )
-                    .border(
-                        width = 0.75.dp,
-                        color = colorScheme.primary.copy(alpha = 0.30f),
-                        shape = RoundedCornerShape(18.dp)
-                    )
+
             )
 
             // Nav items row — positions are tracked relative to this Row
@@ -187,7 +176,7 @@ fun FloatingGlassmorphicBottomBar(
                     }
 
                     val animatedTint by animateColorAsState(
-                        targetValue = if (isSelected) colorScheme.primary else unselectedColor,
+                        targetValue = if (isSelected) Color.White else unselectedColor,
                         animationSpec = spring(stiffness = Spring.StiffnessMedium),
                         label = "navTint"
                     )
@@ -214,19 +203,18 @@ fun FloatingGlassmorphicBottomBar(
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(vertical = 2.dp)
+                            verticalArrangement = Arrangement.spacedBy(0.dp, Alignment.CenterVertically),
+                            modifier = Modifier.padding(vertical = 0.dp)
                         ) {
                             Icon(
                                 imageVector = if (isSelected) screen.selectedIcon else screen.unselectedIcon,
                                 contentDescription = screen.label,
                                 tint = animatedTint,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(20.dp)
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = screen.label,
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 12.sp),
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                 color = animatedTint
                             )

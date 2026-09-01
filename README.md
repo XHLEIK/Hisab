@@ -13,10 +13,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/XHLEIK/Hisab/releases/tag/v4.2.2">
-    <img src="https://img.shields.io/badge/Latest-v4.2.2-111827?style=for-the-badge" alt="Latest release" />
+  <a href="https://github.com/XHLEIK/Hisab/releases/tag/v4.2.3">
+    <img src="https://img.shields.io/badge/Latest-v4.2.3-111827?style=for-the-badge" alt="Latest release" />
   </a>
-  <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.2.2.apk">
+  <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.2.3.apk">
     <img src="https://img.shields.io/badge/Download-APK-16A34A?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" />
   </a>
   <a href="LICENSE">
@@ -35,21 +35,21 @@
 
 ## Download
 
-### Latest release — v4.2.2
+### Latest release — v4.2.3
 
 > **APK size: under 8 MB** — designed to stay lightweight without sacrificing the app's core functionality or visual experience.
 
 <p align="center">
-  <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.2.2.apk">
-    <img src="https://img.shields.io/badge/%E2%86%93%20Download%20Hisab%20v4.2.2-16A34A?style=for-the-badge&logo=android&logoColor=white" alt="Download Hisab APK" />
+  <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.2.3.apk">
+    <img src="https://img.shields.io/badge/%E2%86%93%20Download%20Hisab%20v4.2.3-16A34A?style=for-the-badge&logo=android&logoColor=white" alt="Download Hisab APK" />
   </a>
 </p>
 
-- **Latest version:** `v4.2.2`
+- **Latest version:** `v4.2.3`
 - **Target SDK:** Android 16 / API 36
 - **Minimum SDK:** Android 9 / API 28
-- **Release:** [GitHub v4.2.2](https://github.com/XHLEIK/Hisab/releases/tag/v4.2.2)
-- **Direct APK:** [Hisab_v4.2.2.apk](https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.2.2.apk)
+- **Release:** [GitHub v4.2.3](https://github.com/XHLEIK/Hisab/releases/tag/v4.2.3)
+- **Direct APK:** [Hisab_v4.2.3.apk](https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.2.3.apk)
 
 ---
 
@@ -648,9 +648,20 @@ Build success is treated as necessary but not sufficient; important features sho
 
 # 📝 Version Information
 
-## v4.2.2
+## v4.2.3
 
 **Current release**
+
+Key focus:
+
+- Unified month selector styling across Home, Analytics, and History pages
+- Fixed-width month selector pill (no more width changes with different month names)
+- Primary color border on month selector for visual consistency
+- Removed "On Track" badge from hero card for cleaner design
+- Refined bottom navigation sliding pill indicator opacity and contrast
+- Active nav item icons now display in white for better visibility
+
+## v4.2.2
 
 Key focus:
 
@@ -682,6 +693,15 @@ For the historical release record, see the [GitHub releases](https://github.com/
 ---
 
 # 📌 Patch Notes / Changelog
+
+### v4.2.3 — Month Selector Polish & UI Refinements
+
+- Unified month selector styling across Home, Analytics, and History pages for visual consistency.
+- Fixed-width month selector pill (180dp) — no more width changes when switching months.
+- Added primary color border to month selector for improved visual hierarchy.
+- Removed "On Track" / "Deficit" badge from hero card for a cleaner design.
+- Refined bottom navigation sliding pill indicator opacity (85% → 60%) for softer appearance.
+- Active nav item icons and labels now display in white for better contrast against the green pill.
 
 ### v4.2.2 — Transfer Accuracy, UI Polish & Emoji Overhaul
 

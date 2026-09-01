@@ -53,7 +53,7 @@ fun MonthSelector(
     ) {
         IconButton(
             onClick = { onMonthChange(selectedMonth.minusMonths(1)) },
-            modifier = Modifier.size(38.dp)
+            modifier = Modifier.size(32.dp)
         ) {
             Icon(
                 imageVector = Icons.Filled.ChevronLeft,
@@ -62,51 +62,44 @@ fun MonthSelector(
             )
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
-
+        // Ghost Pill Button with fixed width and primary border
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .border(
-                    width = 1.dp,
-                    color = if (isCurrentMonth) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-                    else colors.cardBorder,
-                    shape = RoundedCornerShape(20.dp)
-                )
+                .width(180.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
                 .clickable { showPicker = true }
-                .padding(horizontal = 18.dp, vertical = 8.dp),
+                .padding(horizontal = 12.dp, vertical = 6.dp),
             contentAlignment = Alignment.Center
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                 Text(
                     text = DateUtils.formatMonthYear(selectedMonth),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.textPrimary
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.textSecondary,
+                    maxLines = 1
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Icon(
                     imageVector = Icons.Filled.ArrowDropDown,
-                    contentDescription = "Select Month & Year",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
+                    contentDescription = null,
+                    tint = colors.textSecondary,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
-
         IconButton(
             onClick = { onMonthChange(selectedMonth.plusMonths(1)) },
-            modifier = Modifier.size(38.dp),
+            modifier = Modifier.size(32.dp),
             enabled = !isCurrentMonth
         ) {
             Icon(
                 imageVector = Icons.Filled.ChevronRight,
                 contentDescription = "Next month",
-                tint = if (!isCurrentMonth) colors.textSecondary
-                else colors.textTertiary.copy(alpha = 0.3f)
+                tint = if (!isCurrentMonth) colors.textSecondary else colors.textTertiary.copy(alpha = 0.3f)
             )
         }
     }
