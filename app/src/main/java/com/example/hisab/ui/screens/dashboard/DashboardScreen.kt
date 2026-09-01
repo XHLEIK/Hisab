@@ -64,6 +64,7 @@ import java.time.LocalDate
 import kotlinx.coroutines.launch
 
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.unit.sp
 
 import com.example.hisab.data.repository.PendingTransactionRepository
 import com.example.hisab.data.db.entity.PendingTransactionEntity
@@ -142,24 +143,23 @@ fun DashboardScreen(
         ) {
             // ── Header ───────────────────────────────────
             item {
-                Row(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
                         .padding(horizontal = 20.dp)
-                        .padding(top = 16.dp, bottom = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(top = 16.dp, bottom = 4.dp)
                 ) {
                     Column {
                         Text(
                             text = "Hisab",
                             style = MaterialTheme.typography.headlineLarge,
                             fontWeight = FontWeight.Bold,
-                            color = colors.textPrimary
+                            color = colors.textPrimary,
+                            letterSpacing = (-0.5).sp
                         )
                         Text(
-                            text = "Smart Financial Overview",
+                            text = "Track every rupee, effortlessly.",
                             style = MaterialTheme.typography.bodySmall,
                             color = colors.textTertiary
                         )

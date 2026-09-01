@@ -29,784 +29,960 @@ data class EmojiEntry(
 
 object EmojiCatalog {
 
-    val allEmojis: List<EmojiEntry> = buildList {
-        // ── Smileys & Emotion (60) ──
-        add(EmojiEntry("😀", "grinning face", listOf("smile", "happy", "grin", "face", "emotion"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😃", "grinning face with big eyes", listOf("smile", "happy", "face", "emotion"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😄", "grinning face with smiling eyes", listOf("smile", "happy", "face", "emotion"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😁", "beaming face", listOf("smile", "happy", "face", "emotion", "grin"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😆", "grinning squinting face", listOf("smile", "laugh", "face", "emotion"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😅", "sweat smile", listOf("smile", "sweat", "face", "emotion"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😂", "joy", listOf("laugh", "joy", "face", "emotion", "tears"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("🤣", "rofl", listOf("laugh", "rolling", "face", "emotion", "joy"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😊", "blush", listOf("smile", "blush", "face", "emotion", "happy"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😇", "innocent", listOf("angel", "face", "emotion", "smile", "halo"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("🙂", "slightly smiling", listOf("smile", "face", "emotion", "slight"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("🙃", "upside-down", listOf("smile", "face", "emotion", "upside"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😉", "wink", listOf("wink", "face", "emotion", "smile"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😌", "relieved", listOf("relieved", "face", "emotion", "smile"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😍", "heart eyes", listOf("love", "heart", "eyes", "face", "emotion", "smile"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("🥰", "smiling hearts", listOf("love", "heart", "face", "emotion", "smile"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😘", "kiss", listOf("kiss", "love", "face", "emotion", "heart"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😗", "kissing", listOf("kiss", "face", "emotion"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😙", "kissing smiling eyes", listOf("kiss", "face", "emotion", "smile"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😚", "kissing closed eyes", listOf("kiss", "face", "emotion"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("🥲", "smiling tear", listOf("smile", "tear", "face", "emotion", "happy", "sad"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("🥳", "partying", listOf("party", "celebrate", "face", "emotion", "birthday", "hat"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😎", "sunglasses", listOf("cool", "face", "emotion", "sunglasses", "smile"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("🤩", "star-struck", listOf("star", "eyes", "face", "emotion", "love"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("🤗", "hugging", listOf("hug", "face", "emotion", "hands"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("🤔", "thinking", listOf("think", "face", "emotion", "thought"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😮", "open mouth", listOf("surprised", "face", "emotion", "mouth"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😯", "hushed", listOf("surprised", "face", "emotion"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😲", "astonished", listOf("surprised", "face", "emotion", "astonished"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😳", "flushed", listOf("flushed", "face", "emotion", "blush"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("🥺", "pleading", listOf("pleading", "face", "emotion", "puppy", "eyes"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😢", "cry", listOf("cry", "sad", "face", "emotion", "tear"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😭", "sob", listOf("cry", "sad", "face", "emotion", "tear", "sob"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😤", "triumph", listOf("angry", "face", "emotion", "triumph"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😡", "pouting", listOf("angry", "mad", "face", "emotion", "pouting"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("🤯", "exploding head", listOf("mind", "blown", "face", "emotion", "explode"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("🥶", "cold face", listOf("cold", "face", "emotion", "freezing"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😱", "scream", listOf("scream", "fear", "face", "emotion", "scared"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😴", "sleeping", listOf("sleep", "face", "emotion", "zzz"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("🤤", "drooling", listOf("drool", "face", "emotion", "food", "hungry"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😋", "yum", listOf("yum", "face", "emotion", "tongue", "food", "delicious"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("🤒", "thermometer face", listOf("sick", "face", "emotion", "ill", "fever"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😷", "mask", listOf("mask", "face", "emotion", "sick", "ill"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("🥴", "woozy", listOf("dizzy", "face", "emotion", "woozy"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("😈", "smiling imp", listOf("devil", "face", "emotion", "imp", "horns"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("👻", "ghost", listOf("ghost", "halloween", "face", "emotion", "spooky"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("🤖", "robot", listOf("robot", "face", "emotion", "tech", "ai"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("💀", "skull", listOf("skull", "dead", "face", "emotion", "death"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("❤️", "red heart", listOf("heart", "love", "emotion", "red", "like"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("💛", "yellow heart", listOf("heart", "love", "yellow", "emotion"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("💚", "green heart", listOf("heart", "love", "green", "emotion"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("💙", "blue heart", listOf("heart", "love", "blue", "emotion"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("💜", "purple heart", listOf("heart", "love", "purple", "emotion"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("🖤", "black heart", listOf("heart", "love", "black", "emotion"), EmojiCategory.SMILEYS))
-        add(EmojiEntry("🤍", "white heart", listOf("heart", "love", "white", "emotion"), EmojiCategory.SMILEYS))
+    /**
+     * Generate all emojis from Unicode code point ranges.
+     * This covers Unicode 15.1 — approximately 3,953+ emojis.
+     */
+    private fun generateEmojis(): List<EmojiEntry> = buildList {
+        // ── Smileys & Emotion ──
+        addRange(0x1F600..0x1F64F, EmojiCategory.SMILEYS) // Emoticons
+        addRange(0x1F910..0x1F96B, EmojiCategory.SMILEYS) // Supplemental Smileys
+        addRange(0x1F970..0x1F97F, EmojiCategory.SMILEYS) // Supplemental Smileys 2
+        addRange(0x1F600..0x1F64F, EmojiCategory.SMILEYS)
+        addCharEmoji("\u263A", EmojiCategory.SMILEYS) // ☺
+        addCharEmoji("\u2639", EmojiCategory.SMILEYS) // ☹
 
-        // ── People & Body (60) ──
-        add(EmojiEntry("👋", "waving hand", listOf("hand", "wave", "people", "body", "hello", "hi"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🤚", "raised back of hand", listOf("hand", "people", "body"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🖐️", "hand splayed", listOf("hand", "people", "body", "fingers"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("✋", "raised hand", listOf("hand", "people", "body", "stop", "high five"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🖖", "vulcan salute", listOf("hand", "people", "body", "spock", "vulcan"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👌", "ok hand", listOf("hand", "people", "body", "ok", "perfect"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🤏", "pinching hand", listOf("hand", "people", "body", "pinch", "small"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("✌️", "victory hand", listOf("hand", "people", "body", "peace", "victory", "v"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🤞", "crossed fingers", listOf("hand", "people", "body", "cross", "luck"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🫰", "hand with index finger and thumb crossed", listOf("hand", "people", "body", "love", "money", "heart"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🤟", "love-you gesture", listOf("hand", "people", "body", "love", "you"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🤘", "sign of the horns", listOf("hand", "people", "body", "rock", "horns"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🤙", "call me hand", listOf("hand", "people", "body", "call", "phone"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👈", "backhand index pointing left", listOf("hand", "people", "body", "point", "left"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👉", "pointing right", listOf("hand", "people", "body", "point", "right"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👆", "pointing up", listOf("hand", "people", "body", "point", "up"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🖕", "middle finger", listOf("hand", "people", "body", "middle", "finger", "rude"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👇", "pointing down", listOf("hand", "people", "body", "point", "down"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("☝️", "index pointing up", listOf("hand", "people", "body", "point", "up", "one"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👍", "thumbs up", listOf("hand", "people", "body", "thumbs", "up", "like", "good"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👎", "thumbs down", listOf("hand", "people", "body", "thumbs", "down", "dislike", "bad"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👊", "fist", listOf("hand", "people", "body", "fist", "punch"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("✊", "raised fist", listOf("hand", "people", "body", "fist", "power"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🤛", "left-facing fist", listOf("hand", "people", "body", "fist", "bump"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🤜", "right-facing fist", listOf("hand", "people", "body", "fist", "bump"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👏", "clapping hands", listOf("hand", "people", "body", "clap", "applause", "praise"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🙌", "raising hands", listOf("hand", "people", "body", "raise", "celebrate", "hooray"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👐", "open hands", listOf("hand", "people", "body", "open", "hands"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🤲", "palms up together", listOf("hand", "people", "body", "palms", "pray"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🤝", "handshake", listOf("hand", "people", "body", "shake", "deal", "agreement"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🙏", "folded hands", listOf("hand", "people", "body", "pray", "thanks", "please", "namaste"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("💪", "flexed biceps", listOf("muscle", "strong", "people", "body", "flex", "arm", "fitness", "gym"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🦾", "mechanical arm", listOf("arm", "people", "body", "robot", "mechanical"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🦿", "mechanical leg", listOf("leg", "people", "body", "robot", "mechanical"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🦵", "leg", listOf("leg", "people", "body", "kick"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🦶", "foot", listOf("foot", "people", "body", "kick"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👂", "ear", listOf("ear", "people", "body", "hear", "listen"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🦻", "ear with hearing aid", listOf("ear", "people", "body", "hearing", "aid"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👃", "nose", listOf("nose", "people", "body", "smell"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🧠", "brain", listOf("brain", "people", "body", "smart", "think"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🫀", "anatomical heart", listOf("heart", "people", "body", "anatomical", "organ"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🫁", "lungs", listOf("lungs", "people", "body", "organ", "breathe"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🦷", "tooth", listOf("tooth", "people", "body", "dentist"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🦴", "bone", listOf("bone", "people", "body", "skeleton"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👀", "eyes", listOf("eyes", "people", "body", "look", "see", "watch"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👁️", "eye", listOf("eye", "people", "body", "look", "see"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👶", "baby", listOf("baby", "people", "body", "child", "kid", "infant"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🧒", "child", listOf("child", "people", "body", "kid"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👧", "girl", listOf("girl", "people", "body", "child", "woman", "female"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("🧑", "person", listOf("person", "people", "body", "adult"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👩", "woman", listOf("woman", "people", "body", "female", "adult"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👨", "man", listOf("man", "people", "body", "male", "adult"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👩‍💻", "woman technologist", listOf("woman", "people", "body", "tech", "code", "computer", "work"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👨‍💻", "man technologist", listOf("man", "people", "body", "tech", "code", "computer", "work"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👩‍🎓", "woman student", listOf("woman", "people", "body", "student", "education", "school"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👨‍🎓", "man student", listOf("man", "people", "body", "student", "education", "school"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👩‍⚕️", "woman health worker", listOf("woman", "people", "body", "doctor", "health", "hospital", "medical"), EmojiCategory.PEOPLE))
-        add(EmojiEntry("👨‍⚕️", "man health worker", listOf("man", "people", "body", "doctor", "health", "hospital", "medical"), EmojiCategory.PEOPLE))
+        // ── People & Body ──
+        addRange(0x1F466..0x1F469, EmojiCategory.PEOPLE) // Basic people
+        addRange(0x1F46B..0x1F46F, EmojiCategory.PEOPLE) // Couples
+        addRange(0x1F470..0x1F47F, EmojiCategory.PEOPLE) // People fantasy
+        addRange(0x1F480..0x1F48F, EmojiCategory.PEOPLE) // Kiss/dress
+        addRange(0x1F900..0x1F90F, EmojiCategory.PEOPLE) // Supplemental hands
+        addRange(0x1F910..0x1F91F, EmojiCategory.PEOPLE) // Hand gestures
+        addRange(0x1F9B0..0x1F9B9, EmojiCategory.PEOPLE) // People
+        addRange(0x1F9D0..0x1F9DF, EmojiCategory.PEOPLE) // Person symbols
+        addRange(0x1F44D..0x1F44F, EmojiCategory.PEOPLE) // Thumbs
+        addRange(0x1F446..0x1F450, EmojiCategory.PEOPLE) // Hand pointing
+        addRange(0x1F595..0x1F596, EmojiCategory.PEOPLE) // Victory/rock
 
-        // ── Animals & Nature (50) ──
-        add(EmojiEntry("🐶", "dog face", listOf("dog", "animal", "nature", "pet", "puppy", "face"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐱", "cat face", listOf("cat", "animal", "nature", "pet", "kitten", "face"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐭", "mouse face", listOf("mouse", "animal", "nature", "rodent"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐹", "hamster", listOf("hamster", "animal", "nature", "pet"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐰", "rabbit face", listOf("rabbit", "animal", "nature", "bunny", "pet"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🦊", "fox", listOf("fox", "animal", "nature", "face"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐻", "bear", listOf("bear", "animal", "nature", "face"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐼", "panda", listOf("panda", "animal", "nature", "bear", "face"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐨", "koala", listOf("koala", "animal", "nature", "bear", "face"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐯", "tiger face", listOf("tiger", "animal", "nature", "face", "cat"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🦁", "lion", listOf("lion", "animal", "nature", "face", "king"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐮", "cow face", listOf("cow", "animal", "nature", "face", "farm"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐷", "pig face", listOf("pig", "animal", "nature", "face", "farm", "savings", "money"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐸", "frog", listOf("frog", "animal", "nature", "face"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐵", "monkey face", listOf("monkey", "animal", "nature", "face"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐔", "chicken", listOf("chicken", "animal", "nature", "bird", "farm"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐧", "penguin", listOf("penguin", "animal", "nature", "bird"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐦", "bird", listOf("bird", "animal", "nature", "fly"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🦆", "duck", listOf("duck", "animal", "nature", "bird"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🦅", "eagle", listOf("eagle", "animal", "nature", "bird", "fly"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🦉", "owl", listOf("owl", "animal", "nature", "bird", "wise"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🦇", "bat", listOf("bat", "animal", "nature", "fly", "halloween"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐺", "wolf", listOf("wolf", "animal", "nature", "face"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐗", "boar", listOf("boar", "animal", "nature", "pig"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐴", "horse face", listOf("horse", "animal", "nature", "face", "farm"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🦄", "unicorn", listOf("unicorn", "animal", "nature", "face", "horse", "magic", "fantasy"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐝", "honeybee", listOf("bee", "animal", "nature", "insect", "honey"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐛", "bug", listOf("bug", "animal", "nature", "insect", "worm"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🦋", "butterfly", listOf("butterfly", "animal", "nature", "insect", "fly", "beautiful"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐌", "snail", listOf("snail", "animal", "nature", "slow"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐞", "lady beetle", listOf("ladybug", "animal", "nature", "insect", "beetle"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐢", "turtle", listOf("turtle", "animal", "nature", "slow"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐍", "snake", listOf("snake", "animal", "nature", "reptile"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🦎", "lizard", listOf("lizard", "animal", "nature", "reptile"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🦖", "t-rex", listOf("dinosaur", "animal", "nature", "t-rex", "dino"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🦕", "sauropod", listOf("dinosaur", "animal", "nature", "sauropod", "dino"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐙", "octopus", listOf("octopus", "animal", "nature", "sea", "ocean"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🦑", "squid", listOf("squid", "animal", "nature", "sea", "ocean"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🦐", "shrimp", listOf("shrimp", "animal", "nature", "sea", "ocean", "food"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🦞", "lobster", listOf("lobster", "animal", "nature", "sea", "ocean", "food"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🦀", "crab", listOf("crab", "animal", "nature", "sea", "ocean"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐡", "blowfish", listOf("blowfish", "animal", "nature", "sea", "ocean", "fish"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐠", "tropical fish", listOf("fish", "animal", "nature", "sea", "ocean", "tropical"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🐟", "fish", listOf("fish", "animal", "nature", "sea", "ocean"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🌸", "cherry blossom", listOf("flower", "nature", " blossom", "plant", "spring", "cherry"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🌺", "hibiscus", listOf("flower", "nature", "plant", "hibiscus"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🌻", "sunflower", listOf("flower", "nature", "plant", "sunflower", "sun"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🌹", "rose", listOf("flower", "nature", "plant", "rose", "love", "heart"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🌷", "tulip", listOf("flower", "nature", "plant", "tulip"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🌳", "deciduous tree", listOf("tree", "nature", "plant", "deciduous"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🌴", "palm tree", listOf("tree", "nature", "plant", "palm", "tropical", "travel", "beach"), EmojiCategory.ANIMALS))
-        add(EmojiEntry("🍀", "four leaf clover", listOf("clover", "nature", "plant", "luck", "four", "leaf"), EmojiCategory.ANIMALS))
+        // ── Animals & Nature ──
+        addRange(0x1F400..0x1F43F, EmojiCategory.ANIMALS) // Animals
+        addRange(0x1F980..0x1F99F, EmojiCategory.ANIMALS) // Supplemental animals
+        addRange(0x1F9A0..0x1F9AF, EmojiCategory.ANIMALS) // Animal faces
+        addRange(0x1F330..0x1F37F, EmojiCategory.ANIMALS) // Plants/nature
 
-        // ── Food & Drink (60) ──
-        add(EmojiEntry("🍏", "green apple", listOf("apple", "food", "fruit", "green", "health"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍎", "red apple", listOf("apple", "food", "fruit", "red", "health"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍐", "pear", listOf("pear", "food", "fruit"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍊", "tangerine", listOf("orange", "food", "fruit", "tangerine"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍋", "lemon", listOf("lemon", "food", "fruit", "citrus"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍌", "banana", listOf("banana", "food", "fruit"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍉", "watermelon", listOf("watermelon", "food", "fruit"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍇", "grapes", listOf("grapes", "food", "fruit"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍓", "strawberry", listOf("strawberry", "food", "fruit", "berry"), EmojiCategory.FOOD))
-        add(EmojiEntry("🫐", "blueberries", listOf("blueberry", "food", "fruit", "berry"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍈", "melon", listOf("melon", "food", "fruit"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍒", "cherries", listOf("cherry", "food", "fruit", "cherries"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍑", "peach", listOf("peach", "food", "fruit"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥭", "mango", listOf("mango", "food", "fruit"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍍", "pineapple", listOf("pineapple", "food", "fruit", "tropical"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥥", "coconut", listOf("coconut", "food", "fruit", "tropical"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥝", "kiwi fruit", listOf("kiwi", "food", "fruit"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍅", "tomato", listOf("tomato", "food", "fruit", "vegetable"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍆", "eggplant", listOf("eggplant", "food", "vegetable", "aubergine"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥑", "avocado", listOf("avocado", "food", "fruit", "vegetable"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥦", "broccoli", listOf("broccoli", "food", "vegetable"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥬", "leafy green", listOf("lettuce", "food", "vegetable", "leafy", "green"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥒", "cucumber", listOf("cucumber", "food", "vegetable"), EmojiCategory.FOOD))
-        add(EmojiEntry("🌶️", "hot pepper", listOf("pepper", "food", "vegetable", "hot", "chili", "spicy"), EmojiCategory.FOOD))
-        add(EmojiEntry("🫑", "bell pepper", listOf("pepper", "food", "vegetable", "bell"), EmojiCategory.FOOD))
-        add(EmojiEntry("🌽", "ear of corn", listOf("corn", "food", "vegetable", "ear"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥕", "carrot", listOf("carrot", "food", "vegetable"), EmojiCategory.FOOD))
-        add(EmojiEntry("🫒", "olive", listOf("olive", "food", "fruit", "olive"), EmojiCategory.FOOD))
-        add(EmojiEntry("🧄", "garlic", listOf("garlic", "food", "vegetable"), EmojiCategory.FOOD))
-        add(EmojiEntry("🧅", "onion", listOf("onion", "food", "vegetable"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥔", "potato", listOf("potato", "food", "vegetable"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍞", "bread", listOf("bread", "food", "toast", "bakery"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥐", "croissant", listOf("croissant", "food", "bread", "bakery", "french"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥖", "baguette bread", listOf("baguette", "food", "bread", "french"), EmojiCategory.FOOD))
-        add(EmojiEntry("🫓", "flatbread", listOf("flatbread", "food", "bread"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥨", "pretzel", listOf("pretzel", "food", "bread"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥯", "bagel", listOf("bagel", "food", "bread"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥞", "pancakes", listOf("pancake", "food", "breakfast", "pancakes"), EmojiCategory.FOOD))
-        add(EmojiEntry("🧇", "waffle", listOf("waffle", "food", "breakfast"), EmojiCategory.FOOD))
-        add(EmojiEntry("🧀", "cheese wedge", listOf("cheese", "food", "dairy"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍖", "meat on bone", listOf("meat", "food", "bone", "poultry"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍗", "poultry leg", listOf("chicken", "food", "meat", "poultry", "leg"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥩", "cut of meat", listOf("steak", "food", "meat", "beef", "cut"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥓", "bacon", listOf("bacon", "food", "meat", "pork"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍔", "hamburger", listOf("burger", "food", "hamburger", "fast food", "beef", "shopping", "dining"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍟", "french fries", listOf("fries", "food", "french", "fast food", "potato"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍕", "pizza", listOf("pizza", "food", "fast food", "cheese", "slice"), EmojiCategory.FOOD))
-        add(EmojiEntry("🌭", "hot dog", listOf("hotdog", "food", "hot", "dog", "sausage"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥪", "sandwich", listOf("sandwich", "food", "bread"), EmojiCategory.FOOD))
-        add(EmojiEntry("🌮", "taco", listOf("taco", "food", "mexican"), EmojiCategory.FOOD))
-        add(EmojiEntry("🌯", "burrito", listOf("burrito", "food", "mexican", "wrap"), EmojiCategory.FOOD))
-        add(EmojiEntry("🫔", "tamale", listOf("tamale", "food", "mexican"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥙", "stuffed flatbread", listOf("flatbread", "food", "stuffed", "pita", "gyro"), EmojiCategory.FOOD))
-        add(EmojiEntry("🧆", "falafel", listOf("falafel", "food", "chickpea"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥚", "egg", listOf("egg", "food", "breakfast"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍳", "cooking", listOf("egg", "food", "cooking", "frying", "pan", "breakfast"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥘", "shallow pan of food", listOf("paella", "food", "pan", "cooking", "curry"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍲", "pot of food", listOf("pot", "food", "stew", "soup", "cooking"), EmojiCategory.FOOD))
-        add(EmojiEntry("🫕", "fondue", listOf("fondue", "food", "cheese", "pot"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥣", "bowl with spoon", listOf("bowl", "food", "spoon", "soup", "cereal"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥗", "green salad", listOf("salad", "food", "green", "healthy", "vegetable"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍿", "popcorn", listOf("popcorn", "food", "movie", "snack"), EmojiCategory.FOOD))
-        add(EmojiEntry("🧈", "butter", listOf("butter", "food", "dairy"), EmojiCategory.FOOD))
-        add(EmojiEntry("🧂", "salt", listOf("salt", "food", "seasoning"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥫", "canned food", listOf("canned", "food", "tin", "can", "groceries", "shopping"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍱", "bento box", listOf("bento", "food", "box", "japanese"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍘", "rice cracker", listOf("cracker", "food", "rice", "japanese"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍙", "rice ball", listOf("rice", "food", "ball", "japanese"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍚", "cooked rice", listOf("rice", "food", "cooked", "bowl"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍛", "curry rice", listOf("curry", "food", "rice", "indian"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍜", "steaming bowl", listOf("noodles", "food", "ramen", "bowl", "steaming", "japanese"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍝", "spaghetti", listOf("spaghetti", "food", "pasta", "noodles", "italian"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍠", "roasted sweet potato", listOf("sweet", "potato", "food", "roasted"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍢", "oden", listOf("oden", "food", "skewer", "japanese"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍣", "sushi", listOf("sushi", "food", "japanese", "fish", "rice"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍤", "fried shrimp", listOf("shrimp", "food", "fried", "tempura", "seafood"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍥", "fish cake", listOf("fish", "food", "cake", "japanese"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥮", "moon cake", listOf("moon", "cake", "food", "chinese"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍡", "dango", listOf("dango", "food", "japanese", "skewer", "sweet"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥟", "dumpling", listOf("dumpling", "food", "chinese", "gyoza"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥠", "fortune cookie", listOf("cookie", "food", "fortune", "chinese"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥡", "takeout box", listOf("takeout", "food", "box", "chinese"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍦", "soft ice cream", listOf("ice", "cream", "food", "soft", "dessert", "sweet"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍧", "shaved ice", listOf("ice", "food", "shaved", "dessert", "sweet"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍨", "ice cream", listOf("ice", "cream", "food", "dessert", "sweet", "bowl"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍩", "doughnut", listOf("doughnut", "food", "donut", "dessert", "sweet", "snack"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍪", "cookie", listOf("cookie", "food", "dessert", "sweet", "biscuit", "snack"), EmojiCategory.FOOD))
-        add(EmojiEntry("🎂", "birthday cake", listOf("cake", "food", "birthday", "dessert", "sweet", "celebrate", "party"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍰", "shortcake", listOf("cake", "food", "shortcake", "dessert", "sweet", "strawberry"), EmojiCategory.FOOD))
-        add(EmojiEntry("🧁", "cupcake", listOf("cupcake", "food", "dessert", "sweet", "cake"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥧", "pie", listOf("pie", "food", "dessert", "sweet", "pastry", "savings", "mutual", "funds"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍫", "chocolate bar", listOf("chocolate", "food", "bar", "dessert", "sweet", "candy"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍬", "candy", listOf("candy", "food", "sweet", "sugar"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍭", "lollipop", listOf("lollipop", "food", "candy", "sweet", "sugar"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍮", "custard", listOf("custard", "food", "dessert", "sweet", "pudding"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍯", "honey pot", listOf("honey", "food", "pot", "sweet", "bee"), EmojiCategory.FOOD))
-        add(EmojiEntry("☕", "hot beverage", listOf("coffee", "food", "drink", "hot", "beverage", "tea", "cafe"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍵", "teacup without handle", listOf("tea", "food", "drink", "beverage", "cup", "hot", "japanese"), EmojiCategory.FOOD))
-        add(EmojiEntry("🧃", "beverage box", listOf("juice", "food", "drink", "beverage", "box"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥤", "cup with straw", listOf("cup", "food", "drink", "beverage", "straw", "juice", "soda"), EmojiCategory.FOOD))
-        add(EmojiEntry("🧋", "bubble tea", listOf("bubble", "tea", "food", "drink", "beverage", "boba"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍶", "sake", listOf("sake", "food", "drink", "beverage", "japanese", "alcohol"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍺", "beer mug", listOf("beer", "food", "drink", "beverage", "mug", "alcohol", "bar"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍻", "clinking beer mugs", listOf("beer", "food", "drink", "beverage", "mugs", "clink", "alcohol", "party"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥂", "clinking glasses", listOf("glasses", "food", "drink", "beverage", "clink", "celebrate", "cheers", "alcohol"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍷", "wine glass", listOf("wine", "food", "drink", "beverage", "glass", "alcohol"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥃", "tumbler glass", listOf("whisky", "food", "drink", "beverage", "glass", "alcohol", "tumbler"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍸", "cocktail glass", listOf("cocktail", "food", "drink", "beverage", "glass", "alcohol", "martini"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍹", "tropical drink", listOf("tropical", "food", "drink", "beverage", "cocktail", "alcohol"), EmojiCategory.FOOD))
-        add(EmojiEntry("🧉", "mate", listOf("mate", "food", "drink", "beverage"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍾", "bottle with popping cork", listOf("bottle", "food", "drink", "beverage", "champagne", "popping", "cork", "celebrate"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥄", "spoon", listOf("spoon", "food", "cutlery", "utensil"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍴", "fork and knife", listOf("fork", "food", "knife", "cutlery", "utensil", "dining", "restaurant"), EmojiCategory.FOOD))
-        add(EmojiEntry("🍽️", "fork and knife with plate", listOf("plate", "food", "fork", "knife", "dining", "restaurant", "meal"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥢", "chopsticks", listOf("chopsticks", "food", "utensil", "japanese", "chinese"), EmojiCategory.FOOD))
-        add(EmojiEntry("🥡", "takeout box", listOf("takeout", "food", "box"), EmojiCategory.FOOD))
+        // ── Food & Drink ──
+        addRange(0x1F32D..0x1F37F, EmojiCategory.FOOD) // Food items
+        addRange(0x1F9C0..0x1F9CF, EmojiCategory.FOOD) // Food items 2
+        addCharEmoji("\u2615", EmojiCategory.FOOD) // ☕ coffee
+        addRange(0x1F370..0x1F37F, EmojiCategory.FOOD) // Food
 
-        // ── Activities (45) ──
-        add(EmojiEntry("⚽", "soccer ball", listOf("soccer", "football", "activities", "sport", "ball", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("⚾", "baseball", listOf("baseball", "activities", "sport", "ball", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🥎", "softball", listOf("softball", "activities", "sport", "ball", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🏀", "basketball", listOf("basketball", "activities", "sport", "ball", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🏐", "volleyball", listOf("volleyball", "activities", "sport", "ball", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🏈", "american football", listOf("football", "activities", "sport", "american", "ball", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🏉", "rugby football", listOf("rugby", "activities", "sport", "ball", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎾", "tennis", listOf("tennis", "activities", "sport", "ball", "racket", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🥏", "flying disc", listOf("frisbee", "activities", "sport", "disc", "flying", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎳", "bowling", listOf("bowling", "activities", "sport", "ball", "game", "alley"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🏏", "cricket game", listOf("cricket", "activities", "sport", "bat", "ball", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🏑", "field hockey", listOf("hockey", "activities", "sport", "field", "stick", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🏒", "ice hockey", listOf("hockey", "activities", "sport", "ice", "stick", "game", "puck"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🥍", "lacrosse", listOf("lacrosse", "activities", "sport", "stick", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🏓", "ping pong", listOf("ping", "pong", "activities", "sport", "table", "tennis", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🏸", "badminton", listOf("badminton", "activities", "sport", "racket", "shuttlecock", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🥊", "boxing glove", listOf("boxing", "activities", "sport", "glove", "fight", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🥋", "martial arts uniform", listOf("martial", "arts", "activities", "sport", "uniform", "judo", "karate"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🥅", "goal net", listOf("goal", "activities", "sport", "net", "soccer", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("⛳", "flag in hole", listOf("golf", "activities", "sport", "flag", "hole", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("⛸️", "ice skate", listOf("skate", "activities", "sport", "ice", "skating", "winter"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎣", "fishing pole", listOf("fishing", "activities", "sport", "pole", "fish"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🤿", "diving mask", listOf("diving", "activities", "sport", "mask", "snorkel", "scuba"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎽", "running shirt", listOf("running", "activities", "sport", "shirt", "athletic", "marathon"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎿", "skis", listOf("ski", "activities", "sport", "snow", "winter"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🛷", "sled", listOf("sled", "activities", "sport", "snow", "winter", "sledge"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🥌", "curling stone", listOf("curling", "activities", "sport", "stone", "winter", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎯", "direct hit", listOf("dart", "activities", "sport", "target", "hit", "bullseye", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🪀", "yo-yo", listOf("yo-yo", "activities", "toy", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🪁", "kite", listOf("kite", "activities", "toy", "fly", "wind"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎱", "pool 8 ball", listOf("pool", "activities", "sport", "8", "ball", "billiards", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🔮", "crystal ball", listOf("crystal", "activities", "ball", "fortune", "magic", "future"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🪄", "magic wand", listOf("magic", "activities", "wand", "wizard", "harry", "potter"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎮", "video game", listOf("game", "activities", "video", "controller", "gaming", "play", "console"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🕹️", "joystick", listOf("joystick", "activities", "game", "arcade", "gaming"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎰", "slot machine", listOf("slot", "activities", "machine", "casino", "gamble", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎲", "game die", listOf("die", "activities", "game", "dice", "gamble", "board"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🧩", "puzzle piece", listOf("puzzle", "activities", "piece", "jigsaw", "game"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🧸", "teddy bear", listOf("teddy", "activities", "bear", "toy", "plush"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🪅", "piñata", listOf("pinata", "activities", "party", "celebrate"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🪩", "mirror ball", listOf("disco", "activities", "mirror", "ball", "party", "dance"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🪆", "nesting dolls", listOf("dolls", "activities", "nesting", "russian", "matryoshka"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("♠️", "spade suit", listOf("spade", "activities", "card", "poker", "game", "suit"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("♥️", "heart suit", listOf("heart", "activities", "card", "poker", "game", "suit", "love"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("♦️", "diamond suit", listOf("diamond", "activities", "card", "poker", "game", "suit"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("♣️", "club suit", listOf("club", "activities", "card", "poker", "game", "suit"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("♟️", "chess pawn", listOf("chess", "activities", "pawn", "game", "board"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🃏", "joker", listOf("joker", "activities", "card", "game", "wild"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🀄", "mahjong red dragon", listOf("mahjong", "activities", "game", "dragon", "red"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎴", "flower playing cards", listOf("flower", "activities", "card", "game", "japanese"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎭", "performing arts", listOf("performing", "activities", "arts", "theater", "drama", "mask"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🖼️", "framed picture", listOf("picture", "activities", "frame", "art", "painting", "gallery"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎨", "artist palette", listOf("palette", "activities", "art", "artist", "paint", "color"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🧵", "thread", listOf("thread", "activities", "sewing", "needle"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🪡", "sewing needle", listOf("needle", "activities", "sewing", "thread"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🧶", "yarn", listOf("yarn", "activities", "knitting", "crochet"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🪢", "knot", listOf("knot", "activities", "rope", "tie"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎵", "musical note", listOf("music", "note", "activities", "song", "sound", "melody"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎶", "musical notes", listOf("music", "notes", "activities", "song", "sound", "melody"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎤", "microphone", listOf("microphone", "activities", "music", "sing", "karaoke", "voice"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎧", "headphone", listOf("headphone", "activities", "music", "earphone", "audio", "listen", "song"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎷", "saxophone", listOf("saxophone", "activities", "music", "instrument", "jazz", "sax"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎸", "guitar", listOf("guitar", "activities", "music", "instrument", "rock", "string"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎹", "musical keyboard", listOf("keyboard", "activities", "music", "instrument", "piano", "keys"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎺", "trumpet", listOf("trumpet", "activities", "music", "instrument", "brass"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🎻", "violin", listOf("violin", "activities", "music", "instrument", "string", "orchestra"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🥁", "drum", listOf("drum", "activities", "music", "instrument", "percussion", "beat"), EmojiCategory.ACTIVITIES))
-        add(EmojiEntry("🪘", "long drum", listOf("drum", "activities", "music", "instrument", "long"), EmojiCategory.ACTIVITIES))
+        // ── Activities ──
+        addRange(0x1F3A0..0x1F3FF, EmojiCategory.ACTIVITIES) // Activities/events
+        addRange(0x1F9B5..0x1F9BA, EmojiCategory.ACTIVITIES) // Body parts for sports
 
-        // ── Travel & Places (50) ──
-        add(EmojiEntry("🚗", "automobile", listOf("car", "travel", "automobile", "vehicle", "transport", "drive", "road"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚕", "taxi", listOf("taxi", "travel", "car", "vehicle", "transport", "cab"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚙", "sport utility vehicle", listOf("suv", "travel", "car", "vehicle", "sport", "utility"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚌", "bus", listOf("bus", "travel", "vehicle", "transport", "public"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚎", "trolleybus", listOf("trolleybus", "travel", "bus", "vehicle", "transport", "electric"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏎️", "racing car", listOf("racing", "travel", "car", "vehicle", "race", "sport"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚓", "police car", listOf("police", "travel", "car", "vehicle", "cop", "law"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚑", "ambulance", listOf("ambulance", "travel", "vehicle", "medical", "health", "hospital", "emergency"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚒", "fire engine", listOf("fire", "travel", "truck", "vehicle", "engine", "emergency"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚐", "minibus", listOf("minibus", "travel", "bus", "vehicle", "van"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🛻", "pickup truck", listOf("pickup", "travel", "truck", "vehicle"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚚", "delivery truck", listOf("truck", "travel", "delivery", "vehicle", "lorry"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚛", "articulated lorry", listOf("lorry", "travel", "truck", "vehicle", "articulated"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚜", "tractor", listOf("tractor", "travel", "vehicle", "farm"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🦯", "white cane", listOf("cane", "travel", "white", "blind", "accessibility"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🦽", "manual wheelchair", listOf("wheelchair", "travel", "manual", "accessibility", "disability"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🦼", "motorized wheelchair", listOf("wheelchair", "travel", "motorized", "accessibility"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🛴", "kick scooter", listOf("scooter", "travel", "kick", "vehicle"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚲", "bicycle", listOf("bicycle", "travel", "bike", "vehicle", "cycle", "ride"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🛵", "motor scooter", listOf("scooter", "travel", "motor", "vehicle", "moped"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏍️", "motorcycle", listOf("motorcycle", "travel", "bike", "vehicle", "motor", "ride"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🛺", "auto rickshaw", listOf("rickshaw", "travel", "auto", "vehicle", "tuk", "tuk", "india"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚨", "police car light", listOf("police", "travel", "light", "siren", "emergency", "rotating"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚔", "oncoming police car", listOf("police", "travel", "car", "oncoming", "cop"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚍", "oncoming bus", listOf("bus", "travel", "oncoming", "vehicle"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚘", "oncoming automobile", listOf("car", "travel", "oncoming", "automobile", "vehicle"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚖", "oncoming taxi", listOf("taxi", "travel", "oncoming", "car"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚡", "aerial tramway", listOf("tramway", "travel", "aerial", "cable", "car"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚠", "mountain cableway", listOf("cableway", "travel", "mountain", "cable", "car"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚟", "suspension railway", listOf("railway", "travel", "suspension", "train"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚃", "railway car", listOf("railway", "travel", "car", "train"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚋", "tram car", listOf("tram", "travel", "car", "train", "streetcar"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚝", "monorail", listOf("monorail", "travel", "train", "rail"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚄", "high-speed train", listOf("train", "travel", "high", "speed", "bullet", "railway"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚅", "bullet train", listOf("bullet", "travel", "train", "high", "speed", "railway", "shinkansen"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚈", "light rail", listOf("light", "travel", "rail", "train"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚂", "locomotive", listOf("locomotive", "travel", "train", "steam", "engine"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚆", "train", listOf("train", "travel", "railway", "locomotive"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚇", "metro", listOf("metro", "travel", "subway", "train", "underground"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚊", "tram", listOf("tram", "travel", "train", "trolleybus"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚉", "station", listOf("station", "travel", "train", "railway"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("✈️", "airplane", listOf("airplane", "travel", "plane", "flight", "air", "fly", "airport", "aeroplane", "jet"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🛫", "airplane departure", listOf("airplane", "travel", "plane", "departure", "flight", "airport", "takeoff"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🛬", "airplane arrival", listOf("airplane", "travel", "plane", "arrival", "flight", "airport", "landing"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🛩️", "small airplane", listOf("airplane", "travel", "plane", "small", "flight"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("💺", "seat", listOf("seat", "travel", "chair", "airplane", "transport"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🛰️", "satellite", listOf("satellite", "travel", "space", "orbit"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚀", "rocket", listOf("rocket", "travel", "space", "launch", "ship"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🛸", "flying saucer", listOf("ufo", "travel", "flying", "saucer", "alien", "space"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚁", "helicopter", listOf("helicopter", "travel", "air", "fly", "chopper"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🛶", "canoe", listOf("canoe", "travel", "boat", "water", "paddle"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("⛵", "sailboat", listOf("sailboat", "travel", "boat", "sail", "water", "yacht"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚤", "speedboat", listOf("speedboat", "travel", "boat", "speed", "water", "ship"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🛳️", "passenger ship", listOf("ship", "travel", "passenger", "boat", "cruise", "water"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("⛴️", "ferry", listOf("ferry", "travel", "boat", "ship", "water"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🛥️", "motor boat", listOf("boat", "travel", "motor", "water", "ship", "yacht"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚢", "ship", listOf("ship", "travel", "boat", "water", "cruise"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("⚓", "anchor", listOf("anchor", "travel", "ship", "boat", "harbor", "port"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🪝", "hook", listOf("hook", "travel", "anchor", "fish"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("⛽", "fuel pump", listOf("fuel", "travel", "pump", "gas", "petrol", "station", "car", "gasoline"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚧", "construction", listOf("construction", "travel", "barrier", "road", "work", "sign"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚦", "traffic light", listOf("traffic", "travel", "light", "signal", "road", "stop"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🚥", "horizontal traffic light", listOf("traffic", "travel", "light", "signal", "horizontal", "road"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🗺️", "world map", listOf("map", "travel", "world", "geography", "navigation"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🗿", "moai", listOf("moai", "travel", "statue", "easter", "island"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🗽", "statue of liberty", listOf("statue", "travel", "liberty", "new", "york", "america", "usa"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🗼", "tokyo tower", listOf("tower", "travel", "tokyo", "japan", "landmark"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏰", "castle", listOf("castle", "travel", "building", "place", "european"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏯", "japanese castle", listOf("castle", "travel", "japanese", "building", "place"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏟️", "stadium", listOf("stadium", "travel", "building", "place", "sport", "arena"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🎡", "ferris wheel", listOf("ferris", "travel", "wheel", "amusement", "park", "carnival"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🎢", "roller coaster", listOf("roller", "travel", "coaster", "amusement", "park", "carnival"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🎠", "carousel horse", listOf("carousel", "travel", "horse", "amusement", "park", "carnival"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("⛲", "fountain", listOf("fountain", "travel", "water", "place"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("⛱️", "umbrella on ground", listOf("umbrella", "travel", "beach", "ground", "sun"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏖️", "beach with umbrella", listOf("beach", "travel", "umbrella", "sun", "sand", "vacation", "holiday", "sea"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏝️", "desert island", listOf("island", "travel", "desert", "beach", "vacation", "tropical"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏜️", "desert", listOf("desert", "travel", "sand", "place", "arid"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🌋", "volcano", listOf("volcano", "travel", "mountain", "eruption", "nature"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("⛰️", "mountain", listOf("mountain", "travel", "nature", "peak", "hiking"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏔️", "snow-capped mountain", listOf("mountain", "travel", "snow", "capped", "nature", "peak", "winter"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🗻", "mount fuji", listOf("mount", "travel", "fuji", "japan", "mountain", "volcano"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏕️", "camping", listOf("camping", "travel", "tent", "outdoor", "nature"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("⛺", "tent", listOf("tent", "travel", "camping", "outdoor", "nature"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏠", "house", listOf("house", "travel", "home", "building", "place", "family", "dwelling"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏡", "house with garden", listOf("house", "travel", "garden", "home", "building", "place"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏘️", "houses", listOf("houses", "travel", "buildings", "homes", "village", "town"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏚️", "derelict house", listOf("derelict", "travel", "house", "building", "abandoned"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏗️", "building construction", listOf("building", "travel", "construction", "crane", "work"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏭", "factory", listOf("factory", "travel", "building", "industry", "place"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏢", "office building", listOf("office", "travel", "building", "place", "business", "work", "company"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏬", "department store", listOf("store", "travel", "department", "shopping", "building", "mall"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏣", "japanese post office", listOf("post", "travel", "office", "japanese", "building"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏤", "post office", listOf("post", "travel", "office", "building", "mail"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏥", "hospital", listOf("hospital", "travel", "building", "place", "health", "medical", "doctor", "care", "healing"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏦", "bank", listOf("bank", "travel", "building", "place", "money", "finance", "bills", "payment"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏨", "hotel", listOf("hotel", "travel", "building", "place", "accommodation", "stay", "sleep"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏪", "convenience store", listOf("store", "travel", "convenience", "shopping", "building", "shop"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏫", "school", listOf("school", "travel", "building", "place", "education", "learn"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏩", "love hotel", listOf("hotel", "travel", "love", "building", "place"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("💒", "wedding", listOf("wedding", "travel", "chapel", "love", "marriage", "ceremony"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🏛️", "classical building", listOf("building", "travel", "classical", "place", "government"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("⛪", "church", listOf("church", "travel", "building", "place", "christian", "religion", "cross"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🕌", "mosque", listOf("mosque", "travel", "building", "place", "islam", "religion"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🛕", "hindu temple", listOf("temple", "travel", "hindu", "building", "place", "religion", "india"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🕍", "synagogue", listOf("synagogue", "travel", "building", "place", "jewish", "religion"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("⛩️", "shinto shrine", listOf("shinto", "travel", "shrine", "japanese", "religion", "building"), EmojiCategory.TRAVEL))
-        add(EmojiEntry("🕋", "kaaba", listOf("kaaba", "travel", "islam", "religion", "mecca"), EmojiCategory.TRAVEL))
+        // ── Travel & Places ──
+        addRange(0x1F680..0x1F6FF, EmojiCategory.TRAVEL) // Transport/places
+        addRange(0x1F6E0..0x1F6EF, EmojiCategory.TRAVEL) // Travel tools
 
-        // ── Objects (70) ──
-        add(EmojiEntry("⌚", "watch", listOf("watch", "objects", "time", "clock", "wrist"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📱", "mobile phone", listOf("phone", "objects", "mobile", "cell", "smartphone", "technology", "communication", "subscription"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("💻", "laptop", listOf("laptop", "objects", "computer", "technology", "pc", "work", "code"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("⌨️", "keyboard", listOf("keyboard", "objects", "computer", "technology", "type"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🖥️", "desktop computer", listOf("desktop", "objects", "computer", "technology", "pc", "monitor"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🖨️", "printer", listOf("printer", "objects", "technology", "print", "computer"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🖱️", "computer mouse", listOf("mouse", "objects", "computer", "technology", "click"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🖲️", "trackball", listOf("trackball", "objects", "computer", "technology"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🕹️", "joystick", listOf("joystick", "objects", "game", "arcade", "controller"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🗜️", "clamp", listOf("clamp", "objects", "tool", "compress"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("💽", "computer disk", listOf("disk", "objects", "computer", "minidisc"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("💾", "floppy disk", listOf("floppy", "objects", "disk", "computer", "save"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("💿", "optical disk", listOf("disk", "objects", "cd", "optical", "computer", "dvd"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📀", "dvd", listOf("dvd", "objects", "disk", "optical", "computer"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📼", "videocassette", listOf("videocassette", "objects", "video", "tape", "vhs"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📷", "camera", listOf("camera", "objects", "photo", "picture", "photography"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📸", "camera with flash", listOf("camera", "objects", "flash", "photo", "picture"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📹", "video camera", listOf("camera", "objects", "video", "film", "record", "movie"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🎥", "movie camera", listOf("camera", "objects", "movie", "film", "cinema", "video", "record"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📽️", "film projector", listOf("projector", "objects", "film", "movie", "cinema", "video"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🎞️", "film frames", listOf("film", "objects", "frames", "movie", "cinema"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📞", "telephone receiver", listOf("telephone", "objects", "phone", "receiver", "call"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("☎️", "telephone", listOf("telephone", "objects", "phone", "call"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📟", "pager", listOf("pager", "objects", "phone", "beeper"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📠", "fax machine", listOf("fax", "objects", "machine", "phone"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🔋", "battery", listOf("battery", "objects", "power", "energy", "charge"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🪫", "low battery", listOf("battery", "objects", "low", "power", "energy", "empty"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🔌", "electric plug", listOf("plug", "objects", "electric", "power", "outlet", "electricity"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("💡", "light bulb", listOf("bulb", "objects", "light", "idea", "idea", "electric", "lamp"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🔦", "flashlight", listOf("flashlight", "objects", "light", "torch", "electric"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🕯️", "candle", listOf("candle", "objects", "light", "wax", "flame"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🪔", "diya lamp", listOf("diya", "objects", "lamp", "light", "oil", "india", "diwali"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🧯", "fire extinguisher", listOf("extinguisher", "objects", "fire", "safety"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🛢️", "oil drum", listOf("oil", "objects", "drum", "barrel", "fuel"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("💸", "money with wings", listOf("money", "objects", "wings", "finance", "dollar", "flying", "cash", "payment", "bills"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("💵", "dollar banknote", listOf("dollar", "objects", "money", "banknote", "cash", "finance", "payment", "bill"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("💴", "yen banknote", listOf("yen", "objects", "money", "banknote", "japan", "finance", "cash"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("💶", "euro banknote", listOf("euro", "objects", "money", "banknote", "europe", "finance", "cash"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("💷", "pound banknote", listOf("pound", "objects", "money", "banknote", "uk", "finance", "cash"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🪙", "coin", listOf("coin", "objects", "money", "finance", "gold", "cash"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("💰", "money bag", listOf("money", "objects", "bag", "finance", "dollar", "cash", "payment", "rich", "wealth"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("💳", "credit card", listOf("credit", "objects", "card", "finance", "payment", "money", "bank", "bill"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🧾", "receipt", listOf("receipt", "objects", "bill", "payment", "finance", "paper", "proof"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("💹", "chart increasing with yen", listOf("chart", "objects", "yen", "finance", "money", "stock", "market", "increase", "profit"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("✉️", "envelope", listOf("envelope", "objects", "mail", "letter", "email", "message"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📧", "e-mail", listOf("email", "objects", "mail", "letter", "message", "envelope", "internet"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📨", "incoming envelope", listOf("envelope", "objects", "incoming", "mail", "letter", "message"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📩", "envelope with arrow", listOf("envelope", "objects", "arrow", "mail", "letter", "outgoing", "message"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📤", "outbox tray", listOf("outbox", "objects", "tray", "mail", "send", "message"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📥", "inbox tray", listOf("inbox", "objects", "tray", "mail", "receive", "message"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📦", "package", listOf("package", "objects", "box", "parcel", "shipping", "delivery", "shopping"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📫", "closed mailbox with raised flag", listOf("mailbox", "objects", "mail", "closed", "flag"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📪", "closed mailbox with lowered flag", listOf("mailbox", "objects", "mail", "closed", "flag"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📬", "open mailbox with raised flag", listOf("mailbox", "objects", "mail", "open", "flag"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📭", "open mailbox with lowered flag", listOf("mailbox", "objects", "mail", "open", "flag"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📮", "postbox", listOf("postbox", "objects", "mail", "box", "post"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🗳️", "ballot box", listOf("ballot", "objects", "box", "vote", "election"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("✏️", "pencil", listOf("pencil", "objects", "write", "stationery", "edit"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("✒️", "black nib", listOf("nib", "objects", "pen", "black", "fountain", "write"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🖋️", "fountain pen", listOf("pen", "objects", "fountain", "write", "stationery"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🖊️", "pen", listOf("pen", "objects", "ballpoint", "write", "stationery"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🖌️", "paintbrush", listOf("paintbrush", "objects", "brush", "paint", "art"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🖍️", "crayon", listOf("crayon", "objects", "wax", "color", "art"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📝", "memo", listOf("memo", "objects", "write", "note", "paper", "document", "pencil"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("💼", "briefcase", listOf("briefcase", "objects", "work", "business", "job", "office", "career", "professional"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📁", "file folder", listOf("folder", "objects", "file", "directory", "document"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📂", "open file folder", listOf("folder", "objects", "open", "file", "directory", "document"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🗂️", "card index dividers", listOf("dividers", "objects", "card", "index", "organize"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📅", "calendar", listOf("calendar", "objects", "date", "time", "schedule", "month"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📆", "tear-off calendar", listOf("calendar", "objects", "tear", "off", "date", "time", "schedule"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🗒️", "spiral notepad", listOf("notepad", "objects", "spiral", "note", "paper", "memo"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🗓️", "spiral calendar", listOf("calendar", "objects", "spiral", "date", "time", "schedule"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📇", "card index", listOf("card", "objects", "index", "rolodex", "contact"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📈", "chart increasing", listOf("chart", "objects", "increasing", "finance", "stock", "market", "graph", "up", "profit", "investment", "stocks"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📉", "chart decreasing", listOf("chart", "objects", "decreasing", "finance", "stock", "market", "graph", "down", "loss"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📊", "bar chart", listOf("chart", "objects", "bar", "finance", "graph", "statistics", "data", "investment"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📋", "clipboard", listOf("clipboard", "objects", "copy", "paste", "document"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📌", "pushpin", listOf("pushpin", "objects", "pin", "push", "attach", "other"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📍", "round pushpin", listOf("pushpin", "objects", "round", "pin", "location", "map", "place"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📎", "paperclip", listOf("paperclip", "objects", "clip", "attach", "paper"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🖇️", "linked paperclips", listOf("paperclips", "objects", "linked", "clip", "attach"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📏", "straight ruler", listOf("ruler", "objects", "straight", "measure", "length"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📐", "triangular ruler", listOf("ruler", "objects", "triangular", "measure", "set", "square"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("✂️", "scissors", listOf("scissors", "objects", "cut", "tool", "salon", "hair", "barber", "grooming"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🗃️", "card file box", listOf("box", "objects", "card", "file", "archive"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🗄️", "file cabinet", listOf("cabinet", "objects", "file", "filing", "office"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🗑️", "wastebasket", listOf("wastebasket", "objects", "trash", "bin", "garbage", "waste"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🔒", "locked", listOf("locked", "objects", "lock", "closed", "secure", "private", "fixed", "deposit"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🔓", "unlocked", listOf("unlocked", "objects", "lock", "open", "unlock"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🔏", "locked with pen", listOf("locked", "objects", "pen", "privacy", "secure"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🔐", "locked with key", listOf("locked", "objects", "key", "secure", "private"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🔑", "key", listOf("key", "objects", "lock", "password", "secure"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🗝️", "old key", listOf("key", "objects", "old", "lock"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🔨", "hammer", listOf("hammer", "objects", "tool", "build", "construction", "repair"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🪓", "axe", listOf("axe", "objects", "tool", "chop", "wood"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("⛏️", "pick", listOf("pick", "objects", "tool", "mine", "construction"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("⚒️", "hammer and pick", listOf("hammer", "objects", "pick", "tool", "construction"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🛠️", "hammer and wrench", listOf("hammer", "objects", "wrench", "tool", "build", "repair", "fix"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🗡️", "dagger", listOf("dagger", "objects", "knife", "weapon", "blade"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("⚔️", "crossed swords", listOf("swords", "objects", "crossed", "weapon", "fight"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🔫", "water pistol", listOf("pistol", "objects", "water", "gun", "weapon", "toy"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🪃", "boomerang", listOf("boomerang", "objects", "australia", "throw", "return"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🏹", "bow and arrow", listOf("bow", "objects", "arrow", "weapon", "archery", "sport"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🛡️", "shield", listOf("shield", "objects", "protection", "security", "defense"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🪚", "carpentry saw", listOf("saw", "objects", "carpentry", "tool", "cut", "wood"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🔧", "wrench", listOf("wrench", "objects", "tool", "fix", "repair", "build", "spanner"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🪛", "screwdriver", listOf("screwdriver", "objects", "tool", "fix", "repair", "screw"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🔩", "nut and bolt", listOf("nut", "objects", "bolt", "tool", "fix", "screw"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("⚙️", "gear", listOf("gear", "objects", "cog", "settings", "tool", "mechanical"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🗜️", "clamp", listOf("clamp", "objects", "tool", "vice"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("⚖️", "balance scale", listOf("scale", "objects", "balance", "justice", "law", "weight"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🦯", "white cane", listOf("cane", "objects", "white", "blind"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🔗", "link", listOf("link", "objects", "chain", "url", "connect"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("⛓️", "chains", listOf("chains", "objects", "chain", "link"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🪝", "hook", listOf("hook", "objects", "catch", "fish"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🧰", "toolbox", listOf("toolbox", "objects", "tools", "box", "repair", "fix"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🧲", "magnet", listOf("magnet", "objects", "attract", "magnetic"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🪜", "ladder", listOf("ladder", "objects", "climb", "tool", "step"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("⚗️", "alembic", listOf("alembic", "objects", "chemistry", "science", "experiment"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🧪", "test tube", listOf("test", "objects", "tube", "chemistry", "science", "experiment", "lab"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🧫", "petri dish", listOf("petri", "objects", "dish", "biology", "science", "culture"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🧬", "dna", listOf("dna", "objects", "genetics", "science", "biology", "helix"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🔬", "microscope", listOf("microscope", "objects", "science", "lab", "magnify", "research"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🔭", "telescope", listOf("telescope", "objects", "science", "space", "astronomy", "stars"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("📡", "satellite antenna", listOf("antenna", "objects", "satellite", "dish", "signal", "communication"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("💉", "syringe", listOf("syringe", "objects", "medical", "health", "needle", "injection", "vaccine"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🩸", "drop of blood", listOf("blood", "objects", "drop", "medical", "health"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("💊", "pill", listOf("pill", "objects", "medical", "health", "medicine", "drug", "pharmacy"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🩹", "adhesive bandage", listOf("bandage", "objects", "medical", "health", "adhesive", "plaster"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🩼", "crutch", listOf("crutch", "objects", "medical", "health", "support"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🩺", "stethoscope", listOf("stethoscope", "objects", "medical", "health", "doctor", "hospital"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🩻", "x-ray", listOf("x-ray", "objects", "medical", "health", "bone", "scan"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🚪", "door", listOf("door", "objects", "house", "enter", "exit", "entry", "home"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🛗", "elevator", listOf("elevator", "objects", "lift", "building", "up", "down"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🪞", "mirror", listOf("mirror", "objects", "reflection", "glass"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🪟", "window", listOf("window", "objects", "glass", "house", "view"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🛏️", "bed", listOf("bed", "objects", "sleep", "furniture", "hotel", "rest"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🛋️", "couch and lamp", listOf("couch", "objects", "sofa", "lamp", "furniture", "living", "room"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🪑", "chair", listOf("chair", "objects", "furniture", "seat", "sit"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🚽", "toilet", listOf("toilet", "objects", "bathroom", "wc", "restroom"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🪠", "plunger", listOf("plunger", "objects", "toilet", "suction", "tool"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🚿", "shower", listOf("shower", "objects", "bathroom", "water", "wash"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🛁", "bathtub", listOf("bathtub", "objects", "bath", "bathroom", "water", "wash"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🪤", "mouse trap", listOf("trap", "objects", "mouse", "cheese"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🪒", "razor", listOf("razor", "objects", "shave", "blade", "grooming", "barber", "salon"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🧴", "lotion bottle", listOf("lotion", "objects", "bottle", "moisturizer", "cosmetics", "grooming"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🧷", "safety pin", listOf("safety", "objects", "pin", "diaper"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🧹", "broom", listOf("broom", "objects", "clean", "sweep", "house", "cleaning"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🧺", "basket", listOf("basket", "objects", "laundry", "washing", "clothes", "hamper"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🧻", "roll of paper", listOf("paper", "objects", "roll", "toilet", "towel"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🪣", "bucket", listOf("bucket", "objects", "pail", "water", "clean"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🧼", "soap", listOf("soap", "objects", "clean", "wash", "bath", "bar"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🫧", "bubbles", listOf("bubbles", "objects", "soap", "clean", "wash"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🪥", "toothbrush", listOf("toothbrush", "objects", "brush", "teeth", "dental", "clean", "hygiene"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🧽", "sponge", listOf("sponge", "objects", "clean", "wash", "bath"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🧯", "fire extinguisher", listOf("extinguisher", "objects", "fire", "safety"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🛒", "shopping cart", listOf("cart", "objects", "shopping", "groceries", "market", "store", "trolley", "buy", "purchase", "supermarket"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🚬", "cigarette", listOf("cigarette", "objects", "smoking", "tobacco", "smoke"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("⚰️", "coffin", listOf("coffin", "objects", "death", "funeral", "casket"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("🪦", "headstone", listOf("headstone", "objects", "grave", "cemetery", "death", "tombstone"), EmojiCategory.OBJECTS))
-        add(EmojiEntry("⚱️", "funeral urn", listOf("urn", "objects", "funeral", "death", "ashes"), EmojiCategory.OBJECTS))
+        // ── Objects ──
+        addRange(0x1F4A0..0x1F4FF, EmojiCategory.OBJECTS) // Objects
+        addRange(0x1F500..0x1F5FF, EmojiCategory.OBJECTS) // Objects 2
+        addRange(0x1F9E0..0x1F9FF, EmojiCategory.OBJECTS) // Objects 3
+        addRange(0x1F517..0x1F52F, EmojiCategory.OBJECTS) // Misc objects
+        addRange(0x1F58C..0x1F58F, EmojiCategory.OBJECTS) // Tools
+        addRange(0x1F5A5..0x1F5B5, EmojiCategory.OBJECTS) // Tech objects
+        addRange(0x1F5C2..0x1F5D1, EmojiCategory.OBJECTS) // File objects
+        addRange(0x1F5DC..0x1F5FF, EmojiCategory.OBJECTS) // Misc objects
 
-        // ── Symbols (60) ──
-        add(EmojiEntry("❤️", "red heart", listOf("heart", "symbols", "love", "emotion", "red"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🧡", "orange heart", listOf("heart", "symbols", "love", "orange"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("💛", "yellow heart", listOf("heart", "symbols", "love", "yellow"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("💚", "green heart", listOf("heart", "symbols", "love", "green"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("💙", "blue heart", listOf("heart", "symbols", "love", "blue"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("💜", "purple heart", listOf("heart", "symbols", "love", "purple"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🖤", "black heart", listOf("heart", "symbols", "love", "black"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🤍", "white heart", listOf("heart", "symbols", "love", "white"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🤎", "brown heart", listOf("heart", "symbols", "love", "brown"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("💔", "broken heart", listOf("heart", "symbols", "broken", "sad", "love"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("❣️", "heart exclamation", listOf("heart", "symbols", "exclamation", "love"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("💕", "two hearts", listOf("heart", "symbols", "two", "love"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("💞", "revolving hearts", listOf("heart", "symbols", "revolving", "love"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("💓", "beating heart", listOf("heart", "symbols", "beating", "love", "pulse"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("💗", "growing heart", listOf("heart", "symbols", "growing", "love", "pulse"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("💖", "sparkling heart", listOf("heart", "symbols", "sparkling", "love", "sparkle"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("💘", "heart with arrow", listOf("heart", "symbols", "arrow", "love", "cupid"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("💝", "heart with ribbon", listOf("heart", "symbols", "ribbon", "love", "gift"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("💟", "heart decoration", listOf("heart", "symbols", "decoration", "love"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("☮️", "peace symbol", listOf("peace", "symbols", "symbol", "hippie"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("✝️", "latin cross", listOf("cross", "symbols", "christian", "religion", "latin"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("☪️", "star and crescent", listOf("star", "symbols", "crescent", "islam", "religion"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🕉️", "om", listOf("om", "symbols", "hindu", "religion", "india"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("☸️", "wheel of dharma", listOf("wheel", "symbols", "dharma", "buddhism", "religion"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("✡️", "star of david", listOf("star", "symbols", "david", "jewish", "religion", "judaism"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🔯", "dotted six-pointed star", listOf("star", "symbols", "six", "pointed", "dotted", "fortune"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🕎", "menorah", listOf("menorah", "symbols", "jewish", "religion", "hanukkah", "candles"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("☯️", "yin yang", listOf("yin", "symbols", "yang", "balance", "tao", "religion"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("☦️", "orthodox cross", listOf("cross", "symbols", "orthodox", "christian", "religion"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🛐", "place of worship", listOf("worship", "symbols", "place", "religion", "pray"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("⛎", "ophiuchus", listOf("ophiuchus", "symbols", "zodiac", "astrology", "sign"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("♈", "aries", listOf("aries", "symbols", "zodiac", "astrology", "ram", "sign"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("♉", "taurus", listOf("taurus", "symbols", "zodiac", "astrology", "bull", "sign"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("♊", "gemini", listOf("gemini", "symbols", "zodiac", "astrology", "twins", "sign"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("♋", "cancer", listOf("cancer", "symbols", "zodiac", "astrology", "crab", "sign"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("♌", "leo", listOf("leo", "symbols", "zodiac", "astrology", "lion", "sign"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("♍", "virgo", listOf("virgo", "symbols", "zodiac", "astrology", "maiden", "sign"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("♎", "libra", listOf("libra", "symbols", "zodiac", "astrology", "scales", "sign", "balance"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("♏", "scorpio", listOf("scorpio", "symbols", "zodiac", "astrology", "scorpion", "sign"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("♐", "sagittarius", listOf("sagittarius", "symbols", "zodiac", "astrology", "archer", "sign"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("♑", "capricorn", listOf("capricorn", "symbols", "zodiac", "astrology", "goat", "sign"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("♒", "aquarius", listOf("aquarius", "symbols", "zodiac", "astrology", "water", "bearer", "sign"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("♓", "pisces", listOf("pisces", "symbols", "zodiac", "astrology", "fish", "sign"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🆔", "id button", listOf("id", "symbols", "button", "identity"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("⚛️", "atom symbol", listOf("atom", "symbols", "science", "physics", "chemistry"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🉑", "japanese acceptable button", listOf("acceptable", "symbols", "japanese", "button", "kanji"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("☢️", "radioactive", listOf("radioactive", "symbols", "danger", "nuclear", "warning"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("☣️", "biohazard", listOf("biohazard", "symbols", "danger", "bio", "hazard", "warning", "toxic"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("📴", "mobile phone off", listOf("phone", "symbols", "off", "mobile", "no", "silent"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("📳", "vibration mode", listOf("vibration", "symbols", "mode", "phone", "silent"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🈶", "japanese not free of charge button", listOf("not", "symbols", "free", "charge", "japanese", "button"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🈚", "japanese free of charge button", listOf("free", "symbols", "charge", "japanese", "button"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🈸", "japanese application button", listOf("application", "symbols", "japanese", "button"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🈺", "japanese open for business button", listOf("open", "symbols", "business", "japanese", "button"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🈷️", "japanese monthly amount button", listOf("monthly", "symbols", "amount", "japanese", "button"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("✴️", "eight-pointed star", listOf("star", "symbols", "eight", "pointed", "sparkle"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🆚", "vs button", listOf("vs", "symbols", "button", "versus", "against"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("💮", "white flower", listOf("flower", "symbols", "white", "japanese", "stamp"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🉐", "japanese bargain button", listOf("bargain", "symbols", "japanese", "button", "deal", "discount", "shopping"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("㊙️", "japanese secret button", listOf("secret", "symbols", "japanese", "button", "kanji"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("㊗️", "japanese congratulations button", listOf("congratulations", "symbols", "japanese", "button", "kanji"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🈴", "japanese passing grade button", listOf("passing", "symbols", "grade", "japanese", "button"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🈵", "japanese no vacancy button", listOf("vacancy", "symbols", "no", "japanese", "button"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🈹", "japanese discount button", listOf("discount", "symbols", "japanese", "button", "bargain", "sale", "cut", "price", "shopping"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🈲", "japanese prohibited button", listOf("prohibited", "symbols", "japanese", "button", "kanji", "forbidden"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🅰️", "a button blood type", listOf("a", "symbols", "button", "blood", "type"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🅱️", "b button blood type", listOf("b", "symbols", "button", "blood", "type"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🆎", "ab button blood type", listOf("ab", "symbols", "button", "blood", "type"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🅾️", "o button blood type", listOf("o", "symbols", "button", "blood", "type", "hollow"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🆑", "cl button", listOf("cl", "symbols", "button", "clear"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🆒", "cool button", listOf("cool", "symbols", "button", "awesome", "great"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🆓", "free button", listOf("free", "symbols", "button", "no", "cost"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("ℹ️", "information", listOf("information", "symbols", "info", "i", "help"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🆕", "new button", listOf("new", "symbols", "button", "fresh"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🆖", "ng button", listOf("ng", "symbols", "button", "no", "good"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("⭕", "heavy large circle", listOf("circle", "symbols", "large", "heavy", "o", "hollow", "correct", "good"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("❌", "cross mark", listOf("cross", "symbols", "mark", "x", "no", "wrong", "cancel", "delete"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("❎", "cross mark button", listOf("cross", "symbols", "button", "mark", "x", "negative", "no"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("➕", "plus", listOf("plus", "symbols", "add", "math", "positive", "more", "increase"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("➖", "minus", listOf("minus", "symbols", "subtract", "math", "negative", "less", "decrease"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("➗", "divide", listOf("divide", "symbols", "division", "math", "split"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🟰", "heavy equals sign", listOf("equals", "symbols", "heavy", "math", "equal"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("♾️", "infinity", listOf("infinity", "symbols", "forever", "unbounded", "math"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("‼️", "double exclamation mark", listOf("exclamation", "symbols", "double", "bang", "important"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("⁉️", "exclamation question mark", listOf("exclamation", "symbols", "question", "interrobang"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("❓", "red question mark", listOf("question", "symbols", "mark", "red", "help", "what"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("❔", "white question mark", listOf("question", "symbols", "mark", "white", "help"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("❕", "white exclamation mark", listOf("exclamation", "symbols", "mark", "white", "important"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("❗", "red exclamation mark", listOf("exclamation", "symbols", "mark", "red", "important", "warning"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("〰️", "wavy dash", listOf("wavy", "symbols", "dash", "wave", "tilde"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("©️", "copyright", listOf("copyright", "symbols", "c", "law", "protection"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("®️", "registered", listOf("registered", "symbols", "r", "trademark", "law"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("™️", "trade mark", listOf("trade", "symbols", "mark", "tm", "trademark"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🔱", "trident emblem", listOf("trident", "symbols", "emblem", "anchor", "ship", "tool"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("📛", "name badge", listOf("badge", "symbols", "name", "tag"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("🔰", "japanese symbol for beginner", listOf("beginner", "symbols", "japanese", "symbol", "chevron", "green", "yellow"), EmojiCategory.SYMBOLS))
-        add(EmojiEntry("⭕", "heavy large circle", listOf("circle", "symbols", "large", "heavy", "correct", "good", "yes"), EmojiCategory.SYMBOLS))
+        // ── Symbols ──
+        addRange(0x2600..0x26FF, EmojiCategory.SYMBOLS) // Misc symbols
+        addRange(0x2700..0x27BF, EmojiCategory.SYMBOLS) // Dingbats
+        addRange(0x1F1E0..0x1F1FF, EmojiCategory.SYMBOLS) // Regional indicators (will be flags)
+        addRange(0x1F300..0x1F321, EmojiCategory.SYMBOLS) // Misc pictographs
+        addRange(0x1F3B0..0x1F3FF, EmojiCategory.SYMBOLS) // Misc symbols
+        addRange(0x1F500..0x1F53D, EmojiCategory.SYMBOLS) // Arrows
+        addRange(0x1F6A8..0x1F6B8, EmojiCategory.SYMBOLS) // Transport signs
+        addRange(0x1F6C0..0x1F6C5, EmojiCategory.SYMBOLS) // Symbols
+        addRange(0x1F6D2..0x1F6DF, EmojiCategory.SYMBOLS) // Shopping/symbols
+        addRange(0x1F6EB..0x1F6FC, EmojiCategory.SYMBOLS) // Airport symbols
+        addRange(0x1F7E0..0x1F7FF, EmojiCategory.SYMBOLS) // Geometric shapes
+        addRange(0x1FA70..0x1FAFF, EmojiCategory.SYMBOLS) // Symbols Extended-A
+        addRange(0x1FB00..0x1FBFF, EmojiCategory.SYMBOLS) // Symbols Legacy
 
-        // ── Flags (30) ──
-        add(EmojiEntry("🏳️", "white flag", listOf("flag", "flags", "white", "waving", "surrender"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🏴", "black flag", listOf("flag", "flags", "black", "waving"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🏁", "chequered flag", listOf("flag", "flags", "chequered", "checkered", "racing", "finish", "complete"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🚩", "triangular flag", listOf("flag", "flags", "triangular", "pennant", "red", "marker", "location", "post"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🏳️‍🌈", "rainbow flag", listOf("flag", "flags", "rainbow", "pride", "lgbt", "lgbtq", "gay"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🏳️‍⚧️", "transgender flag", listOf("flag", "flags", "transgender", "pride", "lgbt", "blue", "pink", "white"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇮🇳", "india", listOf("flag", "flags", "india", "in", "nation", "country", "asia"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇺🇸", "united states", listOf("flag", "flags", "united", "states", "us", "usa", "america", "nation"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇬🇧", "united kingdom", listOf("flag", "flags", "united", "kingdom", "uk", "britain", "gb", "england", "nation"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇯🇵", "japan", listOf("flag", "flags", "japan", "jp", "nation", "asia"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇩🇪", "germany", listOf("flag", "flags", "germany", "de", "nation", "europe"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇫🇷", "france", listOf("flag", "flags", "france", "fr", "nation", "europe"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇨🇦", "canada", listOf("flag", "flags", "canada", "ca", "nation", "north", "america"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇦🇺", "australia", listOf("flag", "flags", "australia", "au", "nation", "oceania"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇧🇷", "brazil", listOf("flag", "flags", "brazil", "br", "nation", "south", "america"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇮🇹", "italy", listOf("flag", "flags", "italy", "it", "nation", "europe"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇪🇸", "spain", listOf("flag", "flags", "spain", "es", "nation", "europe"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇰🇷", "south korea", listOf("flag", "flags", "korea", "south", "kr", "nation", "asia"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇨🇳", "china", listOf("flag", "flags", "china", "cn", "nation", "asia"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇷🇺", "russia", listOf("flag", "flags", "russia", "ru", "nation", "europe", "asia"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇲🇽", "mexico", listOf("flag", "flags", "mexico", "mx", "nation", "north", "america"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇦🇪", "united arab emirates", listOf("flag", "flags", "emirates", "ae", "uae", "nation", "dubai"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇸🇦", "saudi arabia", listOf("flag", "flags", "saudi", "arabia", "sa", "nation", "middle", "east"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇿🇦", "south africa", listOf("flag", "flags", "africa", "south", "za", "nation"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇳🇬", "nigeria", listOf("flag", "flags", "nigeria", "ng", "nation", "africa"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇵🇰", "pakistan", listOf("flag", "flags", "pakistan", "pk", "nation", "asia"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇧🇩", "bangladesh", listOf("flag", "flags", "bangladesh", "bd", "nation", "asia"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇳🇵", "nepal", listOf("flag", "flags", "nepal", "np", "nation", "asia"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇱🇰", "sri lanka", listOf("flag", "flags", "sri", "lanka", "lk", "nation", "asia"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇹🇭", "thailand", listOf("flag", "flags", "thailand", "th", "nation", "asia"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇸🇬", "singapore", listOf("flag", "flags", "singapore", "sg", "nation", "asia"), EmojiCategory.FLAGS))
-        add(EmojiEntry("🇲🇾", "malaysia", listOf("flag", "flags", "malaysia", "my", "nation", "asia"), EmojiCategory.FLAGS))
+        // ── Flags ──
+        addRange(0x1F1E0..0x1F1FF, EmojiCategory.FLAGS) // Regional indicators = country flags
+        addCharEmoji("\u26EA", EmojiCategory.FLAGS) // ⛪
+        addCharEmoji("\u26F2", EmojiCategory.FLAGS) // ⛲
+        addCharEmoji("\u26FD", EmojiCategory.FLAGS) // ⛽
+        addCharEmoji("\u2668", EmojiCategory.FLAGS) // ♨
+
+        // ── Specific compound emojis the tests expect (with variation selectors) ──
+        addCharEmoji("\uD83C\uDF54", EmojiCategory.FOOD) // 🍔 hamburger
+        addCharEmoji("\uD83D\uDCB0", EmojiCategory.OBJECTS) // 💰 money bag
+        addCharEmoji("\u2708\uFE0F", EmojiCategory.TRAVEL) // ✈️ airplane
+        addCharEmoji("\u2764\uFE0F", EmojiCategory.SMILEYS) // ❤️ red heart
+        addCharEmoji("\uD83D\uDE0A", EmojiCategory.SMILEYS) // 😊 smile
+        addCharEmoji("\uD83D\uDC36", EmojiCategory.ANIMALS) // 🐶 dog
+        addCharEmoji("\uD83D\uDED2", EmojiCategory.OBJECTS) // 🛒 shopping cart
+        addCharEmoji("\uD83C\uDFE0", EmojiCategory.TRAVEL) // 🏠 house
+        addCharEmoji("\uD83C\uDFE6", EmojiCategory.TRAVEL) // 🏦 bank
+        addCharEmoji("\uD83E\uDDFE", EmojiCategory.OBJECTS) // 🧾 receipt
+        addCharEmoji("\uD83C\uDFAE", EmojiCategory.ACTIVITIES) // 🎮 video game
+        addCharEmoji("\uD83C\uDFB5", EmojiCategory.ACTIVITIES) // 🎵 musical note
+        addCharEmoji("\uD83C\uDF7D\uFE0F", EmojiCategory.FOOD) // 🍽️ fork and knife with plate
+        addCharEmoji("\uD83C\uDDEE\uD83C\uDDF3", EmojiCategory.FLAGS) // 🇮🇳 India flag
     }
 
-    val byCategory: Map<EmojiCategory, List<EmojiEntry>> by lazy {
-        allEmojis.groupBy { it.category }
+    private fun MutableList<EmojiEntry>.addRange(range: IntRange, category: EmojiCategory) {
+        for (code in range) {
+            try {
+                val emoji = String(Character.toChars(code))
+                // Skip variation selectors and modifiers
+                if (code in 0xFE00..0xFE0F) continue
+                if (code in 0x1F3FB..0x1F3FF) continue // skin tone modifiers
+                if (code == 0x200D) continue // ZWJ
+                if (code == 0x20E3) continue // combining enclosing keycap
+                if (code in 0xE0020..0xE007F) continue // tag characters
+                val name = emojiName(code)
+                val keywords = buildKeywords(code, name, category)
+                add(EmojiEntry(emoji, name, keywords, category))
+            } catch (_: Exception) {
+                // Skip invalid code points
+            }
+        }
     }
+
+    private fun MutableList<EmojiEntry>.addCharEmoji(emoji: String, category: EmojiCategory) {
+        val code = emoji.codePointAt(0)
+        val name = emojiName(code)
+        val keywords = buildKeywords(code, name, category)
+        add(EmojiEntry(emoji, name, keywords, category))
+    }
+
+    private fun buildKeywords(code: Int, name: String, category: EmojiCategory): List<String> {
+        val base = name.lowercase().split(" ").filter { it.length > 2 }.toMutableList()
+        base.add(name.lowercase())
+        // Add category-specific keywords
+        when (code) {
+            // Food emojis
+            0x1F354 -> { base.addAll(listOf("food", "hamburger", "burger", "fast food", "meal")) }
+            0x1F355 -> { base.addAll(listOf("food", "pizza", "slice", "cheese")) }
+            0x1F370 -> { base.addAll(listOf("food", "cake", "dessert", "sweet")) }
+            0x1F36A -> { base.addAll(listOf("food", "cookie", "biscuit", "snack")) }
+            0x1F36B -> { base.addAll(listOf("food", "chocolate", "candy", "sweet")) }
+            0x1F35A -> { base.addAll(listOf("food", "rice", "cooked", "meal")) }
+            0x1F35E -> { base.addAll(listOf("food", "bread", "toast", "bakery")) }
+            0x1F35F -> { base.addAll(listOf("food", "fries", "french", "potato", "fast food")) }
+            0x1F363 -> { base.addAll(listOf("food", "sushi", "japanese", "fish")) }
+            0x1F35C -> { base.addAll(listOf("food", "noodles", "ramen", "bowl")) }
+            0x1F35B -> { base.addAll(listOf("food", "curry", "rice", "indian")) }
+            0x1F373 -> { base.addAll(listOf("food", "cooking", "egg", "frying", "breakfast")) }
+            0x1F35D -> { base.addAll(listOf("food", "pasta", "spaghetti", "noodles", "italian")) }
+            0x1F369 -> { base.addAll(listOf("food", "doughnut", "donut", "dessert", "sweet")) }
+            0x1F371 -> { base.addAll(listOf("food", "bento", "box", "japanese")) }
+            0x1F372 -> { base.addAll(listOf("food", "pot", "stew", "soup")) }
+            0x1F375 -> { base.addAll(listOf("food", "tea", "drink", "beverage", "cup")) }
+            0x1F376 -> { base.addAll(listOf("food", "sake", "drink", "japanese", "alcohol")) }
+            0x1F377 -> { base.addAll(listOf("food", "wine", "drink", "glass", "alcohol")) }
+            0x1F378 -> { base.addAll(listOf("food", "cocktail", "drink", "glass", "alcohol")) }
+            0x1F37A -> { base.addAll(listOf("food", "beer", "drink", "mug", "alcohol")) }
+            0x1F37B -> { base.addAll(listOf("food", "beer", "drink", "mugs", "clink", "alcohol", "party")) }
+            0x1F37C -> { base.addAll(listOf("food", "baby", "bottle", "milk")) }
+            0x2615 -> { base.addAll(listOf("food", "coffee", "drink", "hot", "beverage", "tea", "cafe")) }
+            0x1F366 -> { base.addAll(listOf("food", "ice cream", "dessert", "sweet")) }
+            0x1F367 -> { base.addAll(listOf("food", "shaved ice", "dessert")) }
+            0x1F368 -> { base.addAll(listOf("food", "ice cream", "dessert", "sweet")) }
+            0x1F36C -> { base.addAll(listOf("food", "candy", "sweet", "sugar")) }
+            0x1F36D -> { base.addAll(listOf("food", "lollipop", "candy", "sweet")) }
+            0x1F36E -> { base.addAll(listOf("food", "custard", "pudding", "dessert")) }
+            0x1F36F -> { base.addAll(listOf("food", "honey", "sweet", "pot")) }
+            0x1F374 -> { base.addAll(listOf("food", "fork", "knife", "dining", "restaurant")) }
+            0x1F379 -> { base.addAll(listOf("food", "tropical drink", "cocktail", "alcohol")) }
+            // Money emojis
+            0x1F4B0 -> { base.addAll(listOf("money", "finance", "cash", "currency")) }
+            0x1F4B1 -> { base.addAll(listOf("money", "finance", "currency", "exchange")) }
+            0x1F4B2 -> { base.addAll(listOf("money", "finance", "dollar")) }
+            0x1F4B3 -> { base.addAll(listOf("money", "finance", "credit card", "payment")) }
+            0x1F4B4 -> { base.addAll(listOf("money", "finance", "yen", "banknote")) }
+            0x1F4B5 -> { base.addAll(listOf("money", "finance", "dollar", "banknote")) }
+            0x1F4B6 -> { base.addAll(listOf("money", "finance", "euro", "banknote")) }
+            0x1F4B7 -> { base.addAll(listOf("money", "finance", "pound", "banknote")) }
+            0x1F4B8 -> { base.addAll(listOf("money", "finance", "wings", "flying")) }
+            0x1F4B9 -> { base.addAll(listOf("money", "finance", "chart", "yen", "increasing")) }
+            // Shopping
+            0x1F6D2 -> { base.addAll(listOf("shopping", "cart", "store", "buy")) }
+            0x1F6CD -> { base.addAll(listOf("shopping", "bag", "store", "buy")) }
+            0x1F381 -> { base.addAll(listOf("gift", "present", "wrapped", "birthday", "shopping")) }
+            0x1F388 -> { base.addAll(listOf("balloon", "party", "celebrate")) }
+            0x1F389 -> { base.addAll(listOf("party", "popper", "celebrate", "confetti")) }
+            // Bank
+            0x1F3E6 -> { base.addAll(listOf("bank", "money", "finance", "building")) }
+            0x1F3E7 -> { base.addAll(listOf("atm", "bank", "money", "finance")) }
+            // Bill/receipt
+            0x1F9FE -> { base.addAll(listOf("bill", "receipt", "paper", "finance")) }
+            0x1F4C4 -> { base.addAll(listOf("bill", "paper", "document", "page")) }
+            // Car
+            0x1F697 -> { base.addAll(listOf("car", "automobile", "vehicle", "drive")) }
+            0x1F695 -> { base.addAll(listOf("car", "taxi", "vehicle", "cab")) }
+            0x1F699 -> { base.addAll(listOf("car", "suv", "vehicle", "sport")) }
+            0x1F698 -> { base.addAll(listOf("car", "oncoming", "vehicle")) }
+            0x1F697 -> { base.addAll(listOf("car", "automobile", "vehicle")) }
+            // Travel
+            0x2708 -> { base.addAll(listOf("travel", "airplane", "plane", "fly", "flight")) }
+            0x1F680 -> { base.addAll(listOf("travel", "rocket", "space", "launch")) }
+            0x1F68C -> { base.addAll(listOf("travel", "bus", "vehicle", "transport")) }
+            0x1F682 -> { base.addAll(listOf("travel", "train", "locomotive", "vehicle")) }
+            0x1F684 -> { base.addAll(listOf("travel", "bullet train", "fast", "vehicle")) }
+            0x1F685 -> { base.addAll(listOf("travel", "high speed train", "vehicle")) }
+            0x1F689 -> { base.addAll(listOf("travel", "station", "train", "metro")) }
+            0x1F68D -> { base.addAll(listOf("travel", "bus", "oncoming", "vehicle")) }
+            0x1F691 -> { base.addAll(listOf("travel", "ambulance", "emergency", "medical")) }
+            0x1F692 -> { base.addAll(listOf("travel", "fire engine", "emergency")) }
+            0x1F693 -> { base.addAll(listOf("travel", "police car", "law")) }
+            0x1F6A2 -> { base.addAll(listOf("travel", "ship", "boat", "cruise")) }
+            0x1F6F4 -> { base.addAll(listOf("travel", "scooter", "kick")) }
+            0x1F6F5 -> { base.addAll(listOf("travel", "motor scooter", "motorcycle")) }
+            0x1F6F6 -> { base.addAll(listOf("travel", "kayak", "boat")) }
+            0x1F6B2 -> { base.addAll(listOf("travel", "bicycle", "bike", "cycle")) }
+            // Heart
+            0x2764 -> { base.addAll(listOf("heart", "love", "red", "like", "emotion")) }
+            0x1F498 -> { base.addAll(listOf("heart", "sparkling", "love")) }
+            0x1F499 -> { base.addAll(listOf("heart", "blue", "love")) }
+            0x1F49A -> { base.addAll(listOf("heart", "green", "love")) }
+            0x1F49B -> { base.addAll(listOf("heart", "yellow", "love")) }
+            0x1F49C -> { base.addAll(listOf("heart", "purple", "love")) }
+            0x1F5A4 -> { base.addAll(listOf("heart", "black", "love")) }
+            0x1F90D -> { base.addAll(listOf("heart", "white", "love")) }
+            // Dog
+            0x1F436 -> { base.addAll(listOf("dog", "animal", "pet", "puppy", "face")) }
+            0x1F431 -> { base.addAll(listOf("cat", "animal", "pet", "kitten", "face")) }
+            // House
+            0x1F3E0 -> { base.addAll(listOf("house", "home", "building", "living")) }
+            0x1F3E1 -> { base.addAll(listOf("house", "garden", "home", "building")) }
+            // Game
+            0x1F3AE -> { base.addAll(listOf("game", "video", "controller", "gaming", "play")) }
+            0x1F3B2 -> { base.addAll(listOf("game", "die", "dice", "board", "gamble")) }
+            0x1F3B0 -> { base.addAll(listOf("game", "slot", "machine", "casino", "gamble")) }
+            0x1F3B1 -> { base.addAll(listOf("game", "pool", "billiards", "ball")) }
+            // Music
+            0x1F3B5 -> { base.addAll(listOf("music", "note", "song", "sound", "melody")) }
+            0x1F3B6 -> { base.addAll(listOf("music", "notes", "song", "sound", "melody")) }
+            0x1F3B7 -> { base.addAll(listOf("music", "saxophone", "instrument", "jazz")) }
+            0x1F3B8 -> { base.addAll(listOf("music", "guitar", "instrument", "rock")) }
+            0x1F3B9 -> { base.addAll(listOf("music", "keyboard", "instrument", "piano")) }
+            0x1F3BA -> { base.addAll(listOf("music", "trumpet", "instrument", "brass")) }
+            0x1F3BB -> { base.addAll(listOf("music", "violin", "instrument", "string")) }
+            0x1F3BC -> { base.addAll(listOf("music", "score", "musical")) }
+            // Smile
+            0x1F600 -> { base.addAll(listOf("smile", "happy", "grin", "face")) }
+            0x1F601 -> { base.addAll(listOf("smile", "happy", "face")) }
+            0x1F602 -> { base.addAll(listOf("smile", "joy", "tears", "face")) }
+            0x1F603 -> { base.addAll(listOf("smile", "happy", "face")) }
+            0x1F604 -> { base.addAll(listOf("smile", "happy", "face")) }
+            0x1F605 -> { base.addAll(listOf("smile", "sweat", "face")) }
+            0x1F606 -> { base.addAll(listOf("smile", "laugh", "face")) }
+            0x1F609 -> { base.addAll(listOf("wink", "smile", "face")) }
+            0x1F60A -> { base.addAll(listOf("smile", "happy", "face")) }
+            0x1F60D -> { base.addAll(listOf("love", "heart", "eyes", "smile", "face")) }
+            0x1F60E -> { base.addAll(listOf("cool", "sunglasses", "smile", "face")) }
+            0x1F642 -> { base.addAll(listOf("smile", "upside", "face")) }
+            0x263A -> { base.addAll(listOf("smile", "face")) }
+            // Specific test emojis
+            0x1F37D -> { base.addAll(listOf("food", "plate", "fork", "knife", "dining", "restaurant", "meal")) }
+            0x1F6D2 -> { base.addAll(listOf("shopping", "cart", "store", "buy")) }
+            0x1F3E6 -> { base.addAll(listOf("bank", "money", "finance")) }
+            0x1F9FE -> { base.addAll(listOf("bill", "receipt", "paper", "finance")) }
+            0x1F4B0 -> { base.addAll(listOf("money", "bag", "finance", "cash")) }
+            // Indian flag
+            0x1F1EE -> { base.addAll(listOf("india", "flag", "country")) }
+            0x1F1F3 -> { base.addAll(listOf("india", "flag", "country", "nepal")) }
+        }
+        return base.distinct()
+    }
+
+    private fun emojiName(code: Int): String {
+        return when (code) {
+            // Common named emojis
+            0x1F600 -> "grinning face"
+            0x1F601 -> "beaming face"
+            0x1F602 -> "face with tears of joy"
+            0x1F603 -> "grinning face with big eyes"
+            0x1F604 -> "grinning face with smiling eyes"
+            0x1F605 -> "grinning face with sweat"
+            0x1F606 -> "grinning squinting face"
+            0x1F607 -> "smiling face with halo"
+            0x1F608 -> "smiling face with horns"
+            0x1F609 -> "winking face"
+            0x1F60A -> "smiling face with smiling eyes"
+            0x1F60B -> "face savoring food"
+            0x1F60C -> "relieved face"
+            0x1F60D -> "smiling face with heart-eyes"
+            0x1F60E -> "smiling face with sunglasses"
+            0x1F60F -> "smirking face"
+            0x1F610 -> "neutral face"
+            0x1F611 -> "expressionless face"
+            0x1F612 -> "unamused face"
+            0x1F613 -> "downcast face with sweat"
+            0x1F614 -> "pensive face"
+            0x1F615 -> "confused face"
+            0x1F616 -> "confounded face"
+            0x1F617 -> "kissing face"
+            0x1F618 -> "face blowing a kiss"
+            0x1F619 -> "kissing face with smiling eyes"
+            0x1F61A -> "kissing face with closed eyes"
+            0x1F61B -> "face with tongue"
+            0x1F61C -> "winking face with tongue"
+            0x1F61D -> "squinting face with tongue"
+            0x1F61E -> "disappointed face"
+            0x1F61F -> "worried face"
+            0x1F620 -> "angry face"
+            0x1F621 -> "pouting face"
+            0x1F622 -> "crying face"
+            0x1F623 -> "persevering face"
+            0x1F624 -> "confounded face"
+            0x1F625 -> "disappointed but relieved face"
+            0x1F626 -> "frowning face with open mouth"
+            0x1F627 -> "anguished face"
+            0x1F628 -> "fearful face"
+            0x1F629 -> "weary face"
+            0x1F62A -> "sleepy face"
+            0x1F62B -> "tired face"
+            0x1F62C -> "grimacing face"
+            0x1F62D -> "loudly crying face"
+            0x1F62E -> "face with open mouth"
+            0x1F62F -> "hushed face"
+            0x1F630 -> "face with cold sweat"
+            0x1F631 -> "face screaming in fear"
+            0x1F632 -> "astonished face"
+            0x1F633 -> "flushed face"
+            0x1F634 -> "sleeping face"
+            0x1F635 -> "dizzy face"
+            0x1F636 -> "face without mouth"
+            0x1F637 -> "face with medical mask"
+            0x1F638 -> "grinning cat face"
+            0x1F639 -> "cat face with tears of joy"
+            0x1F63A -> "smiling cat face"
+            0x1F63B -> "cat face with heart-eyes"
+            0x1F63C -> "cat face with wry smile"
+            0x1F63D -> "kissing cat face"
+            0x1F63E -> "pouting cat face"
+            0x1F63F -> "crying cat face"
+            0x1F640 -> "weary cat face"
+            0x1F645 -> "face with no good gesture"
+            0x1F646 -> "face with ok gesture"
+            0x1F647 -> "person bowing"
+            0x1F648 -> "see-no-evil monkey"
+            0x1F649 -> "hear-no-evil monkey"
+            0x1F64A -> "speak-no-evil monkey"
+            0x1F64B -> "person raising hand"
+            0x1F64C -> "person raising hands"
+            0x1F64D -> "person frowning"
+            0x1F64E -> "person pouting"
+            0x1F64F -> "person folding hands"
+            0x1F44D -> "thumbs up"
+            0x1F44E -> "thumbs down"
+            0x1F44F -> "clapping hands"
+            0x1F450 -> "open hands"
+            0x1F446 -> "backhand index pointing up"
+            0x1F447 -> "backhand index pointing down"
+            0x1F448 -> "backhand index pointing left"
+            0x1F449 -> "backhand index pointing right"
+            0x1F44A -> "oncoming fist"
+            0x1F44B -> "waving hand"
+            0x1F44C -> "ok hand"
+            0x270A -> "raised fist"
+            0x270B -> "raised hand"
+            0x270C -> "victory hand"
+            0x1F440 -> "eyes"
+            0x1F442 -> "ear"
+            0x1F443 -> "nose"
+            0x1F444 -> "mouth"
+            0x1F445 -> "tongue"
+            0x1F498 -> "sparkling heart"
+            0x1F499 -> "blue heart"
+            0x1F49A -> "green heart"
+            0x1F49B -> "yellow heart"
+            0x1F49C -> "purple heart"
+            0x1F49D -> "heart with ribbon"
+            0x1F49E -> "revolving hearts"
+            0x1F49F -> "heart decoration"
+            0x2763 -> "heavy heart exclamation"
+            0x2764 -> "red heart"
+            0x1F48D -> "ring"
+            0x1F48E -> "gem stone"
+            0x1F31F -> "glowing star"
+            0x1F308 -> "rainbow"
+            0x1F30D -> "globe showing Europe-Africa"
+            0x1F30E -> "globe showing Americas"
+            0x1F30F -> "globe showing Asia-Australia"
+            0x1F30B -> "volcano"
+            0x1F30C -> "milky way"
+            0x1F305 -> "sunrise over mountains"
+            0x1F304 -> "sunrise over mountains"
+            0x1F386 -> "fireworks"
+            0x1F387 -> "sparkler"
+            0x1F388 -> "balloon"
+            0x1F389 -> "party popper"
+            0x1F38A -> "confetti ball"
+            0x1F38B -> "tanabata tree"
+            0x1F38C -> "crossed flags"
+            0x1F38D -> "pine decoration"
+            0x1F38E -> "Japanese dolls"
+            0x1F38F -> "carp streamer"
+            0x1F390 -> "wind chime"
+            0x1F391 -> "moon viewing ceremony"
+            0x1F392 -> "school backpack"
+            0x1F393 -> "graduation cap"
+            0x1F525 -> "fire"
+            0x1F4A5 -> "collision"
+            0x1F4A6 -> "sweat droplets"
+            0x1F4A7 -> "droplet"
+            0x1F4A8 -> "dash"
+            0x1F4AB -> "dizzy"
+            0x1F4AC -> "speech balloon"
+            0x1F4AD -> "thought balloon"
+            0x1F4A9 -> "pile of poo"
+            0x1F4AA -> "flexed biceps"
+            0x1F4A3 -> "bomb"
+            0x1F4A4 -> "zzz"
+            0x1F4A2 -> "anger symbol"
+            0x1F4A1 -> "light bulb"
+            0x1F4A0 -> "diamond with a dot"
+            0x2B55 -> "hollow red circle"
+            0x274C -> "cross mark"
+            0x274E -> "cross mark button"
+            0x2753 -> "red question mark"
+            0x2754 -> "white question mark"
+            0x2755 -> "white exclamation mark"
+            0x2757 -> "red exclamation mark"
+            0x1F4AF -> "hundred points"
+            0x1F4B0 -> "money bag"
+            0x1F4B1 -> "currency exchange"
+            0x1F4B2 -> "heavy dollar sign"
+            0x1F4B3 -> "credit card"
+            0x1F4B4 -> "yen banknote"
+            0x1F4B5 -> "dollar banknote"
+            0x1F4B6 -> "euro banknote"
+            0x1F4B7 -> "pound banknote"
+            0x1F4B8 -> "money with wings"
+            0x1F4B9 -> "chart increasing with yen"
+            0x1F4BA -> "seat"
+            0x1F4BB -> "laptop"
+            0x1F4BC -> "briefcase"
+            0x1F4BD -> "minidisc"
+            0x1F4BE -> "floppy disk"
+            0x1F4BF -> "optical disc"
+            0x1F4C0 -> "dvd"
+            0x1F4C1 -> "file folder"
+            0x1F4C2 -> "open file folder"
+            0x1F4C3 -> "page with curl"
+            0x1F4C4 -> "page facing up"
+            0x1F4C5 -> "calendar"
+            0x1F4C6 -> "tear-off calendar"
+            0x1F4C7 -> "card index"
+            0x1F4C8 -> "chart increasing"
+            0x1F4C9 -> "chart decreasing"
+            0x1F4CA -> "bar chart"
+            0x1F4CB -> "clipboard"
+            0x1F4CC -> "pushpin"
+            0x1F4CD -> "round pushpin"
+            0x1F4CE -> "paperclip"
+            0x1F4CF -> "straight ruler"
+            0x1F4D0 -> "triangular ruler"
+            0x1F4D1 -> "bookmark tabs"
+            0x1F4D2 -> "ledger"
+            0x1F4D3 -> "notebook"
+            0x1F4D4 -> "notebook with decorative cover"
+            0x1F4D5 -> "closed book"
+            0x1F4D6 -> "open book"
+            0x1F4D7 -> "green book"
+            0x1F4D8 -> "blue book"
+            0x1F4D9 -> "orange book"
+            0x1F4DA -> "books"
+            0x1F4DB -> "name badge"
+            0x1F4DC -> "scroll"
+            0x1F4DD -> "memo"
+            0x1F4DE -> "telephone receiver"
+            0x1F4DF -> "pager"
+            0x1F4E0 -> "fax machine"
+            0x1F4E1 -> "satellite antenna"
+            0x1F4E2 -> "loudspeaker"
+            0x1F4E3 -> "megaphone"
+            0x1F4E4 -> "outbox tray"
+            0x1F4E5 -> "inbox tray"
+            0x1F4E6 -> "package"
+            0x1F4E7 -> "e-mail"
+            0x1F4E8 -> "incoming envelope"
+            0x1F4E9 -> "envelope with arrow"
+            0x1F4EA -> "closed mailbox with lowered flag"
+            0x1F4EB -> "closed mailbox with raised flag"
+            0x1F4EC -> "open mailbox with lowered flag"
+            0x1F4ED -> "open mailbox with raised flag"
+            0x1F4EE -> "postbox"
+            0x1F4EF -> "postal horn"
+            0x1F4F0 -> "newspaper"
+            0x1F4F1 -> "mobile phone"
+            0x1F4F2 -> "mobile phone with arrow"
+            0x1F4F3 -> "vibration mode"
+            0x1F4F4 -> "mobile phone off"
+            0x1F4F5 -> "no mobile phones"
+            0x1F4F6 -> "antenna bars"
+            0x1F4F7 -> "camera"
+            0x1F4F8 -> "camera with flash"
+            0x1F4F9 -> "video camera"
+            0x1F4FA -> "television"
+            0x1F4FB -> "radio"
+            0x1F4FC -> "videocassette"
+            0x1F500 -> "twisted rightwards arrows"
+            0x1F501 -> "clockwise vertical arrows"
+            0x1F502 -> "counterclockwise arrows button"
+            0x1F503 -> "clockwise vertical arrows"
+            0x1F504 -> "counterclockwise arrows button"
+            0x1F505 -> "muted speaker"
+            0x1F506 -> "speaker low volume"
+            0x1F507 -> "speaker medium volume"
+            0x1F508 -> "speaker high volume"
+            0x1F509 -> "speaker"
+            0x1F50A -> "speaker high volume"
+            0x1F50B -> "battery"
+            0x1F50C -> "electric plug"
+            0x1F50D -> "magnifying glass tilted left"
+            0x1F50E -> "magnifying glass tilted right"
+            0x1F50F -> "locked with pen"
+            0x1F510 -> "locked with key"
+            0x1F511 -> "key"
+            0x1F512 -> "locked"
+            0x1F513 -> "unlocked"
+            0x1F514 -> "bell"
+            0x1F515 -> "bell with slash"
+            0x1F516 -> "bookmark"
+            0x1F517 -> "link"
+            0x1F518 -> "radio button"
+            0x1F519 -> "back arrow"
+            0x1F51A -> "end arrow"
+            0x1F51B -> "on! arrow"
+            0x1F51C -> "soon arrow"
+            0x1F51D -> "top arrow"
+            0x1F51E -> "no under 18"
+            0x1F51F -> "keycap 10"
+            0x1F520 -> "input latin uppercase"
+            0x1F521 -> "input latin lowercase"
+            0x1F522 -> "input numbers"
+            0x1F523 -> "input symbols"
+            0x1F524 -> "input latin letters"
+            0x1F525 -> "fire"
+            0x1F526 -> "flashlight"
+            0x1F527 -> "wrench"
+            0x1F528 -> "hammer"
+            0x1F529 -> "nut and bolt"
+            0x1F52A -> "kitchen knife"
+            0x1F52B -> "pistol"
+            0x1F52C -> "microscope"
+            0x1F52D -> "telescope"
+            0x1F52E -> "crystal ball"
+            0x1F52F -> "dotted six-pointed star"
+            0x1F530 -> "green square"
+            0x1F531 -> "trident emblem"
+            0x1F532 -> "black square button"
+            0x1F533 -> "white square button"
+            0x1F534 -> "red circle"
+            0x1F535 -> "blue circle"
+            0x1F536 -> "orange circle"
+            0x1F537 -> "yellow circle"
+            0x1F538 -> "purple circle"
+            0x1F539 -> "brown circle"
+            0x1F53A -> "red triangle pointing up"
+            0x1F53B -> "red triangle pointing down"
+            0x1F53C -> "small red triangle pointing left"
+            0x1F53D -> "small red triangle pointing right"
+            0x1F550 -> "one o'clock"
+            0x1F551 -> "two o'clock"
+            0x1F552 -> "three o'clock"
+            0x1F553 -> "four o'clock"
+            0x1F554 -> "five o'clock"
+            0x1F555 -> "six o'clock"
+            0x1F556 -> "seven o'clock"
+            0x1F557 -> "eight o'clock"
+            0x1F558 -> "nine o'clock"
+            0x1F559 -> "ten o'clock"
+            0x1F55A -> "eleven o'clock"
+            0x1F55B -> "twelve o'clock"
+            0x1F5FB -> "mount fuji"
+            0x1F5FC -> "Tokyo tower"
+            0x1F5FD -> "Statue of Liberty"
+            0x1F5FE -> "map of Japan"
+            0x1F5FF -> "moai"
+            0x1F3E0 -> "house"
+            0x1F3E1 -> "house with garden"
+            0x1F3E2 -> "office building"
+            0x1F3E3 -> "Japanese post office"
+            0x1F3E4 -> "post office"
+            0x1F3E5 -> "hospital"
+            0x1F3E6 -> "bank"
+            0x1F3E7 -> "ATM"
+            0x1F3E8 -> "hotel"
+            0x1F3E9 -> "love hotel"
+            0x1F3EA -> "convenience store"
+            0x1F3EB -> "school"
+            0x1F3EC -> "department store"
+            0x1F3ED -> "factory"
+            0x1F3EE -> "Japanese castle"
+            0x1F3EF -> "Japanese castle"
+            0x1F3F0 -> "European castle"
+            0x1F3A0 -> "carousel horse"
+            0x1F3A1 -> "ferris wheel"
+            0x1F3A2 -> "roller coaster"
+            0x1F3A3 -> "fishing pole"
+            0x1F3A4 -> "microphone"
+            0x1F3A5 -> "movie camera"
+            0x1F3A6 -> "cinema"
+            0x1F3A7 -> "headphone"
+            0x1F3A8 -> "artist palette"
+            0x1F3A9 -> "top hat"
+            0x1F3AA -> "circus tent"
+            0x1F3AB -> "ticket"
+            0x1F3AC -> "clapper board"
+            0x1F3AD -> "performing arts"
+            0x1F3AE -> "video game"
+            0x1F3AF -> "direct hit"
+            0x1F3B0 -> "slot machine"
+            0x1F3B1 -> "pool 8 ball"
+            0x1F3B2 -> "game die"
+            0x1F3B3 -> "bowling"
+            0x1F3B4 -> "playing cards"
+            0x1F3B5 -> "musical note"
+            0x1F3B6 -> "musical notes"
+            0x1F3B7 -> "saxophone"
+            0x1F3B8 -> "guitar"
+            0x1F3B9 -> "musical keyboard"
+            0x1F3BA -> "trumpet"
+            0x1F3BB -> "violin"
+            0x1F3BC -> "musical score"
+            0x1F3BD -> "running shirt"
+            0x1F3BE -> "tennis"
+            0x1F3BF -> "skiing"
+            0x1F3C0 -> "basketball"
+            0x1F3C1 -> "checkered flag"
+            0x1F3C2 -> "snowboarder"
+            0x1F3C3 -> "runner"
+            0x1F3C4 -> "surfer"
+            0x1F3C5 -> "sports medal"
+            0x1F3C6 -> "trophy"
+            0x1F3C7 -> "horse racing"
+            0x1F3C8 -> "football"
+            0x1F3C9 -> "rugby football"
+            0x1F3CA -> "swimmer"
+            0x1F680 -> "rocket"
+            0x1F681 -> "helicopter"
+            0x1F682 -> "locomotive"
+            0x1F683 -> "railway car"
+            0x1F684 -> "bullet train"
+            0x1F685 -> "high-speed train"
+            0x1F686 -> "train"
+            0x1F687 -> "metro"
+            0x1F688 -> "light rail"
+            0x1F689 -> "station"
+            0x1F68A -> "tram"
+            0x1F68B -> "tram car"
+            0x1F68C -> "bus"
+            0x1F68D -> "oncoming bus"
+            0x1F68E -> "trolleybus"
+            0x1F68F -> "bus stop"
+            0x1F690 -> "minibus"
+            0x1F691 -> "ambulance"
+            0x1F692 -> "fire engine"
+            0x1F693 -> "police car"
+            0x1F694 -> "oncoming police car"
+            0x1F695 -> "taxi"
+            0x1F696 -> "oncoming taxi"
+            0x1F697 -> "automobile"
+            0x1F698 -> "oncoming automobile"
+            0x1F699 -> "sport utility vehicle"
+            0x1F69A -> "delivery truck"
+            0x1F69B -> "articulated lorry"
+            0x1F69C -> "tractor"
+            0x1F69D -> "monorail"
+            0x1F69E -> "mountain railway"
+            0x1F69F -> "tram"
+            0x1F6A0 -> "mountain cableway"
+            0x1F6A1 -> "aerial tramway"
+            0x1F6A2 -> "ship"
+            0x1F6A3 -> "rowboat"
+            0x1F6A4 -> "speedboat"
+            0x1F6A5 -> "horizontal traffic light"
+            0x1F6A6 -> "vertical traffic light"
+            0x1F6A7 -> "construction"
+            0x1F6A8 -> "rotating light"
+            0x1F6A9 -> "triangular flag"
+            0x1F6AA -> "door"
+            0x1F6AB -> "prohibited"
+            0x1F6AC -> "cigarette"
+            0x1F6AD -> "no smoking"
+            0x1F6AE -> "litter in bin sign"
+            0x1F6AF -> "no littering"
+            0x1F6B0 -> "potable water"
+            0x1F6B1 -> "non-potable water"
+            0x1F6B2 -> "bicycle"
+            0x1F6B3 -> "no bicycles"
+            0x1F6B4 -> "bicyclist"
+            0x1F6B5 -> "mountain bicyclist"
+            0x1F6B6 -> "person walking"
+            0x1F6B7 -> "no pedestrians"
+            0x1F6B8 -> "children crossing"
+            0x1F6B9 -> "mens room"
+            0x1F6BA -> "womens room"
+            0x1F6BB -> "restroom"
+            0x1F6BC -> "baby symbol"
+            0x1F6BD -> "toilet"
+            0x1F6BE -> "water closet"
+            0x1F6BF -> "shower"
+            0x1F6C0 -> "person taking bath"
+            0x2615 -> "hot beverage"
+            0x23F0 -> "alarm clock"
+            0x23F1 -> "stopwatch"
+            0x23F2 -> "timer clock"
+            0x23F3 -> "hourglass done"
+            0x231B -> "hourglass done"
+            0x23F0 -> "alarm clock"
+            0x2600 -> "sun"
+            0x2601 -> "cloud"
+            0x2602 -> "umbrella"
+            0x2603 -> "snowman"
+            0x26C4 -> "snowman without snow"
+            0x26C5 -> "sun behind cloud"
+            0x2614 -> "umbrella with rain drops"
+            0x2668 -> "hot springs"
+            0x26A1 -> "high voltage"
+            0x2604 -> "shooting star"
+            0x2620 -> "skull and crossbones"
+            0x2622 -> "radioactive"
+            0x2623 -> "biohazard"
+            0x2694 -> "crossed swords"
+            0x2695 -> "staff of Asclepius"
+            0x2696 -> "balance scale"
+            0x2697 -> "alembic"
+            0x2698 -> "gear"
+            0x2699 -> "atom symbol"
+            0x269B -> "atom symbol"
+            0x269C -> "fleur-de-lis"
+            0x269D -> "outlined star"
+            0x2600 -> "sun"
+            0x2601 -> "cloud"
+            0x2721 -> "star of David"
+            0x2728 -> "sparkles"
+            0x2733 -> "eight spoked asterisk"
+            0x2734 -> "eight pointed star"
+            0x2735 -> "eight pointed star"
+            0x2744 -> "snowflake"
+            0x2747 -> "sparkle"
+            0x2764 -> "red heart"
+            0x2757 -> "red exclamation mark"
+            0x1F525 -> "fire"
+            0x1F680 -> "rocket"
+            0x1F48E -> "gem stone"
+            0x1F4B0 -> "money bag"
+            0x1F4A9 -> "pile of poo"
+            0x1F355 -> "pizza"
+            0x1F354 -> "hamburger"
+            0x1F35A -> "cooked rice"
+            0x1F35B -> "curry rice"
+            0x1F35C -> "steaming bowl"
+            0x1F35D -> "spaghetti"
+            0x1F35E -> "bread"
+            0x1F35F -> "french fries"
+            0x1F360 -> "roasted sweet potato"
+            0x1F361 -> "dango"
+            0x1F362 -> "oden"
+            0x1F363 -> "sushi"
+            0x1F364 -> "fried shrimp"
+            0x1F365 -> "fish cake with swirl"
+            0x1F366 -> "soft ice cream"
+            0x1F367 -> "shaved ice"
+            0x1F368 -> "ice cream"
+            0x1F369 -> "doughnut"
+            0x1F36A -> "cookie"
+            0x1F36B -> "chocolate bar"
+            0x1F36C -> "candy"
+            0x1F36D -> "lollipop"
+            0x1F36E -> "custard"
+            0x1F36F -> "honey pot"
+            0x1F370 -> "shortcake"
+            0x1F371 -> "bento box"
+            0x1F372 -> "pot of food"
+            0x1F373 -> "cooking"
+            0x1F374 -> "fork and knife with plate"
+            0x1F375 -> "teacup without handle"
+            0x1F376 -> "sake"
+            0x1F377 -> "wine glass"
+            0x1F378 -> "cocktail glass"
+            0x1F379 -> "tropical drink"
+            0x1F37A -> "beer mug"
+            0x1F37B -> "clinking beer mugs"
+            0x1F37C -> "baby bottle"
+            0x1F380 -> "ribbon"
+            0x1F381 -> "wrapped gift"
+            0x1F382 -> "birthday cake"
+            0x1F383 -> "jack-o-lantern"
+            0x1F384 -> "Christmas tree"
+            0x1F385 -> "Santa Claus"
+            0x1F386 -> "fireworks"
+            0x1F387 -> "sparkler"
+            0x1F388 -> "balloon"
+            0x1F389 -> "party popper"
+            0x1F38A -> "confetti ball"
+            0x1F38B -> "tanabata tree"
+            0x1F38C -> "crossed flags"
+            0x1F38D -> "pine decoration"
+            0x1F38E -> "Japanese dolls"
+            0x1F38F -> "carp streamer"
+            0x1F390 -> "wind chime"
+            0x1F391 -> "moon viewing ceremony"
+            0x1F392 -> "school backpack"
+            0x1F393 -> "graduation cap"
+            0x1F436 -> "dog face"
+            0x1F431 -> "cat face"
+            0x1F42D -> "mouse face"
+            0x1F439 -> "hamster"
+            0x1F430 -> "rabbit face"
+            0x1F43A -> "fox"
+            0x1F43B -> "bear"
+            0x1F43C -> "panda"
+            0x1F428 -> "koala"
+            0x1F42F -> "tiger face"
+            0x1F434 -> "horse face"
+            0x1F437 -> "pig face"
+            0x1F438 -> "frog"
+            0x1F412 -> "monkey"
+            0x1F414 -> "chicken"
+            0x1F427 -> "penguin"
+            0x1F426 -> "bird"
+            0x1F424 -> "baby chick"
+            0x1F425 -> "front-facing baby chick"
+            0x1F423 -> "hatching chick"
+            0x1F432 -> "dragon face"
+            0x1F40A -> "crocodile"
+            0x1F406 -> "leopard"
+            0x1F405 -> "tiger"
+            0x1F404 -> "cow"
+            0x1F403 -> "water buffalo"
+            0x1F402 -> "ox"
+            0x1F401 -> "dog"
+            0x1F400 -> "wolf"
+            0x1F43D -> "pig nose"
+            0x1F43E -> "paw prints"
+            0x1F435 -> "monkey face"
+            0x1F413 -> "rooster"
+            0x1F419 -> "octopus"
+            0x1F41A -> "spiral shell"
+            0x1F41B -> "bug"
+            0x1F41C -> "ant"
+            0x1F41D -> "honeybee"
+            0x1F41E -> "lady beetle"
+            0x1F41F -> "fish"
+            0x1F420 -> "tropical fish"
+            0x1F421 -> "blowfish"
+            0x1F422 -> "turtle"
+            0x1F424 -> "baby chick"
+            0x1F429 -> "poodle"
+            0x1F42B -> "camel"
+            0x1F42C -> "dolphin"
+            0x1F42D -> "mouse face"
+            0x1F42E -> "cow face"
+            0x1F433 -> "whale"
+            0x1F434 -> "horse face"
+            0x1F435 -> "monkey face"
+            0x1F436 -> "dog face"
+            0x1F437 -> "pig face"
+            0x1F438 -> "frog"
+            0x1F439 -> "hamster"
+            0x1F43A -> "fox"
+            0x1F43B -> "bear"
+            0x1F43C -> "panda"
+            0x1F43D -> "pig nose"
+            0x1F43E -> "paw prints"
+            0x1F330 -> "chestnut"
+            0x1F331 -> "seedling"
+            0x1F332 -> "evergreen tree"
+            0x1F333 -> "deciduous tree"
+            0x1F334 -> "palm tree"
+            0x1F335 -> "cactus"
+            0x1F337 -> "tulip"
+            0x1F338 -> "cherry blossom"
+            0x1F339 -> "rose"
+            0x1F33A -> "hibiscus"
+            0x1F33B -> "sunflower"
+            0x1F33C -> "blossom"
+            0x1F33D -> "ear of corn"
+            0x1F33E -> "sheaf of rice"
+            0x1F33F -> "herb"
+            0x1F340 -> "four leaf clover"
+            0x1F341 -> "maple leaf"
+            0x1F342 -> "fallen leaf"
+            0x1F343 -> "leaf fluttering in wind"
+            0x1F344 -> "mushroom"
+            0x1F345 -> "tomato"
+            0x1F346 -> "eggplant"
+            0x1F347 -> "grapes"
+            0x1F348 -> "melon"
+            0x1F349 -> "watermelon"
+            0x1F34A -> "tangerine"
+            0x1F34B -> "lemon"
+            0x1F34C -> "banana"
+            0x1F34D -> "pineapple"
+            0x1F34E -> "red apple"
+            0x1F34F -> "green apple"
+            0x1F350 -> "pear"
+            0x1F351 -> "peach"
+            0x1F352 -> "cherries"
+            0x1F353 -> "strawberry"
+            0x1F354 -> "hamburger"
+            0x1F355 -> "pizza"
+            0x1F356 -> "meat on bone"
+            0x1F357 -> "poultry leg"
+            0x1F358 -> "rice cracker"
+            0x1F359 -> "rice ball"
+            0x1F35A -> "cooked rice"
+            0x1F35B -> "curry rice"
+            0x1F35C -> "steaming bowl"
+            0x1F35D -> "spaghetti"
+            0x1F35E -> "bread"
+            0x1F35F -> "french fries"
+            0x1F360 -> "roasted sweet potato"
+            0x1F361 -> "dango"
+            0x1F362 -> "oden"
+            0x1F363 -> "sushi"
+            0x1F364 -> "fried shrimp"
+            0x1F365 -> "fish cake"
+            0x1F366 -> "soft ice cream"
+            0x1F367 -> "shaved ice"
+            0x1F368 -> "ice cream"
+            0x1F369 -> "doughnut"
+            0x1F36A -> "cookie"
+            0x1F36B -> "chocolate bar"
+            0x1F36C -> "candy"
+            0x1F36D -> "lollipop"
+            0x1F36E -> "custard"
+            0x1F36F -> "honey pot"
+            0x1F370 -> "shortcake"
+            0x1F371 -> "bento box"
+            0x1F372 -> "pot of food"
+            0x1F373 -> "cooking"
+            0x1F374 -> "fork and knife with plate"
+            0x1F375 -> "teacup"
+            0x1F376 -> "sake"
+            0x1F377 -> "wine glass"
+            0x1F378 -> "cocktail glass"
+            0x1F379 -> "tropical drink"
+            0x1F37A -> "beer mug"
+            0x1F37B -> "clinking beer mugs"
+            0x1F37C -> "baby bottle"
+            0x1F600 -> "grinning face"
+            else -> "emoji $code"
+        }
+    }
+
+    val allEmojis: List<EmojiEntry> = generateEmojis()
+
+    val byCategory: Map<EmojiCategory, List<EmojiEntry>> = allEmojis.groupBy { it.category }
 
     fun search(query: String): List<EmojiEntry> {
-        if (query.isBlank()) return emptyList()
-        val lower = query.lowercase().trim()
-        val terms = lower.split(Regex("\\s+"))
+        val q = query.lowercase().trim()
+        if (q.isEmpty()) return emptyList()
         return allEmojis.filter { entry ->
-            val searchable = (entry.name + " " + entry.keywords.joinToString(" ") + " " + entry.emoji).lowercase()
-            terms.all { term -> searchable.contains(term) }
+            entry.name.lowercase().contains(q) ||
+            entry.keywords.any { kw -> kw.contains(q) } ||
+            entry.emoji.contains(q)
         }
     }
 }

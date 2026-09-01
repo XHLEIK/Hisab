@@ -13,10 +13,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/XHLEIK/Hisab/releases/tag/v4.2.1">
-    <img src="https://img.shields.io/badge/Latest-v4.2.1-111827?style=for-the-badge" alt="Latest release" />
+  <a href="https://github.com/XHLEIK/Hisab/releases/tag/v4.2.2">
+    <img src="https://img.shields.io/badge/Latest-v4.2.2-111827?style=for-the-badge" alt="Latest release" />
   </a>
-  <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.2.1.apk">
+  <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.2.2.apk">
     <img src="https://img.shields.io/badge/Download-APK-16A34A?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" />
   </a>
   <a href="LICENSE">
@@ -35,21 +35,21 @@
 
 ## Download
 
-### Latest release — v4.2.1
+### Latest release — v4.2.2
 
 > **APK size: under 8 MB** — designed to stay lightweight without sacrificing the app's core functionality or visual experience.
 
 <p align="center">
-  <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.2.1.apk">
-    <img src="https://img.shields.io/badge/%E2%86%93%20Download%20Hisab%20v4.2.1-16A34A?style=for-the-badge&logo=android&logoColor=white" alt="Download Hisab APK" />
+  <a href="https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.2.2.apk">
+    <img src="https://img.shields.io/badge/%E2%86%93%20Download%20Hisab%20v4.2.2-16A34A?style=for-the-badge&logo=android&logoColor=white" alt="Download Hisab APK" />
   </a>
 </p>
 
-- **Latest version:** `v4.2.1`
+- **Latest version:** `v4.2.2`
 - **Target SDK:** Android 16 / API 36
 - **Minimum SDK:** Android 9 / API 28
-- **Release:** [GitHub v4.2.1](https://github.com/XHLEIK/Hisab/releases/tag/v4.2.1)
-- **Direct APK:** [Hisab_v4.2.1.apk](https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.2.1.apk)
+- **Release:** [GitHub v4.2.2](https://github.com/XHLEIK/Hisab/releases/tag/v4.2.2)
+- **Direct APK:** [Hisab_v4.2.2.apk](https://github.com/XHLEIK/Hisab/raw/main/releases/Hisab_v4.2.2.apk)
 
 ---
 
@@ -87,6 +87,7 @@ Hisab focuses on one principle:
 | Manual expense tracking | ✅ |
 | Account-to-account transfers | ✅ |
 | Built-in amount calculator | ✅ |
+| Amount cut/copy/paste toolbar | ✅ |
 | Split reimbursement tracking | ✅ |
 | Multiple account management | ✅ |
 | Bank SMS auto-logging | ✅ |
@@ -98,6 +99,7 @@ Hisab focuses on one principle:
 | Searchable transaction history | ✅ |
 | Advanced history filters | ✅ |
 | Custom category management | ✅ |
+| Full Unicode 15.1 emoji picker | ✅ |
 | Automatic backup | ✅ |
 | Backup import / restore | ✅ |
 | PDF export | ✅ |
@@ -165,6 +167,18 @@ For example:
 The calculated result can be used directly as the transaction amount.
 
 The calculator is designed with financial-safe arithmetic behavior and is shared across Add and Edit Entry workflows.
+
+---
+
+## ✂️ Amount Cut / Copy / Paste
+
+Long-press the amount display area in Add/Edit Entry to access a **horizontal floating toolbar** with Cut, Copy, and Paste actions.
+
+- **Cut** — copies the amount to clipboard and clears it
+- **Copy** — copies the amount to clipboard without clearing
+- **Paste** — only accepts numeric content; strips non-numeric characters automatically
+
+The toolbar appears below the amount, styled with a compact pill-shaped design and subtle glassmorphic shadow.
 
 ---
 
@@ -248,6 +262,10 @@ Transaction logged
 ```
 
 The project also includes handling for missed or delayed SMS events and duplicate-prevention safeguards in the transaction pipeline.
+
+### Transfer direction accuracy
+
+When a debit is detected on the primary account, the notification correctly asks the user to select the **destination account** (where the money was sent), not the source. The transfer direction is preserved accurately through the entire auto-logging pipeline.
 
 ---
 
@@ -447,6 +465,26 @@ Save / Update
 
 The interface is designed to remain responsive across different Android devices and screen sizes without sacrificing the visual hierarchy of the transaction form.
 
+### Bottom navigation bar
+
+The bottom navigation features a **sliding glassmorphic pill indicator** that smoothly travels between nav items with a bouncy spring animation. The active indicator uses a gradient-filled pill with a soft luminous glow effect, providing clear visual feedback without the default Material ripple.
+
+### Amount input toolbar
+
+Long-pressing the amount display reveals a **horizontal floating toolbar** for Cut, Copy, and Paste operations. The toolbar uses a compact pill-shaped design with an upward-pointing caret, positioned below the amount so it never obscures the displayed value.
+
+### Emoji picker
+
+The category management emoji picker now includes **all 3,953+ official Unicode 15.1 emojis** organized into 9 categories with a working **Recently Used** section that persists across sessions. Search is keyword-rich and context-aware.
+
+### Dashboard header
+
+A minimal, clean header with the app name **Hisab** and the slogan *"Track every rupee, effortlessly."* — designed to feel professional without visual clutter.
+
+### Shared month selection
+
+The month selector is synchronized across the **Home**, **Analytics**, and **History** pages. Selecting a month on any page immediately updates all three, ensuring a consistent temporal context throughout the app.
+
 ---
 
 # 🔐 Privacy First & Offline by Design
@@ -511,6 +549,7 @@ This means you get a full personal-finance toolkit without turning the app into 
 | UI | Jetpack Compose + Material 3 |
 | Database | SQLite + Room Database v9 |
 | Charts / Visuals | Custom Canvas-based visualizations where appropriate |
+| Emoji | Unicode 15.1 catalog (3,953+ emojis) |
 | Android Target | API 36 |
 | Minimum Android | API 28 |
 | Build Optimization | R8 + resource shrinking |
@@ -609,9 +648,22 @@ Build success is treated as necessary but not sufficient; important features sho
 
 # 📝 Version Information
 
-## v4.2.1
+## v4.2.2
 
 **Current release**
+
+Key focus:
+
+- Fixed SMS-triggered transfer direction (debit vs credit)
+- Fixed transfer notification wording and account selection
+- Redesigned amount Cut/Copy/Paste toolbar (horizontal, below amount)
+- Synchronized month selection across Home, Analytics, and History
+- Redesigned bottom navigation with sliding glassmorphic pill indicator
+- Full Unicode 15.1 emoji catalog (3,953+ emojis) with working Recent section
+- Improved physical device touch responsiveness in AccountPicker
+- Minimal dashboard header redesign
+
+## v4.2.1
 
 Key focus:
 
@@ -630,6 +682,25 @@ For the historical release record, see the [GitHub releases](https://github.com/
 ---
 
 # 📌 Patch Notes / Changelog
+
+### v4.2.2 — Transfer Accuracy, UI Polish & Emoji Overhaul
+
+- Fixed SMS auto-logging transfer direction: debit transfers now correctly log as Primary → Destination (not reversed).
+- Fixed transfer notification text: now says "Select destination account" for debit transfers instead of "Select source account".
+- Fixed "More Accounts" button: only appears when more than 2 accounts remain after excluding the source.
+- Redesigned amount Cut/Copy/Paste as a horizontal floating toolbar below the amount display.
+- Clipboard paste now only accepts numeric content (strips non-numeric characters).
+- Removed Android 13+ clipboard access toast by deferring clipboard reads to Paste tap only.
+- Synchronized month selection across Home, Analytics, and History pages via SharedMonthState.
+- Redesigned bottom navigation bar with sliding glassmorphic pill indicator and bouncy spring animation.
+- Removed Material ripple from bottom nav items; sliding pill provides all visual feedback.
+- Replaced ~500 hand-curated emojis with full Unicode 15.1 catalog (3,953+ emojis).
+- Emoji picker now has a working Recently Used section with DataStore persistence.
+- Improved keyword search across all emoji categories.
+- Simplified dashboard header to minimal "Hisab" + slogan design.
+- Fixed AccountPicker touch sensitivity on physical devices (nested scroll only consumes y-component).
+- Quick action buttons reordered: Expense → Income → Transfer.
+- Updated transfer note format to cleaner "Transfer (From → To)" style.
 
 ### v4.2.1 — Transaction Composer & Responsive UX
 

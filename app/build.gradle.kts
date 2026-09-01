@@ -14,8 +14,8 @@ android {
         applicationId = "com.example.hisab"
         minSdk = 28
         targetSdk = 36
-        versionCode = 421
-        versionName = "4.2.1"
+        versionCode = 422
+        versionName = "4.2.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

@@ -57,18 +57,18 @@ fun QuickActionsRow(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             MinimalActionPill(
-                label = "Income",
-                icon = Icons.Filled.Add,
-                accentColor = Color(0xFF00E676), // Bright Green
-                modifier = Modifier.weight(1f),
-                onClick = { onAddType(TransactionType.INCOME) }
-            )
-            MinimalActionPill(
                 label = "Expense",
                 icon = Icons.Filled.Remove,
                 accentColor = Color(0xFFFF5252), // Bright Red
                 modifier = Modifier.weight(1f),
                 onClick = { onAddType(TransactionType.EXPENSE) }
+            )
+            MinimalActionPill(
+                label = "Income",
+                icon = Icons.Filled.Add,
+                accentColor = Color(0xFF00E676), // Bright Green
+                modifier = Modifier.weight(1f),
+                onClick = { onAddType(TransactionType.INCOME) }
             )
             MinimalActionPill(
                 label = "Transfer",

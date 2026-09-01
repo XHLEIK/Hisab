@@ -13,6 +13,7 @@ import com.example.hisab.util.SplitAccounting
 import com.example.hisab.data.repository.AccountRepository
 import com.example.hisab.data.repository.CategoryRepository
 import com.example.hisab.data.repository.TransactionRepository
+import com.example.hisab.ui.screens.SharedMonthState
 import com.example.hisab.util.DateUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -48,8 +49,7 @@ class AnalyticsViewModel(
     private val accountRepository: AccountRepository? = null
 ) : ViewModel() {
 
-    private val _selectedMonth = MutableStateFlow(YearMonth.now())
-    val selectedMonth: StateFlow<YearMonth> = _selectedMonth.asStateFlow()
+    val selectedMonth: StateFlow<YearMonth> = SharedMonthState.selectedMonth
 
     // ── Categories & Accounts ─────────────────────────────────────
     val categories: StateFlow<List<CategoryEntity>> = categoryRepository
@@ -79,7 +79,7 @@ class AnalyticsViewModel(
         )
 
     // ── Monthly Transactions ──────────────────────────────────────
-    val monthlyTransactions: StateFlow<List<TransactionEntity>> = _selectedMonth
+    val monthlyTransactions: StateFlow<List<TransactionEntity>> = SharedMonthState.selectedMonth
         .flatMapLatest { month ->
             transactionRepository.getTransactionsForMonth(month)
         }
@@ -89,7 +89,7 @@ class AnalyticsViewModel(
             initialValue = emptyList()
         )
 
-    val previousMonthTransactions: StateFlow<List<TransactionEntity>> = _selectedMonth
+    val previousMonthTransactions: StateFlow<List<TransactionEntity>> = SharedMonthState.selectedMonth
         .flatMapLatest { month ->
             transactionRepository.getTransactionsForMonth(month.minusMonths(1))
         }
@@ -120,14 +120,14 @@ class AnalyticsViewModel(
         txns.filter { it.type == TransactionType.EXPENSE && it.date == today }.sumOf { it.amount }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val totalExpenseMonthToDate: StateFlow<Double> = combine(monthlyTransactions, _selectedMonth) { txns, month ->
+    val totalExpenseMonthToDate: StateFlow<Double> = combine(monthlyTransactions, SharedMonthState.selectedMonth) { txns, month ->
         val today = LocalDate.now()
         val isCurrentMonth = (month == YearMonth.now())
         txns.filter { it.type == TransactionType.EXPENSE && (!isCurrentMonth || it.date <= today) }
             .sumOf { it.amount }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val totalIncomeMonthToDate: StateFlow<Double> = combine(monthlyTransactions, _selectedMonth) { txns, month ->
+    val totalIncomeMonthToDate: StateFlow<Double> = combine(monthlyTransactions, SharedMonthState.selectedMonth) { txns, month ->
         val today = LocalDate.now()
         val isCurrentMonth = (month == YearMonth.now())
         txns.filter { it.type == TransactionType.INCOME && (!isCurrentMonth || it.date <= today) }
@@ -151,7 +151,7 @@ class AnalyticsViewModel(
         savingsAcc?.name ?: "Savings Bank"
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Savings Bank")
 
-    val dailyBurnRate: StateFlow<Double> = combine(totalExpenseMonthToDate, _selectedMonth) { expense, month ->
+    val dailyBurnRate: StateFlow<Double> = combine(totalExpenseMonthToDate, SharedMonthState.selectedMonth) { expense, month ->
         val isCurrentMonth = (month == YearMonth.now())
         val daysElapsed = if (isCurrentMonth) {
             maxOf(1, LocalDate.now().dayOfMonth)
@@ -288,7 +288,7 @@ class AnalyticsViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // ── Daily Expense & Income Totals ─────────
-    val dailyExpenseTotals: StateFlow<List<DailyTotal>> = _selectedMonth
+    val dailyExpenseTotals: StateFlow<List<DailyTotal>> = SharedMonthState.selectedMonth
         .flatMapLatest { month ->
             transactionRepository.getDailyExpenseTotals(month)
         }
@@ -298,7 +298,7 @@ class AnalyticsViewModel(
             initialValue = emptyList()
         )
 
-    val dailyIncomeTotals: StateFlow<List<DailyTotal>> = _selectedMonth
+    val dailyIncomeTotals: StateFlow<List<DailyTotal>> = SharedMonthState.selectedMonth
         .flatMapLatest { month ->
             transactionRepository.getDailyIncomeTotals(month)
         }
@@ -318,7 +318,7 @@ class AnalyticsViewModel(
     }
 
     val barChartData: StateFlow<List<BarChartDataPoint>> = combine(
-        _selectedMonth,
+        SharedMonthState.selectedMonth,
         barChartFilter,
         barChartSpecificDate,
         weekOffset
@@ -426,7 +426,7 @@ class AnalyticsViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun selectMonth(yearMonth: YearMonth) {
-        _selectedMonth.value = yearMonth
+        SharedMonthState.selectMonth(yearMonth)
     }
 
     fun selectSecondaryAccount(accName: String) {

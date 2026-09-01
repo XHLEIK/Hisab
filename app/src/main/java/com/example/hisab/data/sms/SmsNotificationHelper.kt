@@ -44,6 +44,7 @@ object SmsNotificationHelper {
     const val EXTRA_PAGE_INDEX = "extra_page_index"
     const val EXTRA_PAGINATION_MODE = "extra_pagination_mode" // "EXPENSE", "INCOME", "TRANSFER_DEBIT", "TRANSFER_CREDIT", "SPLIT"
     const val EXTRA_TX_ID = "extra_tx_id"
+    const val EXTRA_IS_DEBIT = "extra_is_debit"
 
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -426,7 +427,8 @@ object SmsNotificationHelper {
         pendingId: Long,
         amount: Double,
         creditedBankName: String,
-        pageIndex: Int = 0
+        pageIndex: Int = 0,
+        isDebit: Boolean = false
     ) {
         val db = HisabDatabase.getDatabase(context)
         val accounts = db.accountDao().getAllSync()
@@ -450,42 +452,56 @@ object SmsNotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val titleText: String
+        val bodyText: String
+        if (isDebit) {
+            titleText = "⇄ Transfer: $formattedAmount"
+            bodyText = "Debited from $creditedBankName. Select where money was sent:"
+        } else {
+            titleText = "⇄ Transfer In: $formattedAmount"
+            bodyText = "Select source account transferred to $creditedBankName:"
+        }
+
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("⇄ Transfer In: $formattedAmount")
-            .setContentText("Select source account transferred to $creditedBankName:")
+            .setContentTitle(titleText)
+            .setContentText(bodyText)
             .setContentIntent(openAppPendingIntent)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
 
-        // Action 1: Source Account 1
+        // Action 1: Account 1
         builder.addAction(
-            createInwardTransferAction(context, notificationId, pendingId, acc1Name, creditedBankName, amount, "🏦 $acc1Name")
+            createInwardTransferAction(context, notificationId, pendingId, acc1Name, creditedBankName, amount, "🏦 $acc1Name", isDebit)
         )
-        // Action 2: Source Account 2
+        // Action 2: Account 2 (only if different)
         if (acc1Name != acc2Name) {
             builder.addAction(
-                createInwardTransferAction(context, notificationId, pendingId, acc2Name, creditedBankName, amount, "🐷 $acc2Name")
+                createInwardTransferAction(context, notificationId, pendingId, acc2Name, creditedBankName, amount, "🐷 $acc2Name", isDebit)
             )
         }
 
-        // Action 3: [ 🔄 More Accounts... ] → Paginate source accounts
-        val paginateIntent = Intent(context, NotificationActionReceiver::class.java).apply {
-            action = ACTION_PAGINATE_NOTIFICATION
-            putExtra(EXTRA_PENDING_ID, pendingId)
-            putExtra(EXTRA_NOTIFICATION_ID, notificationId)
-            putExtra(EXTRA_PAGE_INDEX, pageIndex + 1)
-            putExtra(EXTRA_PAGINATION_MODE, "TRANSFER_CREDIT")
-            putExtra(EXTRA_AMOUNT, amount)
-            putExtra(EXTRA_BANK_NAME, creditedBankName)
+        // Action 3: [ 🔄 More Accounts... ] — only if there are more accounts than shown
+        val remainingAfterPage = total - ((pageIndex + 1) * 2)
+        if (remainingAfterPage > 0) {
+            val paginateIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+                action = ACTION_PAGINATE_NOTIFICATION
+                putExtra(EXTRA_PENDING_ID, pendingId)
+                putExtra(EXTRA_NOTIFICATION_ID, notificationId)
+                putExtra(EXTRA_PAGE_INDEX, pageIndex + 1)
+                putExtra(EXTRA_PAGINATION_MODE, "TRANSFER_CREDIT")
+                putExtra(EXTRA_AMOUNT, amount)
+                putExtra(EXTRA_BANK_NAME, creditedBankName)
+                putExtra(EXTRA_IS_DEBIT, isDebit)
+            }
+            val paginatePendingIntent = PendingIntent.getBroadcast(
+                context,
+                notificationId + 3,
+                paginateIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            builder.addAction(0, "🔄 More Accounts...", paginatePendingIntent)
         }
-        val paginatePendingIntent = PendingIntent.getBroadcast(
-            context,
-            notificationId + 3,
-            paginateIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        builder.addAction(0, "🔄 More Accounts...", paginatePendingIntent)
 
         notificationManager.notify(notificationId, builder.build())
     }
@@ -731,7 +747,8 @@ object SmsNotificationHelper {
         sourceAccount: String,
         targetBankName: String,
         amount: Double,
-        buttonLabel: String
+        buttonLabel: String,
+        isDebit: Boolean = false
     ): NotificationCompat.Action {
         val intent = Intent(context, NotificationActionReceiver::class.java).apply {
             action = ACTION_LOG_INWARD_TRANSFER
@@ -740,6 +757,7 @@ object SmsNotificationHelper {
             putExtra(EXTRA_SOURCE_ACCOUNT, sourceAccount)
             putExtra(EXTRA_BANK_NAME, targetBankName)
             putExtra(EXTRA_AMOUNT, amount)
+            putExtra(EXTRA_IS_DEBIT, isDebit)
         }
         val requestCode = (notificationId + buttonLabel.hashCode()) and 0x7FFFFFFF
         val pendingIntent = PendingIntent.getBroadcast(

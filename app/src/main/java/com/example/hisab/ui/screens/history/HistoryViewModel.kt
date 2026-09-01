@@ -10,6 +10,7 @@ import com.example.hisab.data.model.TransactionType
 import com.example.hisab.data.repository.AccountRepository
 import com.example.hisab.data.repository.CategoryRepository
 import com.example.hisab.data.repository.TransactionRepository
+import com.example.hisab.ui.screens.SharedMonthState
 import com.example.hisab.util.CurrencyFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -31,8 +32,7 @@ class HistoryViewModel(
     private val accountRepository: AccountRepository? = null
 ) : ViewModel() {
 
-    private val _selectedMonth = MutableStateFlow(YearMonth.now())
-    val selectedMonth: StateFlow<YearMonth> = _selectedMonth.asStateFlow()
+    val selectedMonth: StateFlow<YearMonth> = SharedMonthState.selectedMonth
 
     private val _selectedType = MutableStateFlow<TransactionType?>(null)
     val selectedType: StateFlow<TransactionType?> = _selectedType.asStateFlow()
@@ -74,7 +74,7 @@ class HistoryViewModel(
         )
 
     val transactions: StateFlow<List<TransactionEntity>> = combine(
-        _selectedMonth,
+        SharedMonthState.selectedMonth,
         _selectedType,
         _selectedAccount,
         _searchQuery,
@@ -120,7 +120,7 @@ class HistoryViewModel(
     )
 
     fun selectMonth(yearMonth: YearMonth) {
-        _selectedMonth.value = yearMonth
+        SharedMonthState.selectMonth(yearMonth)
     }
 
     fun selectType(type: TransactionType?) {

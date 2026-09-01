@@ -14,6 +14,7 @@ import com.example.hisab.data.repository.LimitType
 import com.example.hisab.data.repository.SpendingLimitConfig
 import com.example.hisab.data.repository.SpendingLimitRepository
 import com.example.hisab.data.repository.TransactionRepository
+import com.example.hisab.ui.screens.SharedMonthState
 import com.example.hisab.util.DateUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -67,10 +68,9 @@ class DashboardViewModel(
     val pendingTransactions: StateFlow<List<PendingTransactionEntity>> = (pendingTransactionRepository?.getAllPendingFlow() ?: flowOf(emptyList()))
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _selectedMonth = MutableStateFlow(YearMonth.now())
-    val selectedMonth: StateFlow<YearMonth> = _selectedMonth.asStateFlow()
+    val selectedMonth: StateFlow<YearMonth> = SharedMonthState.selectedMonth
 
-    val monthlySummary: StateFlow<MonthlySummary> = _selectedMonth
+    val monthlySummary: StateFlow<MonthlySummary> = SharedMonthState.selectedMonth
         .flatMapLatest { month ->
             transactionRepository.getMonthlySummary(month)
         }
@@ -80,7 +80,7 @@ class DashboardViewModel(
             initialValue = MonthlySummary(0.0, 0.0, 0.0, 0)
         )
 
-    val recentTransactions: StateFlow<List<TransactionEntity>> = _selectedMonth
+    val recentTransactions: StateFlow<List<TransactionEntity>> = SharedMonthState.selectedMonth
         .flatMapLatest { month ->
             transactionRepository.getTransactionsForMonth(month)
         }
@@ -150,7 +150,7 @@ class DashboardViewModel(
         )
 
     val topCategoryBreakdown: StateFlow<List<Pair<CategoryEntity, Double>>> = combine(
-        _selectedMonth.flatMapLatest { transactionRepository.getTransactionsForMonth(it) },
+        SharedMonthState.selectedMonth.flatMapLatest { transactionRepository.getTransactionsForMonth(it) },
         categories
     ) { txns, cats ->
         val catMap = cats.associateBy { it.id }
@@ -182,7 +182,7 @@ class DashboardViewModel(
 
     val dailyAverage: StateFlow<Double> = monthlySummary
         .map { summary ->
-            val days = DateUtils.daysElapsed(_selectedMonth.value)
+            val days = DateUtils.daysElapsed(SharedMonthState.selectedMonth.value)
             if (days > 0) summary.totalExpense / days else 0.0
         }
         .stateIn(
@@ -194,7 +194,7 @@ class DashboardViewModel(
     // ── Safe Daily Pace ─────────────────────────────────────────────
     val safeDailyPace: StateFlow<Double> = combine(
         monthlySummary,
-        _selectedMonth
+        SharedMonthState.selectedMonth
     ) { summary, month ->
         val today = LocalDate.now()
         val totalDaysInMonth = month.lengthOfMonth()
@@ -225,7 +225,7 @@ class DashboardViewModel(
     // Per user clarification: hero Income/Expense/Savings are month-scoped, only Net Balance is current-state.
     // Transfer activity is not a balance; hero Savings must be monthly flow, not current Savings account balance.
     val heroSavingsTransfer: StateFlow<Double> = combine(
-        _selectedMonth.flatMapLatest { transactionRepository.getTransactionsForMonth(it) },
+        SharedMonthState.selectedMonth.flatMapLatest { transactionRepository.getTransactionsForMonth(it) },
         accounts,
         linkedAccounts
     ) { monthTxns, accNames, accEntities ->
@@ -266,7 +266,7 @@ class DashboardViewModel(
 
     val spendingLimitStatus: StateFlow<SpendingLimitStatus> = combine(
         limitConfig,
-        _selectedMonth
+        SharedMonthState.selectedMonth
     ) { config, month ->
         Pair(config, month)
     }.flatMapLatest { (config, month) ->
@@ -315,7 +315,7 @@ class DashboardViewModel(
     )
 
     fun selectMonth(yearMonth: YearMonth) {
-        _selectedMonth.value = yearMonth
+        SharedMonthState.selectMonth(yearMonth)
     }
 
     fun addTransaction(transaction: TransactionEntity) {

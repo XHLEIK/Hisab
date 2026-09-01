@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 
 package com.example.hisab.ui.components
 
@@ -45,6 +45,9 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.ContentCut
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -58,7 +61,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -79,7 +84,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.material3.Icon
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -179,6 +201,10 @@ fun QuickAddSheet(
     var showCategoryPicker by remember { mutableStateOf(false) }
     var categorySearchQuery by remember { mutableStateOf("") }
     val categoryPickerScroll = rememberScrollState()
+    var showAmountContextMenu by remember { mutableStateOf(false) }
+    var amountBoxSize by remember { mutableStateOf(IntSize.Zero) }
+    val clipboardManager = LocalClipboardManager.current
+    val hapticFeedback = LocalHapticFeedback.current
 
     val evaluatedForSave = calculator.peekEvaluatedAmount()
     val canSave = evaluatedForSave != null && evaluatedForSave > 0 && selectedCategoryId > 0 &&
@@ -242,14 +268,14 @@ fun QuickAddSheet(
                         val newValue = (swipeOffsetY.value + available.y).coerceAtLeast(0f)
                         swipeOffsetY.snapTo(newValue)
                     }
-                    return available
+                    return androidx.compose.ui.geometry.Offset(0f, available.y)
                 }
                 if (swipeOffsetY.value > 0 && available.y < 0) {
                     swipeScope.launch {
                         val newValue = (swipeOffsetY.value + available.y).coerceAtLeast(0f)
                         swipeOffsetY.snapTo(newValue)
                     }
-                    return available
+                    return androidx.compose.ui.geometry.Offset(0f, available.y)
                 }
                 return androidx.compose.ui.geometry.Offset.Zero
             }
@@ -379,18 +405,102 @@ fun QuickAddSheet(
                     }, modifier = Modifier.weight(1f))
                 }
 
-                // Amount display
+                // Amount display with long-press copy/cut/paste
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = if (amountText.isEmpty()) "₹0" else "₹$amountText",
-                        style = MaterialTheme.typography.displayMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = if (amountText.isEmpty()) colors.textTertiary else colors.textPrimary,
-                        textAlign = TextAlign.Center
-                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .combinedClickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = {},
+                                onLongClick = {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    showAmountContextMenu = true
+                                }
+                            )
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .onGloballyPositioned { amountBoxSize = it.size }
+                    ) {
+                        Text(
+                            text = if (amountText.isEmpty()) "₹0" else "₹$amountText",
+                            style = MaterialTheme.typography.displayMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (amountText.isEmpty()) colors.textTertiary else colors.textPrimary,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    if (showAmountContextMenu) {
+                        val density = LocalDensity.current
+                        Popup(
+                            alignment = Alignment.TopCenter,
+                            offset = IntOffset(0, with(density) { (amountBoxSize.height + 4.dp.roundToPx()) }),
+                            onDismissRequest = { showAmountContextMenu = false },
+                            properties = PopupProperties(focusable = true)
+                        ) {
+                            val toolbarBg = colorScheme.surface
+                            val toolbarBorder = colors.cardBorder
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                // Caret pointing up toward the amount
+                                androidx.compose.foundation.Canvas(
+                                    modifier = Modifier.size(width = 12.dp, height = 6.dp)
+                                ) {
+                                    drawPath(
+                                        path = androidx.compose.ui.graphics.Path().apply {
+                                            moveTo(0f, 0f)
+                                            lineTo(size.width / 2f, size.height)
+                                            lineTo(size.width, 0f)
+                                            close()
+                                        },
+                                        color = toolbarBg
+                                    )
+                                }
+                                Surface(
+                                    modifier = Modifier.shadow(8.dp, RoundedCornerShape(10.dp)),
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = toolbarBg,
+                                    border = androidx.compose.foundation.BorderStroke(0.5.dp, toolbarBorder.copy(alpha = 0.6f))
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(0.dp)
+                                    ) {
+                                        if (amountText.isNotEmpty()) {
+                                            TextToolbarButton(text = "Cut", onClick = {
+                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                clipboardManager.setText(AnnotatedString(amountText))
+                                                amountText = ""
+                                                calculator.setExpression("")
+                                                showAmountContextMenu = false
+                                            })
+                                            VerticalDivider(modifier = Modifier.height(20.dp).width(0.5.dp), color = toolbarBorder.copy(alpha = 0.4f))
+                                            TextToolbarButton(text = "Copy", onClick = {
+                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                clipboardManager.setText(AnnotatedString(amountText))
+                                                showAmountContextMenu = false
+                                            })
+                                        }
+                                        if (amountText.isNotEmpty()) {
+                                            VerticalDivider(modifier = Modifier.height(20.dp).width(0.5.dp), color = toolbarBorder.copy(alpha = 0.4f))
+                                        }
+                                        TextToolbarButton(text = "Paste", onClick = {
+                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            val clipText = clipboardManager.getText()?.toString() ?: ""
+                                            val numericPaste = clipText.replace("[^0-9.]".toRegex(), "")
+                                            if (numericPaste.isNotEmpty()) {
+                                                amountText = numericPaste
+                                                calculator.setExpression(numericPaste)
+                                            }
+                                            showAmountContextMenu = false
+                                        })
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // Split reimbursement - only for Income, minimal texts
@@ -765,6 +875,32 @@ private fun CategoryGridPickerItem(category: CategoryEntity, isSelected: Boolean
             minLines = 1,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             lineHeight = androidx.compose.ui.unit.TextUnit(12f, androidx.compose.ui.unit.TextUnitType.Sp)
+        )
+    }
+}
+
+@Composable
+private fun TextToolbarButton(text: String, onClick: () -> Unit) {
+    val colors = HisabTheme.colors
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val bgColor by animateColorAsState(
+        targetValue = if (isPressed) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent,
+        animationSpec = tween(150), label = "toolbarBtnBg"
+    )
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(bgColor)
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+            color = colors.textPrimary
         )
     }
 }

@@ -7,6 +7,7 @@ import android.content.Intent
 import androidx.room.withTransaction
 import com.example.hisab.data.backup.AutoBackupManager
 import com.example.hisab.data.db.HisabDatabase
+import com.example.hisab.data.db.entity.AccountEntity
 import com.example.hisab.data.db.entity.TransactionEntity
 import com.example.hisab.data.model.TransactionConfidence
 import com.example.hisab.data.model.TransactionSource
@@ -100,8 +101,9 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 try {
                     when (mode) {
                         "TRANSFER_CREDIT" -> {
+                            val isDebit = intent.getBooleanExtra(SmsNotificationHelper.EXTRA_IS_DEBIT, false)
                             SmsNotificationHelper.swapToCreditTransferAccountsNotification(
-                                context, notificationId, pendingId, amount, bankName, pageIndex
+                                context, notificationId, pendingId, amount, bankName, pageIndex, isDebit = isDebit
                             )
                         }
                         "EXPENSE", "INCOME" -> {
@@ -169,7 +171,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
                     // For debit transfers, the source bank is known (the one debited)
                     // Show other accounts as destination options
                     SmsNotificationHelper.swapToCreditTransferAccountsNotification(
-                        context, notificationId, pendingId, amount, bankName, 0
+                        context, notificationId, pendingId, amount, bankName, 0, isDebit = true
                     )
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -234,9 +236,10 @@ class NotificationActionReceiver : BroadcastReceiver() {
 
         if (action == SmsNotificationHelper.ACTION_LOG_INWARD_TRANSFER) {
             val pendingResult = goAsync()
-            val sourceAccount = intent.getStringExtra(SmsNotificationHelper.EXTRA_SOURCE_ACCOUNT) ?: "Secondary Bank"
-            val targetBankName = intent.getStringExtra(SmsNotificationHelper.EXTRA_BANK_NAME) ?: "Primary Bank"
+            val pickedAccount = intent.getStringExtra(SmsNotificationHelper.EXTRA_SOURCE_ACCOUNT) ?: "Secondary Bank"
+            val smsBankName = intent.getStringExtra(SmsNotificationHelper.EXTRA_BANK_NAME) ?: "Primary Bank"
             val amount = intent.getDoubleExtra(SmsNotificationHelper.EXTRA_AMOUNT, 0.0)
+            val isDebitIntent = intent.getBooleanExtra(SmsNotificationHelper.EXTRA_IS_DEBIT, false)
 
             CoroutineScope(Dispatchers.IO).launch {
                 try {
@@ -247,13 +250,41 @@ class NotificationActionReceiver : BroadcastReceiver() {
                     val categoryDao = db.categoryDao()
 
                     val accounts = accountDao.getAllSync()
-                    val targetAccount = accounts.firstOrNull { BankAliasRegistry.matches(it.bankCode, targetBankName, null) }
+                    // Resolve the bank that sent the SMS (authoritative for one leg of the transfer)
+                    val smsAccount = accounts.firstOrNull { BankAliasRegistry.matches(it.bankCode, smsBankName, null) }
                         ?: accounts.firstOrNull { it.isPrimary } ?: accounts.firstOrNull()
-                    val targetAccountName = targetAccount?.name ?: targetBankName
+                    val smsAccountName = smsAccount?.name ?: smsBankName
 
-                    if (sourceAccount.equals(targetAccountName, ignoreCase = true)) {
+                    // The picked account from the notification is the *other* leg
+                    val pickedAccountEntity = accounts.firstOrNull { it.name.equals(pickedAccount, ignoreCase = true) }
+                    val pickedAccountName = pickedAccountEntity?.name ?: pickedAccount
+
+                    if (pickedAccountName.equals(smsAccountName, ignoreCase = true)) {
                         SmsNotificationHelper.postSuccessNotification(context, notificationId, "Cannot transfer to same account")
                         return@launch
+                    }
+
+                    // Direction determination: prefer the intent flag (always reliable) over the
+                    // pending row lookup (which can be null if the pending was consumed by auto-merge).
+                    // For a DEBIT SMS: money left smsAccount, so FROM = smsAccount, TO = picked.
+                    // For a CREDIT SMS: money arrived at smsAccount, so FROM = picked, TO = smsAccount.
+                    val pendingForType = pendingDao.getById(pendingId)
+                    val isDebit = isDebitIntent || pendingForType?.type == "DEBIT"
+                    val fromAccountName: String
+                    val toAccountName: String
+                    val fromAccountEntity: AccountEntity?
+                    val toAccountEntity: AccountEntity?
+                    if (isDebit) {
+                        fromAccountName = smsAccountName
+                        toAccountName = pickedAccountName
+                        fromAccountEntity = smsAccount
+                        toAccountEntity = pickedAccountEntity
+                    } else {
+                        // CREDIT: picked is source, sms is destination
+                        fromAccountName = pickedAccountName
+                        toAccountName = smsAccountName
+                        fromAccountEntity = pickedAccountEntity
+                        toAccountEntity = smsAccount
                     }
 
                     val transferCategories = categoryDao.getAllSync().filter { it.type == TransactionType.TRANSFER }
@@ -264,8 +295,10 @@ class NotificationActionReceiver : BroadcastReceiver() {
                     // destroyed the pending row and left no transaction — the user's tap silently
                     // erased their own transaction.
                     val logged = db.withTransaction {
-                        val pending = pendingDao.getById(pendingId) ?: return@withTransaction false
-                        pendingDao.delete(pending)
+                        val pending = pendingDao.getById(pendingId)
+                        if (pending != null) {
+                            pendingDao.delete(pending)
+                        }
 
                         transactionDao.insert(
                             TransactionEntity(
@@ -273,16 +306,16 @@ class NotificationActionReceiver : BroadcastReceiver() {
                                 type = TransactionType.TRANSFER,
                                 categoryId = categoryId,
                                 date = LocalDate.now(),
-                                account = sourceAccount,
-                                toAccount = targetAccountName,
-                                notes = "Inward transfer from SMS alert ($sourceAccount -> $targetAccountName)",
+                                account = fromAccountName,
+                                toAccount = toAccountName,
+                                notes = "Transfer ($fromAccountName → $toAccountName)",
                                 // Carry the identity forward so the message stays claimed after the
                                 // pending row is gone (cross-table dedup, INV-2).
-                                sourceMessageHash = pending.sourceMessageHash
+                                sourceMessageHash = pending?.sourceMessageHash
                                     ?.takeIf { transactionDao.getBySourceHash(it) == null },
                                 source = TransactionSource.NOTIFICATION_ACTION.name,
                                 confidence = TransactionConfidence.MANUAL.name,
-                                referenceNumber = pending.referenceNumber
+                                referenceNumber = pending?.referenceNumber
                             )
                         )
                         true
@@ -298,7 +331,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
                         SmsHash.reconciliationKey(
                             amount = amount,
                             type = "CREDIT",
-                            accountLast4 = targetAccount?.accountLast4,
+                            accountLast4 = toAccountEntity?.accountLast4,
                             timestamp = System.currentTimeMillis()
                         )
                     )
@@ -310,7 +343,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
                     SmsNotificationHelper.postSuccessNotification(
                         context,
                         notificationId,
-                        "Logged Transfer $formattedAmount ($sourceAccount → $targetAccountName)"
+                        "Logged Transfer $formattedAmount ($fromAccountName → $toAccountName)"
                     )
                 } catch (e: Exception) {
                     e.printStackTrace()
